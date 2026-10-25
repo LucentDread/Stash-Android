@@ -12,6 +12,7 @@ import '../models/models.dart';
 import '../services/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/async_view.dart';
+import 'edit/editors.dart';
 
 /// A playable source: the direct file or one of Stash's transcodes.
 class _Source {
@@ -303,6 +304,52 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  /// Pauses, opens the marker form at the current position, then refreshes
+  /// the scene's markers.
+  Future<void> _addMarker() async {
+    final c = _controller!;
+    final wasPlaying = c.value.isPlaying;
+    await c.pause();
+    _hideTimer?.cancel();
+    if (!mounted) return;
+    final created = await createMarker(
+      context,
+      widget.sceneId,
+      at: c.value.position.inMilliseconds / 1000,
+    );
+    // The form may have shown the system bars (keyboard).
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    if (created) {
+      try {
+        final scene = await _repo.findScene(widget.sceneId);
+        if (mounted) setState(() => _scene = scene);
+      } catch (_) {
+        // The marker exists; the list refreshes on the next opening.
+      }
+    }
+    if (wasPlaying && mounted) await _controller?.play();
+    _scheduleHide();
+  }
+
+  Future<void> _useFrameAsCover() async {
+    final c = _controller;
+    if (c == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _repo.generateCover(
+        widget.sceneId,
+        c.value.position.inMilliseconds / 1000,
+      );
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Couverture en cours de génération par Stash'),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   Future<void> _pickSpeed() async {
     const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
     final current = _controller?.value.playbackSpeed ?? 1;
@@ -460,9 +507,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         onPressed: _pickMarker,
                       ),
                     IconButton(
-                      tooltip: 'Vitesse',
-                      icon: const Icon(Icons.speed),
-                      onPressed: _pickSpeed,
+                      tooltip: 'Ajouter un marqueur ici',
+                      icon: const Icon(Icons.bookmark_add_outlined),
+                      onPressed: c == null ? null : _addMarker,
                     ),
                     if (_sources.length > 1)
                       IconButton(
@@ -470,6 +517,31 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         icon: const Icon(Icons.high_quality_outlined),
                         onPressed: _pickSource,
                       ),
+                    PopupMenuButton<String>(
+                      iconColor: Colors.white,
+                      onSelected: (v) => switch (v) {
+                        'cover' => _useFrameAsCover(),
+                        _ => _pickSpeed(),
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'speed',
+                          child: ListTile(
+                            leading: Icon(Icons.speed),
+                            title: Text('Vitesse de lecture'),
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'cover',
+                          child: ListTile(
+                            leading: Icon(Icons.wallpaper),
+                            title: Text(
+                              'Utiliser cette image comme couverture',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 const Spacer(),

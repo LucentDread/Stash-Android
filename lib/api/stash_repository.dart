@@ -148,6 +148,7 @@ const _sceneFull =
   groups { group { $_tagRef } scene_index }
   scene_markers {
     id title seconds end_seconds screenshot primary_tag { $_tagRef }
+    tags { $_tagRef }
   }
 ''';
 
@@ -180,7 +181,8 @@ const _tagFields =
 
 const _galleryFields =
     '''
-  id title date details image_count
+  id title code date details photographer rating100 organized urls
+  image_count
   paths { cover }
   folder { path }
   files { path }
@@ -201,7 +203,7 @@ const _groupFields =
 enum RefKind { performers, tags, studios, groups }
 
 /// Kinds of entities that can be edited.
-enum EditKind { scene, performer, studio, tag, group }
+enum EditKind { scene, performer, studio, tag, group, gallery, marker }
 
 const _imageFields = '''
   id title
@@ -216,6 +218,7 @@ const _markerFields =
     '''
   id title seconds end_seconds screenshot
   primary_tag { $_tagRef }
+  tags { $_tagRef }
   scene { id title }
 ''';
 
@@ -503,6 +506,8 @@ class StashRepository {
       EditKind.studio => ('studioUpdate', 'StudioUpdateInput'),
       EditKind.tag => ('tagUpdate', 'TagUpdateInput'),
       EditKind.group => ('groupUpdate', 'GroupUpdateInput'),
+      EditKind.gallery => ('galleryUpdate', 'GalleryUpdateInput'),
+      EditKind.marker => ('sceneMarkerUpdate', 'SceneMarkerUpdateInput'),
     };
     await client.query(
       '''
@@ -512,6 +517,38 @@ class StashRepository {
       variables: {
         'input': {'id': id, ...input},
       },
+    );
+  }
+
+  Future<void> createMarker(String sceneId, Map<String, dynamic> input) async {
+    await client.query(
+      '''
+      mutation CreateMarker(\$input: SceneMarkerCreateInput!) {
+        sceneMarkerCreate(input: \$input) { id }
+      }''',
+      variables: {
+        'input': {'scene_id': sceneId, ...input},
+      },
+    );
+  }
+
+  Future<void> deleteMarker(String id) async {
+    await client.query(
+      '''
+      mutation DeleteMarker(\$id: ID!) { sceneMarkerDestroy(id: \$id) }''',
+      variables: {'id': id},
+    );
+  }
+
+  /// Asks Stash to regenerate the scene cover from the frame at [seconds].
+  /// Runs as a background job on the server.
+  Future<void> generateCover(String sceneId, double seconds) async {
+    await client.query(
+      '''
+      mutation Cover(\$id: ID!, \$at: Float) {
+        sceneGenerateScreenshot(id: \$id, at: \$at)
+      }''',
+      variables: {'id': sceneId, 'at': seconds},
     );
   }
 

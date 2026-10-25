@@ -226,6 +226,9 @@ class _SceneScreenState extends State<SceneScreen> {
                             width: 160,
                             child: InkWell(
                               onTap: () => _play(start: m.seconds),
+                              onLongPress: () async {
+                                if (await editMarker(context, m)) _load();
+                              },
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [

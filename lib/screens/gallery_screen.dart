@@ -9,6 +9,7 @@ import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/net_image.dart';
 import '../widgets/paged_grid.dart';
+import 'edit/editors.dart';
 
 class GalleryScreen extends StatelessWidget {
   const GalleryScreen({super.key, required this.galleryId});
@@ -19,7 +20,7 @@ class GalleryScreen extends StatelessWidget {
     final repo = context.read<AppState>().repo!;
     return AsyncView<Gallery>(
       load: () => repo.findGallery(galleryId),
-      builder: (context, g, _) => Scaffold(
+      builder: (context, g, reload) => Scaffold(
         appBar: AppBar(
           title: Text(g.displayTitle),
           actions: [
@@ -33,6 +34,7 @@ class GalleryScreen extends StatelessWidget {
                 builder: (_) => _GalleryInfo(gallery: g),
               ),
             ),
+            EditButton(onEdit: () => editGallery(context, g), onSaved: reload),
           ],
         ),
         body: PagedGrid<StashImage>(

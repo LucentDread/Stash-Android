@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 
 import '../models/models.dart';
 import '../navigation.dart';
+import '../screens/edit/editors.dart';
 import '../services/app_state.dart';
 import '../utils/format.dart';
 import 'net_image.dart';
@@ -198,21 +199,6 @@ class _SceneCardState extends State<SceneCard> {
                         ],
                       ),
                     ),
-                    Positioned(
-                      left: 4,
-                      top: 4,
-                      child: Row(
-                        children: [
-                          if (s.rating100 != null)
-                            _Badge(
-                              starsFromRating(s.rating100)
-                                  .toStringAsFixed(1)
-                                  .replaceAll('.0', ''),
-                              icon: Icons.star,
-                            ),
-                        ],
-                      ),
-                    ),
                     if (progress > 0)
                       Align(
                         alignment: Alignment.bottomCenter,
@@ -327,18 +313,34 @@ class _SceneCardText extends StatelessWidget {
             height: small,
             child: Row(
               children: [
-                _Stat(Icons.play_arrow, s.playCount, 'lectures', dim),
-                _Stat(Icons.water_drop_outlined, s.oCounter, 'O', dim),
-                _Stat(
-                  Icons.person_outline,
-                  s.performers.length,
-                  'performeurs',
-                  dim,
+                // Counters shrink on very narrow cards; the stars keep
+                // their size on the right.
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _Stat(Icons.play_arrow, s.playCount, 'lectures', dim),
+                        _Stat(Icons.water_drop_outlined, s.oCounter, 'O', dim),
+                        _Stat(
+                          Icons.person_outline,
+                          s.performers.length,
+                          'performeurs',
+                          dim,
+                        ),
+                        if (s.organized)
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 14,
+                            color: dim,
+                          ),
+                      ],
+                    ),
+                  ),
                 ),
-                if (s.organized) ...[
-                  const Spacer(),
-                  Icon(Icons.check_circle_outline, size: 14, color: dim),
-                ],
+                _Stars(s.rating100, size: small - 2),
               ],
             ),
           ),
@@ -392,6 +394,38 @@ class _StudioWatermark extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Five small stars filled according to a 1-100 rating (halves included).
+class _Stars extends StatelessWidget {
+  const _Stars(this.rating100, {required this.size});
+  final int? rating100;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final stars = starsFromRating(rating100);
+    final empty = Theme.of(context).colorScheme.onSurfaceVariant
+        .withValues(alpha: 0.45);
+    return Tooltip(
+      message: rating100 == null ? 'Pas de note' : '$stars / 5',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 1; i <= 5; i++)
+            Icon(
+              stars >= i
+                  ? Icons.star
+                  : stars >= i - 0.5
+                  ? Icons.star_half
+                  : Icons.star_border,
+              size: size,
+              color: stars >= i - 0.5 ? Colors.amber : empty,
+            ),
+        ],
       ),
     );
   }
@@ -667,6 +701,39 @@ class MarkerCard extends StatelessWidget {
   const MarkerCard({super.key, required this.marker});
   final SceneMarker marker;
 
+  Future<void> _actions(BuildContext context) async {
+    final m = marker;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (m.sceneId != null)
+              ListTile(
+                leading: const Icon(Icons.movie_outlined),
+                title: const Text('Ouvrir la scène'),
+                onTap: () => Navigator.pop(context, 'scene'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Modifier le marqueur'),
+              onTap: () => Navigator.pop(context, 'edit'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    switch (action) {
+      case 'scene':
+        openScene(context, m.sceneId!);
+      case 'edit':
+        await editMarker(context, m);
+    }
+  }
+
   /// Height of a card [width] wide: thumbnail, title and one small line.
   static double heightFor(BuildContext context, double width) =>
       width * 9 / 16 +
@@ -684,9 +751,7 @@ class MarkerCard extends StatelessWidget {
         onTap: m.sceneId == null
             ? null
             : () => playScene(context, m.sceneId!, start: m.seconds),
-        onLongPress: m.sceneId == null
-            ? null
-            : () => openScene(context, m.sceneId!),
+        onLongPress: () => _actions(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

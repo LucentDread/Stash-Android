@@ -1,8 +1,14 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../api/stash_repository.dart';
 import '../../models/models.dart';
+import '../../utils/format.dart';
 import '../../widgets/detail_widgets.dart';
+import '../../widgets/net_image.dart';
 import '../scene_filter_screen.dart';
 
 /// One editable value of an edit form. Fields remember their initial value
@@ -37,6 +43,7 @@ class TextEditField extends EditField {
     this.multiline = false,
     this.required = false,
     this.hint,
+    this.emptyAsNull = true,
   }) : _initial = initial ?? '',
        controller = TextEditingController(text: initial ?? '');
 
@@ -46,11 +53,16 @@ class TextEditField extends EditField {
   final bool required;
   final String? hint;
 
+  /// Send null for an empty value (clears it); otherwise send "".
+  final bool emptyAsNull;
+
   @override
   bool get changed => controller.text.trim() != _initial.trim();
 
   @override
-  Map<String, dynamic> toInput() => {key: _blankToNull(controller.text)};
+  Map<String, dynamic> toInput() => {
+    key: emptyAsNull ? _blankToNull(controller.text) : controller.text.trim(),
+  };
 
   @override
   String? validate() => required && controller.text.trim().isEmpty
@@ -318,13 +330,23 @@ class RefsEditField extends EditField {
 
 /// A single linked studio (or parent studio).
 class RefEditField extends EditField {
-  RefEditField(super.key, super.label, this.kind, TagRef? initial)
-    : _initialId = initial?.id,
-      value = initial;
+  RefEditField(
+    super.key,
+    super.label,
+    this.kind,
+    TagRef? initial, {
+    this.required = false,
+  }) : _initialId = initial?.id,
+       value = initial;
 
   final RefKind kind;
   final String? _initialId;
+  final bool required;
   TagRef? value;
+
+  @override
+  String? validate() =>
+      required && value == null ? '$label est obligatoire' : null;
 
   @override
   bool get changed => value?.id != _initialId;
@@ -334,7 +356,7 @@ class RefEditField extends EditField {
 
   @override
   Widget build(BuildContext context, VoidCallback onChanged) => _RefsEditor(
-    label: label,
+    label: required ? '$label *' : label,
     items: [?value],
     addLabel: value == null ? 'Choisir' : 'Changer',
     onAdd: () async {
@@ -482,6 +504,184 @@ class StringListEditField extends EditField {
   void dispose() => controller.dispose();
 }
 
+/// Position in a video, typed as `m:ss` or `h:mm:ss` (or plain seconds).
+class TimeEditField extends EditField {
+  TimeEditField(
+    super.key,
+    super.label,
+    double? initial, {
+    this.required = false,
+  }) : _initialText = initial == null ? '' : formatDuration(initial),
+       controller = TextEditingController(
+         text: initial == null ? '' : formatDuration(initial),
+       );
+
+  final String _initialText;
+  final TextEditingController controller;
+  final bool required;
+
+  /// Seconds, or null when empty or invalid.
+  static double? parse(String text) {
+    final t = text.trim();
+    if (t.isEmpty) return null;
+    final parts = t.split(':');
+    if (parts.length > 3) return null;
+    var seconds = 0.0;
+    for (final p in parts) {
+      final v = double.tryParse(p);
+      if (v == null || v < 0) return null;
+      seconds = seconds * 60 + v;
+    }
+    return seconds;
+  }
+
+  @override
+  bool get changed => controller.text.trim() != _initialText;
+
+  @override
+  Map<String, dynamic> toInput() => {key: parse(controller.text)};
+
+  @override
+  String? validate() {
+    final t = controller.text.trim();
+    if (t.isEmpty) return required ? '$label est obligatoire' : null;
+    return parse(t) == null ? '$label : format m:ss attendu' : null;
+  }
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) => TextField(
+    controller: controller,
+    onChanged: (_) => onChanged(),
+    keyboardType: TextInputType.datetime,
+    decoration: InputDecoration(
+      labelText: required ? '$label *' : label,
+      hintText: 'm:ss',
+      border: const OutlineInputBorder(),
+    ),
+  );
+
+  @override
+  void dispose() => controller.dispose();
+}
+
+/// Image chosen from the phone or given by URL. Stash accepts both a URL
+/// and a base64 data URI for image inputs.
+class ImageEditField extends EditField {
+  ImageEditField(super.key, super.label, this.currentUrl);
+
+  final String? currentUrl;
+
+  /// New image (data URI or URL), null while unchanged.
+  String? value;
+  Uint8List? _pickedBytes;
+
+  @override
+  bool get changed => value != null;
+
+  @override
+  Map<String, dynamic> toInput() => {key: value};
+
+  Future<void> _pick(VoidCallback onChanged) async {
+    final file = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      // Keeps uploads reasonable: Stash stores the image as sent.
+      maxWidth: 2400,
+      maxHeight: 2400,
+      imageQuality: 90,
+    );
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    final mime =
+        file.mimeType ??
+        (file.name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+    _pickedBytes = bytes;
+    value = 'data:$mime;base64,${base64Encode(bytes)}';
+    onChanged();
+  }
+
+  Future<void> _fromUrl(BuildContext context, VoidCallback onChanged) async {
+    final controller = TextEditingController();
+    final url = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(label),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(hintText: 'https://…'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('Utiliser'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (url == null || url.isEmpty) return;
+    _pickedBytes = null;
+    value = url;
+    onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) {
+    final Widget preview;
+    if (_pickedBytes != null) {
+      preview = Image.memory(_pickedBytes!, fit: BoxFit.contain);
+    } else if (value != null) {
+      preview = Image.network(value!, fit: BoxFit.contain);
+    } else {
+      preview = NetImage(currentUrl, fit: BoxFit.contain);
+    }
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+      ),
+      child: Row(
+        children: [
+          SizedBox(width: 96, height: 96, child: preview),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _pick(onChanged),
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('Depuis le téléphone'),
+                ),
+                TextButton.icon(
+                  onPressed: () => _fromUrl(context, onChanged),
+                  icon: const Icon(Icons.link),
+                  label: const Text('Depuis une URL'),
+                ),
+                if (value != null)
+                  TextButton.icon(
+                    onPressed: () {
+                      value = null;
+                      _pickedBytes = null;
+                      onChanged();
+                    },
+                    icon: const Icon(Icons.undo),
+                    label: const Text('Annuler'),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Generic edit screen: shows [fields], sends the changed ones to [save].
 class EditScreen extends StatefulWidget {
   const EditScreen({
@@ -489,11 +689,21 @@ class EditScreen extends StatefulWidget {
     required this.title,
     required this.fields,
     required this.save,
+    this.create = false,
+    this.delete,
+    this.deleteLabel = 'Supprimer',
   });
 
   final String title;
   final List<EditField> fields;
   final Future<void> Function(Map<String, dynamic> input) save;
+
+  /// Creation form: every field is sent and saving needs no change.
+  final bool create;
+
+  /// Shows a delete action (with confirmation) when set.
+  final Future<void> Function()? delete;
+  final String deleteLabel;
 
   @override
   State<EditScreen> createState() => _EditScreenState();
@@ -524,7 +734,7 @@ class _EditScreenState extends State<EditScreen> {
     }
     final input = <String, dynamic>{
       for (final f in widget.fields)
-        if (f.changed) ...f.toInput(),
+        if (widget.create || f.changed) ...f.toInput(),
     };
     setState(() => _saving = true);
     try {
@@ -532,6 +742,38 @@ class _EditScreenState extends State<EditScreen> {
       if (!mounted) return;
       messenger.showSnackBar(const SnackBar(content: Text('Enregistré')));
       Navigator.of(context).pop(true);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _delete() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${widget.deleteLabel} ?'),
+        content: const Text('Cette action est définitive.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _saving = true);
+    try {
+      await widget.delete!();
+      messenger.showSnackBar(const SnackBar(content: Text('Supprimé')));
+      navigator.pop(true);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
       if (mounted) setState(() => _saving = false);
@@ -572,10 +814,18 @@ class _EditScreenState extends State<EditScreen> {
         appBar: AppBar(
           title: Text(widget.title),
           actions: [
+            if (widget.delete != null)
+              IconButton(
+                tooltip: widget.deleteLabel,
+                icon: const Icon(Icons.delete_outline),
+                onPressed: _saving ? null : _delete,
+              ),
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: FilledButton(
-                onPressed: changed && !_saving ? _save : null,
+                onPressed: (changed || widget.create) && !_saving
+                    ? _save
+                    : null,
                 child: _saving
                     ? const SizedBox.square(
                         dimension: 16,

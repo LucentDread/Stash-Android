@@ -22,11 +22,16 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
 - **Vues enregistrées** : une recherche + filtres + tri peut être enregistrée
   (icône signet) et choisie comme page d'accueil ; l'accueil par défaut reste
   accessible par le bouton en haut à droite. Les vues apparaissent aussi en
-  lignes sur l'accueil par défaut. Gestion dans **Plus > Vues enregistrées**.
+  lignes sur l'accueil par défaut. Leur filtre n'est modifiable que depuis
+  **Plus > Vues enregistrées** (création, modification, ordre, suppression).
   Exemple : « Groupes : Vide » affiche toutes les scènes hors groupe.
 - **Modification** : bouton crayon sur les fiches scène, performeur,
-  studio, tag et groupe (titre, date, note, studio, performeurs, tags,
-  groupes, liens, description…). Seuls les champs modifiés sont envoyés à
+  studio, tag, groupe et galerie (titre, date, note, studio, performeurs,
+  tags, groupes, liens, description, images…). Les images peuvent venir du
+  téléphone ou d'une URL ; la couverture d'une scène peut aussi être prise
+  sur l'image en cours de lecture (menu ⋮ du lecteur).
+- **Marqueurs** : ajout depuis le lecteur (bouton à côté de la qualité, à la
+  position courante), modification ou suppression par appui long. Seuls les champs modifiés sont envoyés à
   Stash ; la position d'une scène dans ses groupes est conservée.
 - **Logo du studio** en filigrane sur les miniatures, quand le studio en a un.
 - **Groupes** : onglet dédié, fiche avec jaquettes et scènes dans l'ordre du

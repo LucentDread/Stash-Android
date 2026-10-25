@@ -13,6 +13,8 @@ Future<bool> _open(
   required EditKind kind,
   required String id,
   required List<EditField> fields,
+  Future<void> Function()? delete,
+  String deleteLabel = 'Supprimer',
 }) async {
   final repo = context.read<AppState>().repo!;
   final saved = await Navigator.of(context).push<bool>(
@@ -21,6 +23,8 @@ Future<bool> _open(
         title: title,
         fields: fields,
         save: (input) => repo.update(kind, id, input),
+        delete: delete,
+        deleteLabel: deleteLabel,
       ),
     ),
   );
@@ -39,6 +43,7 @@ const _genders = <String?, String>{
 
 /// Editable fields of a scene.
 List<EditField> sceneFields(Scene s) => [
+  ImageEditField('cover_image', 'Couverture', s.screenshot),
   TextEditField('title', 'Titre', s.title),
   TextEditField('code', 'Code', s.code),
   DateEditField('date', 'Date', s.date),
@@ -80,6 +85,7 @@ Future<bool> editScene(BuildContext context, Scene s) => _open(
 
 /// Editable fields of a performer.
 List<EditField> performerFields(Performer p) => [
+  ImageEditField('image', 'Photo', p.imagePath),
   TextEditField('name', 'Nom', p.name, required: true),
   TextEditField('disambiguation', 'Désambiguïsation', p.disambiguation),
   StringListEditField('alias_list', 'Alias', p.aliases),
@@ -113,6 +119,7 @@ Future<bool> editPerformer(BuildContext context, Performer p) => _open(
 
 /// Editable fields of a studio.
 List<EditField> studioFields(Studio s) => [
+  ImageEditField('image', 'Logo', s.imagePath),
   TextEditField('name', 'Nom', s.name, required: true),
   RefEditField('parent_id', 'Studio parent', RefKind.studios, s.parent),
   RatingEditField(s.rating100),
@@ -131,6 +138,7 @@ Future<bool> editStudio(BuildContext context, Studio s) => _open(
 
 /// Editable fields of a tag.
 List<EditField> tagFields(Tag t) => [
+  ImageEditField('image', 'Image', t.imagePath),
   TextEditField('name', 'Nom', t.name, required: true),
   StringListEditField('aliases', 'Alias', t.aliases),
   BoolEditField('favorite', 'Favori', t.favorite),
@@ -148,6 +156,8 @@ Future<bool> editTag(BuildContext context, Tag t) => _open(
 
 /// Editable fields of a group.
 List<EditField> groupFields(Group g) => [
+  ImageEditField('front_image', 'Jaquette (recto)', g.frontImage),
+  ImageEditField('back_image', 'Jaquette (verso)', g.backImage),
   TextEditField('name', 'Nom', g.name, required: true),
   TextEditField('aliases', 'Alias', g.aliases),
   DateEditField('date', 'Date', g.date),
@@ -182,4 +192,81 @@ class EditButton extends StatelessWidget {
       if (await onEdit()) onSaved();
     },
   );
+}
+
+/// Editable fields of a gallery.
+List<EditField> galleryFields(Gallery g) => [
+  TextEditField('title', 'Titre', g.title),
+  TextEditField('code', 'Code', g.code),
+  DateEditField('date', 'Date', g.date),
+  TextEditField('photographer', 'Photographe', g.photographer),
+  RatingEditField(g.rating100),
+  BoolEditField('organized', 'Organisée', g.organized),
+  RefEditField('studio_id', 'Studio', RefKind.studios, g.studio),
+  RefsEditField(
+    'performer_ids',
+    'Performeurs',
+    RefKind.performers,
+    g.performers,
+  ),
+  RefsEditField('tag_ids', 'Tags', RefKind.tags, g.tags),
+  StringListEditField('urls', 'Liens', g.urls, hint: 'https://…'),
+  TextEditField('details', 'Description', g.details, multiline: true),
+];
+
+Future<bool> editGallery(BuildContext context, Gallery g) => _open(
+  context,
+  title: 'Modifier la galerie',
+  kind: EditKind.gallery,
+  id: g.id,
+  fields: galleryFields(g),
+);
+
+/// Fields of a marker; [m] is null when creating one at [at] seconds.
+List<EditField> markerFields(SceneMarker? m, {double at = 0}) => [
+  // Stash requires a title (possibly empty) and a primary tag.
+  TextEditField('title', 'Titre', m?.title, emptyAsNull: false),
+  TimeEditField('seconds', 'Début', m?.seconds ?? at, required: true),
+  TimeEditField('end_seconds', 'Fin (optionnelle)', m?.endSeconds),
+  RefEditField(
+    'primary_tag_id',
+    'Tag principal',
+    RefKind.tags,
+    m?.primaryTag,
+    required: true,
+  ),
+  RefsEditField('tag_ids', 'Autres tags', RefKind.tags, m?.tags ?? const []),
+];
+
+Future<bool> editMarker(BuildContext context, SceneMarker m) {
+  final repo = context.read<AppState>().repo!;
+  return _open(
+    context,
+    title: 'Modifier le marqueur',
+    kind: EditKind.marker,
+    id: m.id,
+    fields: markerFields(m),
+    delete: () => repo.deleteMarker(m.id),
+    deleteLabel: 'Supprimer le marqueur',
+  );
+}
+
+/// Creation form for a marker on [sceneId], starting at [at] seconds.
+Future<bool> createMarker(
+  BuildContext context,
+  String sceneId, {
+  required double at,
+}) async {
+  final repo = context.read<AppState>().repo!;
+  final saved = await Navigator.of(context).push<bool>(
+    MaterialPageRoute(
+      builder: (_) => EditScreen(
+        title: 'Nouveau marqueur',
+        fields: markerFields(null, at: at),
+        create: true,
+        save: (input) => repo.createMarker(sceneId, input),
+      ),
+    ),
+  );
+  return saved ?? false;
 }

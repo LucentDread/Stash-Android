@@ -4,39 +4,15 @@ import 'package:provider/provider.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
 import 'browse_screens.dart';
+import 'view_edit_screen.dart';
 
 /// Lists saved views: open, choose the home page, rename, reorder, delete.
 class ViewsScreen extends StatelessWidget {
   const ViewsScreen({super.key});
 
-  Future<void> _rename(BuildContext context, SavedView view) async {
-    final app = context.read<AppState>();
-    final controller = TextEditingController(text: view.name);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Renommer la vue'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          onSubmitted: (v) => Navigator.pop(context, v),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Renommer'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (name == null || name.trim().isEmpty) return;
-    app.saveView(view..name = name.trim());
-  }
+  void _edit(BuildContext context, [SavedView? view]) =>
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => ViewEditScreen(view: view)));
 
   Future<void> _delete(BuildContext context, SavedView view) async {
     final app = context.read<AppState>();
@@ -67,13 +43,21 @@ class ViewsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Vues enregistrées')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _edit(context),
+        icon: const Icon(Icons.add),
+        label: const Text('Nouvelle vue'),
+      ),
       body: ListView(
+        // Room for the floating button.
+        padding: const EdgeInsets.only(bottom: 88),
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
-              'Créez une vue depuis l\'onglet Scènes : réglez la recherche, '
-              'le tri et les filtres, puis touchez l\'icône signet.',
+              'Créez une vue avec le bouton « Nouvelle vue », ou depuis '
+              'l\'onglet Scènes (icône signet). Le menu ⋮ d\'une vue permet '
+              'de modifier son filtre.',
             ),
           ),
           RadioGroup<String?>(
@@ -139,13 +123,13 @@ class ViewsScreen extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         PopupMenuButton<String>(
-                          onSelected: (a) => a == 'rename'
-                              ? _rename(context, views[i])
+                          onSelected: (a) => a == 'edit'
+                              ? _edit(context, views[i])
                               : _delete(context, views[i]),
                           itemBuilder: (_) => const [
                             PopupMenuItem(
-                              value: 'rename',
-                              child: Text('Renommer'),
+                              value: 'edit',
+                              child: Text('Modifier'),
                             ),
                             PopupMenuItem(
                               value: 'delete',

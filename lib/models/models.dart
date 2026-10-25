@@ -93,6 +93,7 @@ class SceneMarker {
     this.screenshot,
     this.sceneId,
     this.sceneTitle,
+    this.tags = const [],
   });
 
   final String id;
@@ -103,6 +104,9 @@ class SceneMarker {
   final String? screenshot;
   final String? sceneId;
   final String? sceneTitle;
+
+  /// Secondary tags (besides [primaryTag]).
+  final List<TagRef> tags;
 
   String get displayTitle => title.isNotEmpty ? title : primaryTag.name;
 
@@ -117,6 +121,7 @@ class SceneMarker {
       screenshot: j['screenshot'] as String?,
       sceneId: scene?['id'] as String?,
       sceneTitle: scene?['title'] as String?,
+      tags: _list(j['tags'], TagRef.fromJson),
     );
   }
 }
@@ -422,6 +427,11 @@ class Gallery {
     this.title,
     this.date,
     this.details,
+    this.code,
+    this.photographer,
+    this.rating100,
+    this.organized = false,
+    this.urls = const [],
     this.imageCount = 0,
     this.cover,
     this.folderPath,
@@ -434,6 +444,11 @@ class Gallery {
   final String? title;
   final String? date;
   final String? details;
+  final String? code;
+  final String? photographer;
+  final int? rating100;
+  final bool organized;
+  final List<String> urls;
   final int imageCount;
   final String? cover;
   final String? folderPath;
@@ -459,6 +474,11 @@ class Gallery {
       title: j['title'] as String?,
       date: j['date'] as String?,
       details: j['details'] as String?,
+      code: j['code'] as String?,
+      photographer: j['photographer'] as String?,
+      rating100: _int(j['rating100']),
+      organized: j['organized'] as bool? ?? false,
+      urls: (j['urls'] as List?)?.cast<String>() ?? const [],
       imageCount: _int(j['image_count']) ?? 0,
       cover: paths['cover'] as String?,
       folderPath:

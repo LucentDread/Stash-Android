@@ -45,7 +45,8 @@ class ScenesBrowser extends StatefulWidget {
 
   final EntityFilter? entity;
 
-  /// Saved view to start from; its filter and sort are applied.
+  /// Saved view to show. Its filter is locked here: views are edited from
+  /// Plus > Vues enregistrées.
   final SavedView? view;
   final List<SortOption> sortOptions;
   final String? initialSort;
@@ -102,13 +103,6 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
         .showSnackBar(SnackBar(content: Text('Vue « $name » enregistrée')));
   }
 
-  void _updateView() {
-    final v = widget.view!;
-    context.read<AppState>().saveView(_currentView(id: v.id, name: v.name));
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Vue « ${v.name} » mise à jour')));
-  }
-
   Widget? _chips() {
     if (_filter.isEmpty) return null;
     return SizedBox(
@@ -141,6 +135,7 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
   Widget build(BuildContext context) {
     final repo = context.read<AppState>().repo!;
     final count = _filter.activeCount;
+    final locked = widget.view != null;
     return PagedGrid<Scene>(
       fetch: (q) => repo.findScenes(
         q,
@@ -160,36 +155,24 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
       maxCrossAxisExtent: sceneExtent(context),
       tileHeight: (w) => SceneCard.heightFor(context, w),
       countLabel: 'scènes',
-      header: _chips(),
+      header: locked ? null : _chips(),
       actions: [
-        IconButton(
-          tooltip: 'Filtres',
-          icon: Badge(
-            isLabelVisible: count > 0,
-            label: Text('$count'),
-            child: const Icon(Icons.filter_list),
-          ),
-          onPressed: _editFilter,
-        ),
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.bookmark_add_outlined),
-          tooltip: 'Vues',
-          onSelected: (v) => switch (v) {
-            'update' => _updateView(),
-            _ => _saveAsNew(),
-          },
-          itemBuilder: (_) => [
-            if (widget.view != null)
-              PopupMenuItem(
-                value: 'update',
-                child: Text('Mettre à jour « ${widget.view!.name} »'),
-              ),
-            const PopupMenuItem(
-              value: 'new',
-              child: Text('Enregistrer comme nouvelle vue…'),
+        if (!locked) ...[
+          IconButton(
+            tooltip: 'Filtres',
+            icon: Badge(
+              isLabelVisible: count > 0,
+              label: Text('$count'),
+              child: const Icon(Icons.filter_list),
             ),
-          ],
-        ),
+            onPressed: _editFilter,
+          ),
+          IconButton(
+            tooltip: 'Enregistrer comme nouvelle vue',
+            icon: const Icon(Icons.bookmark_add_outlined),
+            onPressed: _saveAsNew,
+          ),
+        ],
       ],
       itemBuilder: (_, s, _, _) => SceneCard(scene: s),
     );
