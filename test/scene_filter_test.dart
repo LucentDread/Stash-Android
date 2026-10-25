@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stash_android/models/home_section.dart';
 import 'package:stash_android/models/models.dart';
 import 'package:stash_android/models/scene_filter.dart';
 import 'package:stash_android/services/app_state.dart';
@@ -89,7 +90,7 @@ void main() {
     expect(app.homeViews, isEmpty);
   });
 
-  test('several home views, in the order of the views list', () async {
+  test('custom home: views and sections, in its own order', () async {
     // Before 1.9, a single home view under "home_view".
     SharedPreferences.setMockInitialValues({'home_view': 'b'});
     final app = AppState(await SharedPreferences.getInstance());
@@ -98,19 +99,60 @@ void main() {
     }
     expect([for (final v in app.homeViews) v.id], ['b']);
 
+    // The house icon adds at the end; the views list order is separate.
     app.setHomeView('c', true);
     app.setHomeView('a', true);
-    expect([for (final v in app.homeViews) v.id], ['a', 'b', 'c']);
     app.reorderViews(2, 0);
-    expect([for (final v in app.homeViews) v.id], ['c', 'a', 'b']);
+    expect(app.homeLayout, ['b', 'c', 'a']);
+
+    app.homeLayout = ['a', HomeSection.resume.id, 'b', 'gone'];
+    expect(app.homeLayout, ['a', 'section:resume', 'b']);
+    expect([for (final v in app.homeViews) v.id], ['a', 'b']);
 
     app.setHomeView('a', false);
     app.deleteView('b');
-    expect([for (final v in app.homeViews) v.id], ['c']);
-    expect(app.isHomeView('c'), isTrue);
+    expect(app.homeLayout, ['section:resume']);
+    expect(app.homeViews, isEmpty);
 
     app.clearHomeViews();
-    expect(app.homeViews, isEmpty);
+    expect(app.homeLayout, isEmpty);
     expect(app.prefs.getString('home_view'), isNull);
+  });
+
+  test('home views of 1.9 to 1.11 keep their order', () async {
+    SharedPreferences.setMockInitialValues({});
+    final app = AppState(await SharedPreferences.getInstance());
+    for (final id in ['a', 'b', 'c']) {
+      app.saveView(SavedView(id: id, name: id, filter: SceneFilter()));
+    }
+    // They were shown in the order of the views list.
+    await app.prefs.setStringList('home_views', ['c', 'a']);
+    expect(app.homeLayout, ['a', 'c']);
+  });
+
+  test('dashboard rows: sections around the views until chosen', () async {
+    SharedPreferences.setMockInitialValues({});
+    final app = AppState(await SharedPreferences.getInstance());
+    app.saveView(SavedView(id: 'v', name: 'v', filter: SceneFilter()));
+    expect(app.dashboardLayout, [
+      'section:stats',
+      'section:resume',
+      'v',
+      'section:recent',
+      'section:releases',
+      'section:favoritePerformers',
+      'section:random',
+      'section:galleries',
+    ]);
+    app.saveView(SavedView(id: 'w', name: 'w', filter: SceneFilter()));
+    expect(app.dashboardLayout, contains('w'), reason: 'still the default');
+
+    app.dashboardLayout = ['w', 'section:random', 'v'];
+    app.saveView(SavedView(id: 'x', name: 'x', filter: SceneFilter()));
+    expect(app.dashboardLayout, ['w', 'section:random', 'v']);
+    app.deleteView('w');
+    expect(app.dashboardLayout, ['section:random', 'v']);
+    app.dashboardLayout = null;
+    expect(app.dashboardLayout, contains('x'));
   });
 }

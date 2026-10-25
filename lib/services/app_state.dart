@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/stash_client.dart';
 import '../api/stash_repository.dart';
+import '../models/home_section.dart';
 import '../models/scene_filter.dart';
 import 'app_lock.dart';
 import 'background_fetcher.dart';
@@ -28,6 +29,8 @@ class AppState extends ChangeNotifier {
   static const _kViews = 'saved_views';
   static const _kHomeView = 'home_view';
   static const _kHomeViews = 'home_views';
+  static const _kHomeLayout = 'home_layout';
+  static const _kDashboardLayout = 'dashboard_layout';
   static const _kWebViews = 'web_views';
   static const _kViewOrder = 'view_order';
   static const _kPip = 'popup_player';
@@ -180,43 +183,80 @@ class AppState extends ChangeNotifier {
     return raw.length - list.length;
   }
 
-  /// Ids of the views making up the home page. Before 1.9 only one view
-  /// could be chosen, under another key.
+  /// The custom home page as stored: view ids and [HomeSection] ids, in
+  /// order. Ids of views not loaded yet (web filters) are kept.
   List<String> get _homeIds {
-    final ids = _prefs.getStringList(_kHomeViews);
+    final ids = _prefs.getStringList(_kHomeLayout);
     if (ids != null) return ids;
-    final old = _prefs.getString(_kHomeView);
-    return old == null ? [] : [old];
-  }
-
-  void _storeHomeIds(List<String> ids) {
-    _prefs.setStringList(_kHomeViews, ids);
-    _prefs.remove(_kHomeView);
-  }
-
-  /// The views stacked on the home page, in the order of [allViews]. Empty
-  /// for the default dashboard.
-  List<SavedView> get homeViews {
-    final ids = _homeIds.toSet();
+    // Before 1.12: views only, in the order of the views list; before 1.9
+    // a single view, under another key.
+    final old = {
+      ...?_prefs.getStringList(_kHomeViews),
+      ?_prefs.getString(_kHomeView),
+    };
     return [
       for (final v in allViews)
-        if (ids.contains(v.id)) v,
+        if (old.contains(v.id)) v.id,
     ];
   }
 
+  void _storeHomeIds(List<String> ids) {
+    _prefs.setStringList(_kHomeLayout, ids);
+    // Replaced by the layout.
+    _prefs.remove(_kHomeViews);
+    _prefs.remove(_kHomeView);
+    notifyListeners();
+  }
+
+  /// Ids that still name a view or a section.
+  List<String> _existing(List<String> ids) {
+    final views = {for (final v in allViews) v.id};
+    return [
+      for (final id in ids)
+        if (views.contains(id) || HomeSection.fromId(id) != null) id,
+    ];
+  }
+
+  /// The custom home page: views and dashboard sections, stacked in this
+  /// order. Empty for the default dashboard.
+  List<String> get homeLayout => _existing(_homeIds);
+  set homeLayout(List<String> ids) => _storeHomeIds(ids);
+
+  /// The views of the custom home page.
+  List<SavedView> get homeViews => [for (final id in homeLayout) ?viewById(id)];
+
   bool isHomeView(String id) => _homeIds.contains(id);
 
-  /// Adds the view [id] to the home page, or removes it.
+  /// Adds the view [id] at the end of the home page, or removes it.
   void setHomeView(String id, bool onHome) {
     final ids = _homeIds..remove(id);
     if (onHome) ids.add(id);
     _storeHomeIds(ids);
-    notifyListeners();
   }
 
   /// Back to the default dashboard.
-  void clearHomeViews() {
-    _storeHomeIds([]);
+  void clearHomeViews() => _storeHomeIds([]);
+
+  /// Rows of the default dashboard, in order: sections and views. Until
+  /// chosen, the sections with the app's views after "Reprendre la
+  /// lecture", as before 1.12.
+  List<String> get dashboardLayout => _existing(
+    _prefs.getStringList(_kDashboardLayout) ??
+        [
+          HomeSection.stats.id,
+          HomeSection.resume.id,
+          for (final v in views) v.id,
+          for (final s in HomeSection.values.skip(2)) s.id,
+        ],
+  );
+
+  /// Null goes back to the default rows.
+  set dashboardLayout(List<String>? ids) {
+    if (ids == null) {
+      _prefs.remove(_kDashboardLayout);
+    } else {
+      _prefs.setStringList(_kDashboardLayout, ids);
+    }
     notifyListeners();
   }
 
@@ -271,6 +311,10 @@ class AppState extends ChangeNotifier {
 
   void deleteView(String id) {
     if (_homeIds.contains(id)) _storeHomeIds(_homeIds..remove(id));
+    final rows = _prefs.getStringList(_kDashboardLayout);
+    if (rows != null && rows.remove(id)) {
+      _prefs.setStringList(_kDashboardLayout, rows);
+    }
     _storeViews(views..removeWhere((v) => v.id == id));
   }
 

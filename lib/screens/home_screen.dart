@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
+import '../models/home_section.dart';
 import '../models/models.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
@@ -14,8 +15,9 @@ import '../widgets/paged_grid.dart';
 import '../widgets/view_list.dart';
 import 'browse_screens.dart';
 
-/// First tab: the saved views chosen as home page, or the dashboard.
-/// A single view fills the page (and names it); several are stacked.
+/// First tab: the custom home page (views and dashboard sections, chosen
+/// in Plus > Page d'accueil), or the dashboard. A single view fills the
+/// page (and names it); anything else is stacked.
 class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
 
@@ -33,15 +35,17 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
-    final views = context.select<AppState, List<SavedView>>((s) => s.homeViews);
-    if (views.isEmpty) return const HomeScreen();
+    final app = context.watch<AppState>();
+    final layout = app.homeLayout;
+    if (layout.isEmpty) return const HomeScreen();
+    final single = layout.length == 1 ? app.viewById(layout.single) : null;
     // Keyed on the views' content so that editing them reloads the page.
-    final key = ValueKey([for (final v in views) v.toJson()].toString());
+    final key = ValueKey(
+      [for (final id in layout) app.viewById(id)?.toJson() ?? id].toString(),
+    );
     return Scaffold(
       appBar: AppBar(
-        title: BrandTitle(
-          page: views.length == 1 ? views.single.name : 'Accueil',
-        ),
+        title: BrandTitle(page: single?.name ?? 'Accueil'),
         actions: [
           IconButton(
             tooltip: 'Accueil par défaut',
@@ -54,29 +58,39 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ],
       ),
-      body: views.length == 1
-          ? ViewBrowser(key: key, view: views.single)
-          : _StackedViews(key: key, views: views),
+      body: single != null
+          ? ViewBrowser(key: key, view: single)
+          : _StackedHome(key: key, ids: layout),
     );
   }
 }
 
-/// Several views one under the other, each with its first items and a
-/// button loading more.
-class _StackedViews extends StatefulWidget {
-  const _StackedViews({super.key, required this.views});
-  final List<SavedView> views;
+/// Views and dashboard sections one under the other; each view shows its
+/// first items and a button loading more.
+class _StackedHome extends StatefulWidget {
+  const _StackedHome({super.key, required this.ids});
+
+  /// View and [HomeSection] ids.
+  final List<String> ids;
 
   @override
-  State<_StackedViews> createState() => _StackedViewsState();
+  State<_StackedHome> createState() => _StackedHomeState();
 }
 
-class _StackedViewsState extends State<_StackedViews> {
+class _StackedHomeState extends State<_StackedHome> {
   int _refresh = 0;
 
   /// Sort chosen on the home page for each view (by id), until the app
   /// closes; the saved views keep their own.
   final _sorts = <String, (String, bool)>{};
+
+  Widget _viewSection(SavedView v) => _ViewSection(
+    // Reloaded from the first page when its sort changes.
+    key: ValueKey('${v.id}|${v.sort}|${v.descending}'),
+    view: v,
+    onSort: (sort, descending) =>
+        setState(() => _sorts[v.id] = (sort, descending)),
+  );
 
   /// [view] with the sort chosen here, if any.
   SavedView _sorted(SavedView view) {
@@ -89,6 +103,7 @@ class _StackedViewsState extends State<_StackedViews> {
 
   @override
   Widget build(BuildContext context) {
+    final app = context.read<AppState>();
     final version = context.select<AppState, int>((s) => s.dataVersion);
     return RefreshIndicator(
       onRefresh: () async => setState(() => _refresh++),
@@ -97,14 +112,14 @@ class _StackedViewsState extends State<_StackedViews> {
         key: ValueKey('$_refresh-$version'),
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          for (final v in widget.views.map(_sorted))
-            _ViewSection(
-              // Reloaded from the first page when its sort changes.
-              key: ValueKey('${v.id}|${v.sort}|${v.descending}'),
-              view: v,
-              onSort: (sort, descending) =>
-                  setState(() => _sorts[v.id] = (sort, descending)),
-            ),
+          for (final id in widget.ids)
+            if (HomeSection.fromId(id) case final section?)
+              SliverToBoxAdapter(
+                key: ValueKey(id),
+                child: HomeSectionRow(section),
+              )
+            else if (app.viewById(id) case final view?)
+              _viewSection(_sorted(view)),
           const SliverToBoxAdapter(child: SizedBox(height: 16)),
         ],
       ),
@@ -373,11 +388,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final repo = app.repo!;
-    final sceneWidth = (MediaQuery.sizeOf(context).shortestSide * 0.62).clamp(
-      200.0,
-      320.0,
-    );
-    final sceneHeight = SceneCard.heightFor(context, sceneWidth);
+    final sceneWidth = homeSceneWidth(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -387,85 +398,106 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async => setState(() => _refresh++),
-        child: ListView(
+        // A column rather than a lazy list: rows scrolled away are kept,
+        // not rebuilt (and reloaded, changing height) when coming back up.
+        child: SingleChildScrollView(
           // Rebuilt (and reloaded) on pull-to-refresh and after a scan.
           key: ValueKey('$_refresh-${app.dataVersion}'),
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 16),
-          children: [
-            _StatsRow(load: repo.stats),
-            _Row<Scene>(
-              title: 'Reprendre la lecture',
-              hideWhenEmpty: true,
-              load: () => repo.continueWatching(),
-              itemWidth: sceneWidth,
-              itemHeight: sceneHeight,
-              builder: (s) => SceneCard(scene: s),
-            ),
-            for (final view in app.views)
-              _viewRow(context, repo, view, sceneWidth),
-            _Row<Scene>(
-              title: 'Ajoutées récemment',
-              load: () async => (await repo.findScenes(
-                const ListQuery(perPage: 20, sort: 'created_at'),
-              )).items,
-              itemWidth: sceneWidth,
-              itemHeight: sceneHeight,
-              builder: (s) => SceneCard(scene: s),
-            ),
-            _Row<Scene>(
-              title: 'Sorties récentes',
-              load: () async => (await repo.findScenes(
-                const ListQuery(perPage: 20, sort: 'date'),
-              )).items,
-              itemWidth: sceneWidth,
-              itemHeight: sceneHeight,
-              builder: (s) => SceneCard(scene: s),
-            ),
-            _Row<Performer>(
-              title: 'Performeurs favoris',
-              hideWhenEmpty: true,
-              load: () async => (await repo.findPerformers(
-                const ListQuery(perPage: 20, sort: 'random'),
-                performerFilter: {'filter_favorites': true},
-              )).items,
-              itemWidth: 130,
-              aspectRatio: PerformerCard.aspectRatio,
-              builder: (p) => PerformerCard(performer: p),
-            ),
-            _Row<Scene>(
-              title: 'Au hasard',
-              load: () async => (await repo.findScenes(
-                const ListQuery(perPage: 20, sort: 'random'),
-              )).items,
-              itemWidth: sceneWidth,
-              itemHeight: sceneHeight,
-              builder: (s) => SceneCard(scene: s),
-            ),
-            _Row<Gallery>(
-              title: 'Galeries récentes',
-              hideWhenEmpty: true,
-              load: () async => (await repo.findGalleries(
-                const ListQuery(perPage: 20, sort: 'created_at'),
-              )).items,
-              itemWidth: 170,
-              aspectRatio: EntityCard.aspectRatio,
-              builder: (g) => GalleryCard(gallery: g),
-            ),
-          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final id in app.dashboardLayout)
+                if (HomeSection.fromId(id) case final section?)
+                  HomeSectionRow(section, key: ValueKey(id))
+                else if (app.viewById(id) case final view?)
+                  _viewRow(context, repo, view, sceneWidth),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _StatsRow extends StatelessWidget {
+/// Width of scene cards in the horizontal rows.
+double homeSceneWidth(BuildContext context) =>
+    (MediaQuery.sizeOf(context).shortestSide * 0.62).clamp(200.0, 320.0);
+
+/// A built-in section of the dashboard, also usable on the custom home.
+class HomeSectionRow extends StatelessWidget {
+  const HomeSectionRow(this.section, {super.key});
+  final HomeSection section;
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.read<AppState>().repo!;
+    final sceneWidth = homeSceneWidth(context);
+    final sceneHeight = SceneCard.heightFor(context, sceneWidth);
+    Widget scenes(Future<List<Scene>> Function() load, {bool hide = false}) =>
+        _Row<Scene>(
+          title: section.label,
+          hideWhenEmpty: hide,
+          load: load,
+          itemWidth: sceneWidth,
+          itemHeight: sceneHeight,
+          builder: (s) => SceneCard(scene: s),
+        );
+    Future<List<Scene>> Function() sorted(String sort) =>
+        () async =>
+            (await repo.findScenes(ListQuery(perPage: 20, sort: sort))).items;
+
+    return switch (section) {
+      HomeSection.stats => _StatsRow(load: repo.stats),
+      HomeSection.resume => scenes(repo.continueWatching, hide: true),
+      HomeSection.recent => scenes(sorted('created_at')),
+      HomeSection.releases => scenes(sorted('date')),
+      HomeSection.random => scenes(
+        sorted('random_${Random().nextInt(100000000)}'),
+      ),
+      HomeSection.favoritePerformers => _Row<Performer>(
+        title: section.label,
+        hideWhenEmpty: true,
+        load: () async => (await repo.findPerformers(
+          const ListQuery(perPage: 20, sort: 'random'),
+          performerFilter: {'filter_favorites': true},
+        )).items,
+        itemWidth: 130,
+        aspectRatio: PerformerCard.aspectRatio,
+        builder: (p) => PerformerCard(performer: p),
+      ),
+      HomeSection.galleries => _Row<Gallery>(
+        title: section.label,
+        hideWhenEmpty: true,
+        load: () async => (await repo.findGalleries(
+          const ListQuery(perPage: 20, sort: 'created_at'),
+        )).items,
+        itemWidth: 170,
+        aspectRatio: EntityCard.aspectRatio,
+        builder: (g) => GalleryCard(gallery: g),
+      ),
+    };
+  }
+}
+
+class _StatsRow extends StatefulWidget {
   const _StatsRow({required this.load});
   final Future<Stats> Function() load;
 
   @override
+  State<_StatsRow> createState() => _StatsRowState();
+}
+
+class _StatsRowState extends State<_StatsRow> {
+  // Loaded once: a new request on each rebuild changed the row's height
+  // while loading, moving the page.
+  late final Future<Stats> _future = widget.load();
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<Stats>(
-      future: load(),
+      future: _future,
       builder: (context, snap) {
         if (snap.hasError) {
           return Padding(

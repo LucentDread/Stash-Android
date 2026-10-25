@@ -6,6 +6,7 @@ import '../services/app_state.dart';
 import '../widgets/brand_title.dart';
 import 'app_screens.dart';
 import 'downloads_screen.dart';
+import 'home_layout_screen.dart';
 import 'settings_screen.dart';
 import 'setup_screen.dart';
 import 'tabs_screen.dart';
@@ -45,19 +46,30 @@ class MoreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final home = app.homeViews;
+    final home = app.homeLayout;
     final tabs = AppScreen.tabsOf(app);
     return Scaffold(
       appBar: AppBar(title: const BrandTitle(page: 'Plus')),
       body: ListView(
         children: [
           ListTile(
+            leading: const Icon(Icons.home_outlined),
+            title: const Text('Page d\'accueil'),
+            subtitle: Text(switch (home.length) {
+              0 => 'Accueil par défaut',
+              1 when app.homeViews.length == 1 => app.homeViews.single.name,
+              1 => 'Personnalisé : 1 élément',
+              final n => 'Personnalisé : $n éléments',
+            }),
+            onTap: () => _push(context, const HomeLayoutScreen()),
+          ),
+          ListTile(
             leading: const Icon(Icons.bookmarks),
             title: const Text('Vues enregistrées'),
-            subtitle: Text(switch (home.length) {
-              0 => 'Accueil : par défaut',
-              1 => 'Accueil : ${home.single.name}',
-              final n => 'Accueil : $n vues',
+            subtitle: Text(switch (app.allViews.length) {
+              0 => 'Aucune',
+              1 => '1 vue',
+              final n => '$n vues',
             }),
             onTap: () => _push(context, const ViewsScreen()),
           ),

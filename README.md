@@ -57,6 +57,10 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   rechargent sans changer de navigation.
 - **Logo du studio** en filigrane sur les miniatures et la fiche scène,
   quand le studio en a un.
+- **Page d'accueil** (**Plus > Page d'accueil**) : l'accueil personnalisé
+  empile des vues et des sections de l'accueil par défaut (« Reprendre la
+  lecture »…) dans l'ordre voulu ; les lignes de l'accueil par défaut se
+  choisissent et s'ordonnent aussi.
 - **Onglets** au choix (**Plus > Affichage > Onglets**) : jusqu'à 4 écrans
   dans la barre du bas, dans l'ordre voulu ; les autres sont dans **Plus**.
 - **Groupes** : onglet dédié, fiche avec jaquettes et scènes dans l'ordre du

@@ -5,6 +5,7 @@ import '../models/scene_filter.dart';
 import '../services/app_state.dart';
 import '../widgets/view_list.dart';
 import 'browse_screens.dart';
+import 'home_layout_screen.dart';
 import 'view_edit_screen.dart';
 
 /// Lists the views made in the app and the filters saved in Stash's web
@@ -112,7 +113,7 @@ class _ViewsScreenState extends State<ViewsScreen> {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final views = app.allViews;
-    final defaultHome = app.homeViews.isEmpty;
+    final defaultHome = app.homeLayout.isEmpty;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -195,17 +196,17 @@ class _ViewsScreenState extends State<ViewsScreen> {
                 ),
               ),
             ListTile(
-              leading: Icon(
-                defaultHome ? Icons.dashboard : Icons.dashboard_outlined,
-                color: defaultHome ? theme.colorScheme.primary : null,
+              leading: const Icon(Icons.home_outlined),
+              title: const Text('Composer les pages d\'accueil'),
+              subtitle: Text(
+                defaultHome
+                    ? 'Accueil : par défaut'
+                    : 'Accueil : ${app.homeLayout.length} élément(s)',
               ),
-              title: const Text('Accueil par défaut'),
-              subtitle: const Text(
-                'Page d\'accueil standard, où les vues de l\'app apparaissent '
-                'en lignes',
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const HomeLayoutScreen()),
               ),
-              selected: defaultHome,
-              onTap: app.clearHomeViews,
             ),
             if (views.isEmpty)
               const ListTile(
@@ -216,8 +217,10 @@ class _ViewsScreenState extends State<ViewsScreen> {
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
-                  'L\'icône maison ajoute une vue à la page d\'accueil. '
-                  'Plusieurs vues s\'y empilent, dans l\'ordre de cette liste.',
+                  'L\'icône maison ajoute une vue à la fin de la page '
+                  'd\'accueil, ou l\'en retire. L\'ordre, les sections et '
+                  'l\'accueil par défaut se règlent dans « Composer les '
+                  'pages d\'accueil ».',
                 ),
               ),
               ReorderableListView(

@@ -398,7 +398,8 @@ void main() {
       a.setHomeView('web:3', true);
       expect(
         [for (final v in a.homeViews) v.name],
-        ['Favorites du web', 'Locale'],
+        ['Locale', 'Favorites du web'],
+        reason: 'the order they were added to the home page',
       );
 
       final page = await a.repo!.findForView(

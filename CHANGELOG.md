@@ -1,5 +1,16 @@
 # Historique des versions
 
+## 1.12.0
+- Correction : sur l'accueil par défaut, après être descendu en bas de la
+  page, on ne pouvait plus remonter tout en haut (la page redescendait
+  toute seule). Les lignes ne sont plus rechargées en remontant.
+- Plus > Page d'accueil : composition des deux pages d'accueil.
+  - Accueil : vues et sections de l'accueil par défaut (« Reprendre la
+    lecture », statistiques, ajoutées récemment…) empilées dans l'ordre
+    choisi.
+  - Accueil par défaut : choix et ordre de ses lignes, vues comprises
+    (y compris les filtres web).
+
 ## 1.11.0
 - Plus > Affichage > Onglets : choix et ordre des écrans de la barre du bas
   (jusqu'à 4, plus « Plus ») parmi Accueil, Scènes, Groupes, Performeurs,
