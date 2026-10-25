@@ -31,23 +31,20 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
 
 ## Installation
 
-### APK précompilé
-
-Chaque push déclenche le workflow GitHub Actions *Build APK* : téléchargez
-l'artefact `stash-android-apk` depuis l'onglet **Actions** du dépôt et
-installez l'APK correspondant à votre appareil (en général
-`app-arm64-v8a-release.apk`).
-
-### Compiler soi-même
+### Compiler l'APK
 
 Prérequis : [Flutter](https://docs.flutter.dev/get-started/install) (stable)
-et le SDK Android.
+et le SDK Android (le plus simple : installer Android Studio, puis lancer
+`flutter doctor --android-licenses`).
 
 ```bash
 flutter pub get
 flutter run                 # sur un appareil connecté
-flutter build apk --release # APK dans build/app/outputs/flutter-apk/
+flutter build apk --release --split-per-abi
 ```
+
+Les APK se trouvent dans `build/app/outputs/flutter-apk/` ; pour la plupart
+des téléphones récents, installez `app-arm64-v8a-release.apk`.
 
 ## Configuration
 
