@@ -109,4 +109,53 @@ void main() {
       },
     });
   });
+
+  test(
+    'createRef retries with less data when Stash rejects the input',
+    () async {
+      final inputs = <Map<String, dynamic>>[];
+      final repo = StashRepository(
+        StashClient(
+          serverUrl: 'http://host',
+          client: MockClient((req) async {
+            final body = jsonDecode(req.body) as Map<String, dynamic>;
+            final input =
+                (body['variables'] as Map)['input'] as Map<String, dynamic>;
+            inputs.add(input);
+            if (input.length > 1) {
+              return http.Response(
+                jsonEncode({
+                  'errors': [
+                    {'message': 'unknown field'},
+                  ],
+                }),
+                200,
+              );
+            }
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'tagCreate': {'id': '42', 'name': input['name']},
+                },
+              }),
+              200,
+            );
+          }),
+        ),
+      );
+      final tag = await repo.createRef(RefKind.tags, {
+        'name': 'Nouveau',
+        'description': 'd',
+        'stash_ids': [
+          {'endpoint': 'e', 'stash_id': 's'},
+        ],
+      });
+      expect(tag.id, '42');
+      expect(inputs.map((i) => i.keys.toSet()), [
+        {'name', 'description', 'stash_ids'},
+        {'name', 'description'},
+        {'name'},
+      ]);
+    },
+  );
 }

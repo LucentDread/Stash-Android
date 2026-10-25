@@ -1,5 +1,11 @@
 # Historique des versions
 
+## 1.8.0
+- Scraping : les performeurs, tags, studios et groupes absents de Stash
+  peuvent être créés puis liés depuis l'écran de comparaison (cochés par
+  défaut), avec les informations du scraper (photo, dates, liens…) et le
+  lien vers la stash-box d'origine.
+
 ## 1.7.1
 - Correction : avec le tri aléatoire, des cartes revenaient en double après
   le chargement de la page suivante (et d'autres n'apparaissaient jamais).

@@ -36,8 +36,8 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
 - **Scraping** depuis l'écran de modification (bouton loupe) des scènes,
   performeurs, groupes, galeries et studios : stash-box et scrapers
   configurés sur le serveur (selon ce que chacun gère), ou une URL. Un écran de
-  comparaison permet de choisir les valeurs reprises ; seuls les
-  performeurs, tags, studios et groupes existant dans Stash sont liés.
+  comparaison permet de choisir les valeurs reprises ; les performeurs,
+  tags, studios et groupes absents de Stash peuvent y être créés puis liés.
 - **Hors ligne** : téléchargement d'une scène, d'un groupe (toutes ses
   scènes) ou d'une galerie (bouton dans leur fiche), en arrière-plan avec
   notification. Les copies se trouvent dans **Plus > Téléchargements** et se

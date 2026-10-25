@@ -71,7 +71,9 @@ void main() {
       expect(byLabel['Couverture']!.checked, isFalse);
       // Alice is already linked: only Bob is proposed.
       expect(byLabel['Performeurs']!.proposed, '+ Bob');
-      expect(missing, ['Performeurs : Inconnue']);
+      expect(missing.map((m) => '${m.label} : ${m.proposed}'), [
+        'Performeurs : Inconnue',
+      ]);
     });
 
     test('applying the checked items fills the form', () {
@@ -151,7 +153,7 @@ void main() {
       'studio': {'stored_id': null, 'name': 'Nouveau studio'},
     });
     final (items, missing) = mergeItems(scraped, fields);
-    expect(missing, ['Studio : Nouveau studio']);
+    expect(missing.single.proposed, 'Nouveau studio');
     expect(items.singleWhere((i) => i.label == 'Durée').proposed, '90 min');
     _applyChecked(items);
     expect(_changes(fields), {'duration': 5400, 'director': 'Réal'});
@@ -195,6 +197,112 @@ void main() {
       'parent_id': '9',
       'urls': ['https://studio'],
       'details': 'À propos',
+    });
+  });
+
+  group('creating missing items', () {
+    final scene = Scene.fromJson({
+      'id': '1',
+      'paths': <String, dynamic>{},
+      'performers': <dynamic>[],
+      'tags': [
+        {'id': '9', 'name': 'Plage'},
+      ],
+    });
+    final scraped = toScraped(ScrapeKind.scene, {
+      'studio': {
+        'stored_id': null,
+        'name': 'Nouveau studio',
+        'urls': ['https://studio'],
+        'remote_site_id': 'st-1',
+        'parent': {'stored_id': '3', 'name': 'Réseau'},
+      },
+      'performers': [
+        {
+          'stored_id': null,
+          'name': 'Chloé',
+          'gender': 'Female',
+          'height': '165 cm',
+          'aliases': 'Clo, C.',
+          'images': ['https://img/chloe.jpg'],
+          'remote_site_id': 'p-1',
+        },
+      ],
+      'tags': [
+        {'stored_id': null, 'name': 'Nouveau tag', 'remote_site_id': 't-1'},
+        {'stored_id': '9', 'name': 'Plage'},
+      ],
+    });
+
+    test('created with the scraped data and linked', () async {
+      final fields = sceneFields(scene);
+      final created = <(RefKind, Map<String, dynamic>)>[];
+      var next = 100;
+      final (items, missing) = mergeItems(
+        scraped,
+        fields,
+        create: (kind, input) async {
+          created.add((kind, input));
+          return TagRef(id: '${next++}', name: input['name'] as String);
+        },
+        stashBoxEndpoint: 'https://stashdb.org/graphql',
+      );
+      expect(items, isEmpty);
+      expect(missing.map((m) => m.proposed), [
+        'Nouveau studio',
+        'Chloé',
+        'Nouveau tag',
+      ]);
+      expect(missing.every((m) => m.checked), isTrue);
+
+      for (final m in missing) {
+        await m.apply();
+      }
+      expect(created.map((c) => c.$1), [
+        RefKind.studios,
+        RefKind.performers,
+        RefKind.tags,
+      ]);
+      expect(created[1].$2, {
+        'name': 'Chloé',
+        'gender': 'FEMALE',
+        'height_cm': 165,
+        'alias_list': ['Clo', 'C.'],
+        'image': 'https://img/chloe.jpg',
+        'stash_ids': [
+          {'endpoint': 'https://stashdb.org/graphql', 'stash_id': 'p-1'},
+        ],
+      });
+      expect(created[0].$2['parent_id'], '3');
+      expect(created[0].$2['urls'], ['https://studio']);
+
+      expect(_field<RefEditField>(fields, 'studio_id').value?.id, '100');
+      expect(
+        _field<RefsEditField>(fields, 'performer_ids').items.single.id,
+        '101',
+      );
+      expect(_field<RefsEditField>(fields, 'tag_ids').items.map((t) => t.id), [
+        '9',
+        '102',
+      ]);
+    });
+
+    test('nothing is linked to a stash-box outside stash-box results', () {
+      final input = createInput(
+        RefKind.tags,
+        ScrapedRef(name: 'T', raw: {'name': 'T', 'remote_site_id': 'x'}),
+      );
+      expect(input, {'name': 'T'});
+      final unknownGender = createInput(
+        RefKind.performers,
+        ScrapedRef(name: 'P', raw: {'name': 'P', 'gender': 'Robot'}),
+      );
+      expect(unknownGender, {'name': 'P'});
+    });
+
+    test('without a creator nothing is ticked', () {
+      final (_, missing) = mergeItems(scraped, sceneFields(scene));
+      expect(missing.any((m) => m.checked), isFalse);
     });
   });
 }

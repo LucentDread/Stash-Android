@@ -659,9 +659,12 @@ class Job {
 /// Performer, tag, studio or group proposed by a scraper. [storedId] is
 /// set when Stash matched it to an existing entry.
 class ScrapedRef {
-  ScrapedRef({this.storedId, required this.name});
+  ScrapedRef({this.storedId, required this.name, this.raw = const {}});
   final String? storedId;
   final String name;
+
+  /// Everything the scraper returned for it (used to create it in Stash).
+  final Map<String, dynamic> raw;
 
   TagRef? get ref =>
       storedId == null ? null : TagRef(id: storedId!, name: name);
@@ -669,5 +672,6 @@ class ScrapedRef {
   factory ScrapedRef.fromJson(Map<String, dynamic> j) => ScrapedRef(
     storedId: j['stored_id'] as String?,
     name: j['name'] as String? ?? '',
+    raw: j,
   );
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -20,7 +22,9 @@ class MergeItem {
   final String label;
   final String? current;
   final String proposed;
-  final VoidCallback apply;
+
+  /// Puts the value in the form. Creations first create the item in Stash.
+  final FutureOr<void> Function() apply;
   bool checked;
 
   /// New cover (data URI or URL) to preview.
@@ -150,11 +154,131 @@ Scraped toScraped(ScrapeKind kind, Map<String, dynamic> j) {
   return Scraped(j, values);
 }
 
-/// Changes a scraped record would bring to the edit [fields], plus the
-/// names it found that do not exist in Stash (which cannot be linked).
-(List<MergeItem>, List<String>) mergeItems(Scraped r, List<EditField> fields) {
+/// Creates an item in Stash and returns it (see StashRepository.createRef).
+typedef RefCreator = Future<TagRef> Function(
+  RefKind kind,
+  Map<String, dynamic> input,
+);
+
+/// Input to create a scraped [ref] of [kind] in Stash, with its stash-box
+/// link when it comes from [stashBoxEndpoint].
+Map<String, dynamic> createInput(
+  RefKind kind,
+  ScrapedRef ref, {
+  String? stashBoxEndpoint,
+}) {
+  final j = ref.raw;
+  String? text(String key) {
+    final v = (j[key] as String?)?.trim();
+    return v == null || v.isEmpty ? null : v;
+  }
+
+  final urls = _strings(j['urls']);
+  final remoteId = text('remote_site_id');
+  final stashIds = stashBoxEndpoint != null && remoteId != null
+      ? [
+          {'endpoint': stashBoxEndpoint, 'stash_id': remoteId},
+        ]
+      : null;
+  return switch (kind) {
+    RefKind.performers => {
+      'name': ref.name,
+      'disambiguation': ?text('disambiguation'),
+      if (_gender(j['gender']) case final g? when _genders.contains(g))
+        'gender': g,
+      if (urls.isNotEmpty) 'urls': urls,
+      'birthdate': ?text('birthdate'),
+      'death_date': ?text('death_date'),
+      'country': ?text('country'),
+      'ethnicity': ?text('ethnicity'),
+      'hair_color': ?text('hair_color'),
+      'eye_color': ?text('eye_color'),
+      'height_cm': ?_number(j['height']),
+      'weight': ?_number(j['weight']),
+      'measurements': ?text('measurements'),
+      'fake_tits': ?text('fake_tits'),
+      'tattoos': ?text('tattoos'),
+      'piercings': ?text('piercings'),
+      'details': ?text('details'),
+      if (_aliases(j['aliases']) case final a when a.isNotEmpty)
+        'alias_list': a,
+      'image': ?_strings(j['images']).firstOrNull,
+      'stash_ids': ?stashIds,
+    },
+    RefKind.tags => {'name': ref.name, 'stash_ids': ?stashIds},
+    RefKind.studios => {
+      'name': ref.name,
+      if (urls.isNotEmpty) 'urls': urls,
+      'image': ?text('image'),
+      'parent_id': ?_ref(j['parent'])?.storedId,
+      'stash_ids': ?stashIds,
+    },
+    RefKind.groups => {
+      'name': ref.name,
+      'aliases': ?text('aliases'),
+      'date': ?text('date'),
+      'director': ?text('director'),
+      'synopsis': ?text('synopsis'),
+      if (urls.isNotEmpty) 'urls': urls,
+      'duration': ?TimeEditField.parse(text('duration') ?? '')?.round(),
+      'front_image': ?text('front_image'),
+      'back_image': ?text('back_image'),
+    },
+  };
+}
+
+const _genders = {
+  'MALE',
+  'FEMALE',
+  'TRANSGENDER_MALE',
+  'TRANSGENDER_FEMALE',
+  'INTERSEX',
+  'NON_BINARY',
+};
+
+List<String> _aliases(Object? v) => [
+  for (final a in (v as String? ?? '').split(','))
+    if (a.trim().isNotEmpty) a.trim(),
+];
+
+/// Changes a scraped record would bring to the edit [fields], and the
+/// items it names that do not exist in Stash: those can be created with
+/// [create] and then linked (unticked ones are left out).
+(List<MergeItem>, List<MergeItem>) mergeItems(
+  Scraped r,
+  List<EditField> fields, {
+  RefCreator? create,
+  String? stashBoxEndpoint,
+}) {
   final items = <MergeItem>[];
-  final missing = <String>[];
+  final missing = <MergeItem>[];
+
+  /// Proposes to create [s] in Stash, then [link] it in the form.
+  void missingRef(
+    RefKind kind,
+    String label,
+    ScrapedRef s,
+    void Function(TagRef created) link,
+  ) {
+    if (missing.any((m) => m.label == label && m.proposed == s.name)) return;
+    missing.add(
+      MergeItem(
+        label: label,
+        current: null,
+        proposed: s.name,
+        checked: create != null,
+        apply: () async {
+          if (create == null) return;
+          link(
+            await create(
+              kind,
+              createInput(kind, s, stashBoxEndpoint: stashBoxEndpoint),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   for (final f in fields) {
     final v = r.values[f.key];
@@ -214,7 +338,7 @@ Scraped toScraped(ScrapeKind kind, Map<String, dynamic> j) {
       case RefEditField() when v is ScrapedRef:
         final ref = v.ref;
         if (ref == null) {
-          missing.add('${f.label} : ${v.name}');
+          missingRef(f.kind, f.label, v, (created) => f.value = created);
         } else if (ref.id != f.value?.id) {
           items.add(
             MergeItem(
@@ -232,10 +356,15 @@ Scraped toScraped(ScrapeKind kind, Map<String, dynamic> j) {
           for (final s in v)
             if (s.ref case final ref? when !have.contains(ref.id)) ref,
         ];
-        missing.addAll([
-          for (final s in v)
-            if (s.storedId == null) '${f.label} : ${s.name}',
-        ]);
+        for (final s in v) {
+          if (s.storedId == null) {
+            missingRef(f.kind, f.label, s, (created) {
+              if (!f.items.any((i) => i.id == created.id)) {
+                f.items.add(created);
+              }
+            });
+          }
+        }
         if (add.isEmpty) continue;
         items.add(
           MergeItem(
@@ -383,7 +512,12 @@ Future<bool> scrapeIntoFields(
     }
   }
 
-  final (items, missing) = mergeItems(picked!, fields);
+  final (items, missing) = mergeItems(
+    picked!,
+    fields,
+    create: repo.createRef,
+    stashBoxEndpoint: choice is ScrapeSource ? choice.stashBoxEndpoint : null,
+  );
   if (items.isEmpty && missing.isEmpty) {
     messenger.showSnackBar(
       const SnackBar(content: Text('Rien de nouveau dans ce résultat')),
@@ -590,18 +724,52 @@ class _ResultsScreen extends StatelessWidget {
 class _MergeScreen extends StatefulWidget {
   const _MergeScreen({required this.items, required this.missing});
   final List<MergeItem> items;
-  final List<String> missing;
+
+  /// Items to create in Stash before linking them.
+  final List<MergeItem> missing;
 
   @override
   State<_MergeScreen> createState() => _MergeScreenState();
 }
 
 class _MergeScreenState extends State<_MergeScreen> {
-  void _apply() {
+  bool _busy = false;
+
+  Future<void> _apply() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     for (final i in widget.items) {
-      if (i.checked) i.apply();
+      if (i.checked) await i.apply();
     }
-    Navigator.pop(context, widget.items.any((i) => i.checked));
+    // Creations hit the server: show progress and keep going on failure.
+    final toCreate = widget.missing.where((m) => m.checked).toList();
+    final failed = <String>[];
+    if (toCreate.isNotEmpty) {
+      setState(() => _busy = true);
+      for (final m in toCreate) {
+        try {
+          await m.apply();
+        } catch (e) {
+          failed.add('${m.proposed} ($e)');
+        }
+      }
+    }
+    final created = toCreate.length - failed.length;
+    if (created > 0 || failed.isNotEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          duration: Duration(seconds: failed.isEmpty ? 4 : 10),
+          content: Text(
+            [
+              if (created > 0)
+                '$created élément${created > 1 ? 's' : ''} créé${created > 1 ? 's' : ''} dans Stash',
+              if (failed.isNotEmpty) 'Échec : ${failed.join(', ')}',
+            ].join('\n'),
+          ),
+        ),
+      );
+    }
+    navigator.pop(widget.items.any((i) => i.checked) || created > 0);
   }
 
   @override
@@ -617,8 +785,16 @@ class _MergeScreenState extends State<_MergeScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilledButton(
-              onPressed: widget.items.isEmpty ? null : _apply,
-              child: const Text('Appliquer'),
+              onPressed:
+                  _busy || (widget.items.isEmpty && widget.missing.isEmpty)
+                  ? null
+                  : _apply,
+              child: _busy
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Appliquer'),
             ),
           ),
         ],
@@ -630,7 +806,8 @@ class _MergeScreenState extends State<_MergeScreen> {
             padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
               'Cochez les valeurs à reprendre. Elles remplissent le formulaire '
-              'de modification : rien n\'est enregistré avant « Enregistrer ».',
+              'de modification et ne sont enregistrées qu\'avec « Enregistrer » '
+              '(sauf les éléments à créer, plus bas).',
             ),
           ),
           for (final i in widget.items)
@@ -665,20 +842,30 @@ class _MergeScreenState extends State<_MergeScreen> {
           if (widget.missing.isNotEmpty) ...[
             const Divider(),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Text(
-                'Absents de Stash (non liés)',
+                'Absents de Stash',
                 style: theme.textTheme.titleSmall,
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
               child: Text(
-                'Créez-les dans Stash pour pouvoir les lier : '
-                '${widget.missing.join(' · ')}',
+                'Les éléments cochés sont créés dans Stash (avec les '
+                'informations du scraper) dès « Appliquer », puis liés.',
                 style: dim,
               ),
             ),
+            for (final m in widget.missing)
+              CheckboxListTile(
+                value: m.checked,
+                onChanged: _busy
+                    ? null
+                    : (v) => setState(() => m.checked = v ?? false),
+                secondary: const Icon(Icons.add_circle_outline),
+                title: Text(m.proposed),
+                subtitle: Text('Créer et lier · ${m.label}'),
+              ),
           ],
         ],
       ),

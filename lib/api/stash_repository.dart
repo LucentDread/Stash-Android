@@ -235,41 +235,55 @@ class ScrapeSource {
 
 const _scrapedRef = 'stored_id name';
 
+// Linked items come with enough data to create them when Stash lacks them.
+const _scrapedTag = 'stored_id name remote_site_id';
+const _scrapedStudio =
+    'stored_id name urls image remote_site_id parent { $_scrapedRef }';
+const _scrapedPerformer = '''
+  stored_id name disambiguation gender urls birthdate death_date ethnicity
+  country eye_color hair_color height weight measurements fake_tits tattoos
+  piercings aliases details images remote_site_id
+''';
+const _scrapedGroup = '''
+  stored_id name aliases duration date director urls synopsis front_image
+  back_image
+''';
+
 /// Scraped fields requested for each kind, plus the GraphQL names used to
 /// scrape it.
 const _scrapeFields = <ScrapeKind, String>{
   ScrapeKind.scene:
       '''
     title code details director date image urls remote_site_id
-    studio { $_scrapedRef }
-    performers { $_scrapedRef }
-    tags { $_scrapedRef }
-    groups { $_scrapedRef }
+    studio { $_scrapedStudio }
+    performers { $_scrapedPerformer }
+    tags { $_scrapedTag }
+    groups { $_scrapedGroup }
   ''',
   ScrapeKind.performer:
       '''
     name disambiguation gender urls birthdate death_date ethnicity country
     eye_color hair_color height weight measurements fake_tits tattoos
     piercings aliases details images remote_site_id
-    tags { $_scrapedRef }
+    tags { $_scrapedTag }
   ''',
   ScrapeKind.group:
       '''
     name aliases duration date director urls synopsis front_image back_image
-    studio { $_scrapedRef }
-    tags { $_scrapedRef }
+    studio { $_scrapedStudio }
+    tags { $_scrapedTag }
   ''',
   ScrapeKind.gallery:
       '''
     title code details photographer urls date
-    studio { $_scrapedRef }
-    performers { $_scrapedRef }
-    tags { $_scrapedRef }
+    studio { $_scrapedStudio }
+    performers { $_scrapedPerformer }
+    tags { $_scrapedTag }
   ''',
   ScrapeKind.studio:
       '''
     stored_id name urls image details
-    parent { $_scrapedRef }
+    parent { $_scrapedStudio }
   ''',
 };
 
@@ -827,6 +841,40 @@ class StashRepository {
       variables: {'url': url},
     );
     return d[field] as Map<String, dynamic>?;
+  }
+
+  /// Creates a performer, tag, studio or group and returns it. When Stash
+  /// rejects the input (an older server without `stash_ids` on tags, a
+  /// value in an unexpected format…), it retries with less: without the
+  /// stash-box link, then with the name alone.
+  Future<TagRef> createRef(RefKind kind, Map<String, dynamic> input) async {
+    final (mutation, type) = switch (kind) {
+      RefKind.performers => ('performerCreate', 'PerformerCreateInput'),
+      RefKind.tags => ('tagCreate', 'TagCreateInput'),
+      RefKind.studios => ('studioCreate', 'StudioCreateInput'),
+      RefKind.groups => ('groupCreate', 'GroupCreateInput'),
+    };
+    final attempts = [
+      input,
+      if (input.containsKey('stash_ids')) {...input}..remove('stash_ids'),
+      if (input.length > 1) {'name': input['name']},
+    ];
+    StashException? error;
+    for (final attempt in attempts) {
+      try {
+        final d = await client.query(
+          '''
+          mutation Create(\$input: $type!) {
+            $mutation(input: \$input) { id name }
+          }''',
+          variables: {'input': attempt},
+        );
+        return TagRef.fromJson(d[mutation] as Map<String, dynamic>);
+      } on StashException catch (e) {
+        error = e;
+      }
+    }
+    throw error!;
   }
 
   /// Name search used by the filter pickers. Without a query, returns the
