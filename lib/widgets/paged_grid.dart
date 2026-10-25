@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -30,6 +31,7 @@ class PagedGrid<T> extends StatefulWidget {
     this.header,
     this.reloadKey,
     this.onQueryChanged,
+    this.itemKey,
   });
 
   final PageFetcher<T> fetch;
@@ -60,6 +62,10 @@ class PagedGrid<T> extends StatefulWidget {
   /// Called when the search text or the sort changes.
   final void Function(String q, String? sort, bool descending)? onQueryChanged;
 
+  /// Identity of an item: an item already shown is not added again when
+  /// the server data shifts between two pages.
+  final Object Function(T item)? itemKey;
+
   @override
   State<PagedGrid<T>> createState() => _PagedGridState<T>();
 }
@@ -68,6 +74,13 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
   static const _perPage = 40;
 
   final _items = <T>[];
+  final _keys = <Object>{};
+
+  /// Seed for the "random" sort. Plain `random` reshuffles on every request,
+  /// so pages would overlap; `random_<seed>` keeps one order for all pages
+  /// (as the web UI does). A new seed is drawn when the list reloads.
+  int _seed = _newSeed();
+  static int _newSeed() => Random().nextInt(100000000);
   final _scroll = ScrollController();
   late final _search = TextEditingController(text: widget.initialQuery);
   Timer? _debounce;
@@ -120,6 +133,8 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
     _generation++;
     setState(() {
       _items.clear();
+      _keys.clear();
+      _seed = _newSeed();
       _count = 0;
       _page = 0;
       _error = null;
@@ -138,7 +153,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
           q: _search.text.trim(),
           page: _page + 1,
           perPage: _perPage,
-          sort: _sort,
+          sort: _sort == 'random' ? 'random_$_seed' : _sort,
           descending: _descending,
         ),
       );
@@ -146,7 +161,12 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
       setState(() {
         _page++;
         _count = result.count;
-        _items.addAll(result.items);
+        final key = widget.itemKey;
+        _items.addAll(
+          key == null
+              ? result.items
+              : result.items.where((item) => _keys.add(key(item))),
+        );
         _loading = false;
       });
       // Fill the screen if the first page did not make it scrollable.

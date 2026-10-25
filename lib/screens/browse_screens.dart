@@ -137,6 +137,7 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
     final count = _filter.activeCount;
     final locked = widget.view != null;
     return PagedGrid<Scene>(
+      itemKey: (item) => item.id,
       fetch: (q) => repo.findScenes(
         q,
         entity: widget.entity,
@@ -236,6 +237,7 @@ class _SaveViewDialogState extends State<_SaveViewDialog> {
 Widget performerGrid(BuildContext context, {EntityFilter? entity}) {
   final repo = context.read<AppState>().repo!;
   return PagedGrid<Performer>(
+    itemKey: (item) => item.id,
     fetch: (q) => repo.findPerformers(q, entity: entity),
     sortOptions: SortOptions.performers,
     initialSort: entity == null ? 'name' : 'scenes_count',
@@ -250,6 +252,7 @@ Widget performerGrid(BuildContext context, {EntityFilter? entity}) {
 Widget galleryGrid(BuildContext context, {EntityFilter? entity}) {
   final repo = context.read<AppState>().repo!;
   return PagedGrid<Gallery>(
+    itemKey: (item) => item.id,
     fetch: (q) => repo.findGalleries(q, entity: entity),
     sortOptions: SortOptions.galleries,
     maxCrossAxisExtent: 220,
@@ -262,6 +265,7 @@ Widget galleryGrid(BuildContext context, {EntityFilter? entity}) {
 Widget markerGrid(BuildContext context, {EntityFilter? entity}) {
   final repo = context.read<AppState>().repo!;
   return PagedGrid<SceneMarker>(
+    itemKey: (item) => item.id,
     fetch: (q) => repo.findMarkers(q, entity: entity),
     sortOptions: SortOptions.markers,
     maxCrossAxisExtent: sceneExtent(context),
@@ -325,6 +329,7 @@ class GroupsScreen extends StatelessWidget {
     return _BrowseScaffold(
       title: 'Groupes',
       child: PagedGrid<Group>(
+        itemKey: (item) => item.id,
         fetch: repo.findGroups,
         sortOptions: SortOptions.groups,
         initialDescending: false,
@@ -358,6 +363,7 @@ class StudiosScreen extends StatelessWidget {
     return _BrowseScaffold(
       title: 'Studios',
       child: PagedGrid<Studio>(
+        itemKey: (item) => item.id,
         fetch: repo.findStudios,
         sortOptions: SortOptions.studios,
         initialDescending: false,
@@ -379,6 +385,7 @@ class TagsScreen extends StatelessWidget {
     return _BrowseScaffold(
       title: 'Tags',
       child: PagedGrid<Tag>(
+        itemKey: (item) => item.id,
         fetch: repo.findTags,
         sortOptions: SortOptions.tags,
         initialDescending: false,

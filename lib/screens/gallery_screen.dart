@@ -41,6 +41,7 @@ class GalleryScreen extends StatelessWidget {
           ],
         ),
         body: PagedGrid<StashImage>(
+          itemKey: (item) => item.id,
           showToolbar: false,
           fetch: (q) => repo.findImages(
             // Gallery order as defined in Stash (by path/title).
