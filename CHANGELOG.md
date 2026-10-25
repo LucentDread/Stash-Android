@@ -1,5 +1,20 @@
 # Historique des versions
 
+## 1.9.0
+- Accueil : plusieurs vues enregistrées peuvent former la page d'accueil,
+  empilées dans l'ordre de Plus > Vues enregistrées (bouton « Afficher
+  plus » par vue). Avec une seule vue, la page prend son nom.
+- Lecteur popup : la vidéo en cours continue dans une petite fenêtre quand
+  on quitte l'application, avec un bouton lecture/pause.
+- Aperçu noir dans les applications récentes.
+- Mot de passe optionnel à l'ouverture de l'application, redemandé après
+  un temps réglable en arrière-plan.
+- Plus > Application > Paramètres : lecteur popup, confidentialité, mot de
+  passe et mises à jour.
+- Mises à jour : les nouvelles versions publiées sur GitHub sont proposées
+  au démarrage, avec leurs nouveautés, puis téléchargées et installées
+  depuis l'application.
+
 ## 1.8.0
 - Scraping : les performeurs, tags, studios et groupes absents de Stash
   peuvent être créés puis liés depuis l'écran de comparaison (cochés par

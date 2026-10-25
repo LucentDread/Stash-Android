@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/app_state.dart';
 import '../services/scan_tracker.dart';
+import '../services/system_bridge.dart';
 
 /// Shows [child] with the scan progress banner under it while a library
 /// scan runs (and briefly after it ends). Placed above the navigator so it
@@ -14,10 +15,12 @@ class ScanBannerHost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scan = context.read<AppState>().scan;
+    final pip = SystemBridge.instance.inPip;
     return ListenableBuilder(
-      listenable: scan,
+      listenable: Listenable.merge([scan, pip]),
       builder: (context, _) {
-        if (scan.phase == ScanPhase.idle) return child;
+        // Nothing but the video in the small window.
+        if (scan.phase == ScanPhase.idle || pip.value) return child;
         return Column(
           children: [
             Expanded(

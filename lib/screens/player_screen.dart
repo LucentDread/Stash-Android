@@ -11,6 +11,7 @@ import '../api/stash_client.dart';
 import '../api/stash_repository.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
+import '../services/system_bridge.dart';
 import '../utils/format.dart';
 import '../widgets/async_view.dart';
 import 'edit/editors.dart';
@@ -73,16 +74,54 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Duration _lastPosition = Duration.zero;
   bool _playCounted = false;
 
+  final _bridge = SystemBridge.instance;
+
+  /// Last state sent for the small window, to send only changes.
+  String? _pipState;
+
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
+    _bridge.inPip.addListener(_onPipChanged);
+    _bridge.onPipPlayPause = _togglePlay;
+    // Closing the small window stops the video, as YouTube does.
+    _bridge.onPipClosed = () => _controller?.pause();
     _init();
+  }
+
+  void _onPipChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Lets the video continue in a small window when leaving the app, while
+  /// it plays and the setting allows it.
+  void _updatePip() {
+    final c = _controller;
+    final enabled = _app.popupPlayer && c != null && c.value.isInitialized;
+    final playing = c?.value.isPlaying ?? false;
+    final size = c?.value.size ?? Size.zero;
+    final w = size.width.round(), h = size.height.round();
+    final state = '$enabled $playing $w $h';
+    if (state == _pipState) return;
+    _pipState = state;
+    _bridge.setPip(
+      enabled: enabled,
+      playing: playing,
+      width: w > 0 ? w : 16,
+      height: h > 0 ? h : 9,
+    );
   }
 
   @override
   void dispose() {
+    _bridge.inPip.removeListener(_onPipChanged);
+    if (_bridge.onPipPlayPause == _togglePlay) {
+      _bridge.onPipPlayPause = null;
+      _bridge.onPipClosed = null;
+    }
+    _bridge.setPip(enabled: false);
     _hideTimer?.cancel();
     _activityTimer?.cancel();
     _saveActivity(finalSave: true);
@@ -242,6 +281,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       }
     }
     _lastPosition = pos;
+    _updatePip();
     if (c.value.hasError && _error == null) {
       setState(() => _error = c.value.errorDescription ?? 'Erreur de lecture');
     }
@@ -431,6 +471,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   Widget build(BuildContext context) {
     final c = _controller;
+    if (_bridge.inPip.value) {
+      // Small window: the video alone.
+      return ColoredBox(
+        color: Colors.black,
+        child: Center(
+          child: c == null
+              ? null
+              : AspectRatio(
+                  aspectRatio: c.value.aspectRatio,
+                  child: VideoPlayer(c),
+                ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: Colors.black,
       body: _error != null && c == null

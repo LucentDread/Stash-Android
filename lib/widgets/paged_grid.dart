@@ -10,6 +10,19 @@ import 'data_refresh.dart';
 
 typedef PageFetcher<T> = Future<ResultPage<T>> Function(ListQuery query);
 
+/// Space between grid tiles, and around the grid.
+const gridSpacing = 8.0;
+
+/// Tile width as computed by [SliverGridDelegateWithMaxCrossAxisExtent]
+/// with [gridSpacing], for a grid [width] without its padding.
+double gridTileWidth(double width, double maxCrossAxisExtent) {
+  final count = (width / (maxCrossAxisExtent + gridSpacing)).ceil().clamp(
+    1,
+    1000,
+  );
+  return (width - gridSpacing * (count - 1)) / count;
+}
+
 /// Infinite-scrolling grid backed by a paginated Stash query, with an
 /// optional search field and sort selector.
 class PagedGrid<T> extends StatefulWidget {
@@ -279,18 +292,11 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
     );
   }
 
-  static const _spacing = 8.0;
-  static const _padding = 8.0;
+  static const _spacing = gridSpacing;
+  static const _padding = gridSpacing;
 
-  /// Tile width as computed by [SliverGridDelegateWithMaxCrossAxisExtent].
-  double _tileWidth(double gridWidth) {
-    final width = gridWidth - 2 * _padding;
-    final count = (width / (widget.maxCrossAxisExtent + _spacing)).ceil().clamp(
-      1,
-      1000,
-    );
-    return (width - _spacing * (count - 1)) / count;
-  }
+  double _tileWidth(double gridWidth) =>
+      gridTileWidth(gridWidth - 2 * _padding, widget.maxCrossAxisExtent);
 
   Widget _body(BuildContext context) {
     if (_items.isEmpty) {

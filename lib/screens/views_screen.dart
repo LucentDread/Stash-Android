@@ -6,7 +6,8 @@ import '../services/app_state.dart';
 import 'browse_screens.dart';
 import 'view_edit_screen.dart';
 
-/// Lists saved views: open, choose the home page, rename, reorder, delete.
+/// Lists saved views: open, choose those on the home page, edit, reorder,
+/// delete.
 class ViewsScreen extends StatelessWidget {
   const ViewsScreen({super.key});
 
@@ -39,7 +40,7 @@ class ViewsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final views = app.views;
-    final homeId = app.homeView?.id;
+    final defaultHome = app.homeViews.isEmpty;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Vues enregistrées')),
@@ -60,28 +61,30 @@ class ViewsScreen extends StatelessWidget {
               'de modifier son filtre.',
             ),
           ),
-          RadioGroup<String?>(
-            groupValue: homeId,
-            onChanged: (id) => app.homeViewId = id,
-            child: Column(
-              children: [
-                const RadioListTile<String?>(
-                  value: null,
-                  title: Text('Accueil par défaut'),
-                  subtitle: Text('Page d\'accueil standard'),
-                ),
-                if (views.isEmpty)
-                  const ListTile(
-                    leading: Icon(Icons.info_outline),
-                    title: Text('Aucune vue enregistrée'),
-                  ),
-              ],
+          ListTile(
+            leading: Icon(
+              defaultHome ? Icons.dashboard : Icons.dashboard_outlined,
+              color: defaultHome ? Theme.of(context).colorScheme.primary : null,
             ),
+            title: const Text('Accueil par défaut'),
+            subtitle: const Text(
+              'Page d\'accueil standard, où les vues apparaissent en lignes',
+            ),
+            selected: defaultHome,
+            onTap: app.clearHomeViews,
           ),
+          if (views.isEmpty)
+            const ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('Aucune vue enregistrée'),
+            ),
           if (views.isNotEmpty) ...[
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text('Page d\'accueil ou ligne de l\'accueil par défaut'),
+              child: Text(
+                'L\'icône maison ajoute une vue à la page d\'accueil. '
+                'Plusieurs vues s\'y empilent, dans l\'ordre de cette liste.',
+              ),
             ),
             ReorderableListView(
               shrinkWrap: true,
@@ -92,19 +95,21 @@ class ViewsScreen extends StatelessWidget {
                 for (var i = 0; i < views.length; i++)
                   ListTile(
                     key: ValueKey(views[i].id),
-                    leading: IconButton(
-                      tooltip: 'Page d\'accueil',
-                      icon: Icon(
-                        views[i].id == homeId
-                            ? Icons.home
-                            : Icons.home_outlined,
-                      ),
-                      color: views[i].id == homeId
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                      onPressed: () => app.homeViewId = views[i].id == homeId
-                          ? null
-                          : views[i].id,
+                    leading: Builder(
+                      builder: (context) {
+                        final onHome = app.isHomeView(views[i].id);
+                        return IconButton(
+                          tooltip: onHome
+                              ? 'Retirer de la page d\'accueil'
+                              : 'Ajouter à la page d\'accueil',
+                          icon: Icon(onHome ? Icons.home : Icons.home_outlined),
+                          color: onHome
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                          onPressed: () =>
+                              app.setHomeView(views[i].id, !onHome),
+                        );
+                      },
                     ),
                     title: Text(views[i].name),
                     subtitle: Text(

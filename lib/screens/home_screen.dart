@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,19 +10,25 @@ import '../services/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/cards.dart';
+import '../widgets/paged_grid.dart';
 import 'browse_screens.dart';
 
-/// First tab: the saved view chosen as home page, or the dashboard.
+/// First tab: the saved views chosen as home page, or the dashboard.
+/// A single view fills the page (and names it); several are stacked.
 class HomeTab extends StatelessWidget {
   const HomeTab({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final view = context.select<AppState, SavedView?>((s) => s.homeView);
-    if (view == null) return const HomeScreen();
+    final views = context.select<AppState, List<SavedView>>((s) => s.homeViews);
+    if (views.isEmpty) return const HomeScreen();
+    // Keyed on the views' content so that editing them reloads the page.
+    final key = ValueKey([for (final v in views) v.toJson()].toString());
     return Scaffold(
       appBar: AppBar(
-        title: BrandTitle(page: view.name),
+        title: BrandTitle(
+          page: views.length == 1 ? views.single.name : 'Accueil',
+        ),
         actions: [
           IconButton(
             tooltip: 'Accueil par défaut',
@@ -33,8 +41,202 @@ class HomeTab extends StatelessWidget {
           ),
         ],
       ),
-      // Keyed so that editing the view from elsewhere reloads it.
-      body: ScenesBrowser(key: ValueKey(view.toJson().toString()), view: view),
+      body: views.length == 1
+          ? ScenesBrowser(key: key, view: views.single)
+          : _StackedViews(key: key, views: views),
+    );
+  }
+}
+
+/// Several views one under the other, each with its first scenes and a
+/// button loading more.
+class _StackedViews extends StatefulWidget {
+  const _StackedViews({super.key, required this.views});
+  final List<SavedView> views;
+
+  @override
+  State<_StackedViews> createState() => _StackedViewsState();
+}
+
+class _StackedViewsState extends State<_StackedViews> {
+  int _refresh = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final version = context.select<AppState, int>((s) => s.dataVersion);
+    return RefreshIndicator(
+      onRefresh: () async => setState(() => _refresh++),
+      child: CustomScrollView(
+        // Rebuilt (and reloaded) on pull-to-refresh and after a scan.
+        key: ValueKey('$_refresh-$version'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          for (final v in widget.views) _ViewSection(view: v),
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ViewSection extends StatefulWidget {
+  const _ViewSection({required this.view});
+  final SavedView view;
+
+  @override
+  State<_ViewSection> createState() => _ViewSectionState();
+}
+
+class _ViewSectionState extends State<_ViewSection> {
+  /// Divisible by 1 to 4 columns, so that full rows are shown.
+  static const _perPage = 12;
+
+  final _items = <Scene>[];
+  final _ids = <String>{};
+  int _count = 0;
+  int _page = 0;
+  bool _loading = false;
+  Object? _error;
+
+  /// Same order on every page for the random sort (see PagedGrid).
+  final _seed = Random().nextInt(100000000);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading) return;
+    final view = widget.view;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final result = await context.read<AppState>().repo!.findScenes(
+        ListQuery(
+          q: view.query,
+          page: _page + 1,
+          perPage: _perPage,
+          sort: view.sort == 'random' ? 'random_$_seed' : view.sort,
+          descending: view.descending,
+        ),
+        sceneFilter: view.filter.toGraphQL(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _page++;
+        _count = result.count;
+        _items.addAll(result.items.where((s) => _ids.add(s.id)));
+        _loading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e;
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final extent = sceneExtent(context);
+    final width = MediaQuery.sizeOf(context).width - 2 * gridSpacing;
+    final tileHeight = SceneCard.heightFor(
+      context,
+      gridTileWidth(width, extent),
+    );
+    final more = _page > 0 && _items.length < _count;
+
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 4, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      text: widget.view.name,
+                      children: [
+                        if (_page > 0)
+                          TextSpan(
+                            text: '  $_count',
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                    style: theme.textTheme.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ViewScreen(view: widget.view),
+                    ),
+                  ),
+                  child: const Text('Voir tout'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_items.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.all(gridSpacing),
+            sliver: SliverGrid.builder(
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: extent,
+                mainAxisExtent: tileHeight,
+                mainAxisSpacing: gridSpacing,
+                crossAxisSpacing: gridSpacing,
+              ),
+              itemCount: _items.length,
+              itemBuilder: (_, i) => SceneCard(scene: _items[i]),
+            ),
+          ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Center(
+              child: _error != null
+                  ? TextButton.icon(
+                      onPressed: _loadMore,
+                      icon: const Icon(Icons.refresh),
+                      label: Text('Erreur : $_error', maxLines: 2),
+                    )
+                  : _loading
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(),
+                    )
+                  : _page > 0 && _items.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Aucune scène'),
+                    )
+                  : more
+                  ? OutlinedButton.icon(
+                      onPressed: _loadMore,
+                      icon: const Icon(Icons.expand_more),
+                      label: Text('Afficher plus (${_count - _items.length})'),
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        const SliverToBoxAdapter(child: Divider(height: 24)),
+      ],
     );
   }
 }

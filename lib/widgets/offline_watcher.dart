@@ -63,7 +63,8 @@ class _OfflineWatcherState extends State<OfflineWatcher> {
 
   Future<void> _showOfflineDialog() async {
     final navigator = widget.navigatorKey.currentState;
-    if (navigator == null || _dialogShown) return;
+    // Not above the lock screen: its button would open the app.
+    if (navigator == null || _dialogShown || _app.lock.locked) return;
     _dialogShown = true;
     final openDownloads = await showDialog<bool>(
       context: navigator.overlay!.context,

@@ -20,8 +20,9 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   sous-groupes), note minimale, résolution minimale, durée, déjà vues ou
   jamais vues, organisées, marqueurs, performeur favori.
 - **Vues enregistrées** : une recherche + filtres + tri peut être enregistrée
-  (icône signet) et choisie comme page d'accueil ; l'accueil par défaut reste
-  accessible par le bouton en haut à droite. Les vues apparaissent aussi en
+  (icône signet) et ajoutée à la page d'accueil (icône maison) ; plusieurs
+  vues s'y empilent, une seule donne son nom à la page. L'accueil par défaut
+  reste accessible par le bouton en haut à droite. Les vues apparaissent aussi en
   lignes sur l'accueil par défaut. Leur filtre n'est modifiable que depuis
   **Plus > Vues enregistrées** (création, modification, ordre, suppression).
   Exemple : « Groupes : Vide » affiche toutes les scènes hors groupe.
@@ -58,6 +59,15 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   de lecture, choix du flux (direct ou transcodé HLS/DASH/MP4) avec bascule
   automatique sur un flux transcodé si le codec n'est pas supporté.
   La position et le temps de visionnage sont renvoyés à Stash.
+  En quittant l'application pendant la lecture, la vidéo continue dans une
+  petite fenêtre (lecteur popup, désactivable).
+- **Paramètres** (**Plus > Application**) : lecteur popup, aperçu noir dans
+  les applications récentes, mot de passe à l'ouverture (création,
+  modification, suppression, délai avant de le redemander), mises à jour.
+- **Mises à jour** : au démarrage, l'application consulte les releases
+  GitHub du projet ; une nouvelle version est proposée avec ses nouveautés,
+  téléchargée puis installée (Android demande confirmation, et la première
+  fois l'autorisation d'installer des applications).
 - **Performeurs**, **studios**, **tags**, **galeries** (dans **Plus**) : fiches détaillées avec leurs
   scènes, galeries, marqueurs ; ajout/retrait des favoris (performeurs).
 - **Galeries** : grille d'images et visionneuse plein écran (glisser,

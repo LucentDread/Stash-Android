@@ -6,6 +6,7 @@ import '../services/app_state.dart';
 import '../widgets/brand_title.dart';
 import 'browse_screens.dart';
 import 'downloads_screen.dart';
+import 'settings_screen.dart';
 import 'setup_screen.dart';
 import 'views_screen.dart';
 
@@ -43,6 +44,7 @@ class MoreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
+    final home = app.homeViews;
     return Scaffold(
       appBar: AppBar(title: const BrandTitle(page: 'Plus')),
       body: ListView(
@@ -50,11 +52,11 @@ class MoreScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.bookmarks),
             title: const Text('Vues enregistrées'),
-            subtitle: Text(
-              app.homeView == null
-                  ? 'Accueil : par défaut'
-                  : 'Accueil : ${app.homeView!.name}',
-            ),
+            subtitle: Text(switch (home.length) {
+              0 => 'Accueil : par défaut',
+              1 => 'Accueil : ${home.single.name}',
+              final n => 'Accueil : $n vues',
+            }),
             onTap: () => _push(context, const ViewsScreen()),
           ),
           const Divider(),
@@ -176,6 +178,12 @@ class MoreScreen extends StatelessWidget {
                     : (snap.hasError ? '—' : '…'),
               ),
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings_outlined),
+            title: const Text('Paramètres'),
+            subtitle: const Text('Lecteur popup, mot de passe, mises à jour'),
+            onTap: () => _push(context, const SettingsScreen()),
           ),
         ],
       ),

@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_shell.dart';
 import 'screens/setup_screen.dart';
 import 'services/app_state.dart';
+import 'services/system_bridge.dart';
+import 'widgets/app_gate.dart';
 import 'widgets/offline_watcher.dart';
 import 'widgets/scan_banner.dart';
 
@@ -14,6 +16,8 @@ Future<void> main() async {
   final app = AppState(prefs);
   // Picks up downloads that progressed while the app was closed.
   app.downloads.init().ignore();
+  // Also applied natively at startup; this follows later changes.
+  SystemBridge.instance.setSecure(app.hideInRecents).ignore();
   runApp(ChangeNotifierProvider.value(value: app, child: const StashApp()));
 }
 
@@ -36,10 +40,13 @@ class StashApp extends StatelessWidget {
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: messengerKey,
       // Scan progress and the offline popup work above every page.
-      builder: (context, child) => OfflineWatcher(
+      builder: (context, child) => AppGate(
         navigatorKey: navigatorKey,
-        messengerKey: messengerKey,
-        child: ScanBannerHost(child: child!),
+        child: OfflineWatcher(
+          navigatorKey: navigatorKey,
+          messengerKey: messengerKey,
+          child: ScanBannerHost(child: child!),
+        ),
       ),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: _seed),

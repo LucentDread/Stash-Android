@@ -56,6 +56,11 @@ android {
     }
 }
 
+dependencies {
+    // FileProvider (update installation) and Lifecycle in MainActivity.
+    implementation("androidx.core:core-ktx:1.13.1")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17

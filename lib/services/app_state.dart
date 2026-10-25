@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api/stash_client.dart';
 import '../api/stash_repository.dart';
 import '../models/scene_filter.dart';
+import 'app_lock.dart';
 import 'background_fetcher.dart';
 import 'downloads.dart';
 import 'scan_tracker.dart';
@@ -26,6 +27,10 @@ class AppState extends ChangeNotifier {
   static const _kPreview = 'play_previews';
   static const _kViews = 'saved_views';
   static const _kHomeView = 'home_view';
+  static const _kHomeViews = 'home_views';
+  static const _kPip = 'popup_player';
+  static const _kHideRecents = 'hide_recents';
+  static const _kAutoUpdate = 'auto_update';
 
   final SharedPreferences _prefs;
   StashRepository? _repo;
@@ -34,6 +39,9 @@ class AppState extends ChangeNotifier {
   late final ScanTracker scan = ScanTracker(this);
 
   final FileFetcher? _fetcher;
+
+  /// Optional password protecting the app.
+  late final AppLock lock = AppLock(_prefs);
 
   /// Scenes, groups and galleries kept for offline viewing.
   late final DownloadManager downloads = DownloadManager(
@@ -126,17 +134,70 @@ class AppState extends ChangeNotifier {
   SavedView? viewById(String? id) =>
       id == null ? null : views.where((v) => v.id == id).firstOrNull;
 
-  /// The view shown as home page, or null for the default dashboard.
-  SavedView? get homeView => viewById(_prefs.getString(_kHomeView));
+  /// Ids of the views making up the home page. Before 1.9 only one view
+  /// could be chosen, under another key.
+  List<String> get _homeIds {
+    final ids = _prefs.getStringList(_kHomeViews);
+    if (ids != null) return ids;
+    final old = _prefs.getString(_kHomeView);
+    return old == null ? [] : [old];
+  }
 
-  set homeViewId(String? id) {
-    if (id == null) {
-      _prefs.remove(_kHomeView);
-    } else {
-      _prefs.setString(_kHomeView, id);
-    }
+  void _storeHomeIds(List<String> ids) {
+    _prefs.setStringList(_kHomeViews, ids);
+    _prefs.remove(_kHomeView);
+  }
+
+  /// The views stacked on the home page, in the order of [views]. Empty for
+  /// the default dashboard.
+  List<SavedView> get homeViews {
+    final ids = _homeIds.toSet();
+    return [
+      for (final v in views)
+        if (ids.contains(v.id)) v,
+    ];
+  }
+
+  bool isHomeView(String id) => _homeIds.contains(id);
+
+  /// Adds the view [id] to the home page, or removes it.
+  void setHomeView(String id, bool onHome) {
+    final ids = _homeIds..remove(id);
+    if (onHome) ids.add(id);
+    _storeHomeIds(ids);
     notifyListeners();
   }
+
+  /// Back to the default dashboard.
+  void clearHomeViews() {
+    _storeHomeIds([]);
+    notifyListeners();
+  }
+
+  /// Whether a playing video continues in a small window (picture in
+  /// picture) when leaving the app.
+  bool get popupPlayer => _prefs.getBool(_kPip) ?? true;
+  set popupPlayer(bool v) {
+    _prefs.setBool(_kPip, v);
+    notifyListeners();
+  }
+
+  /// Black preview in the recent apps screen (also blocks screenshots).
+  /// Read natively too, at startup (MainActivity).
+  bool get hideInRecents => _prefs.getBool(_kHideRecents) ?? true;
+  set hideInRecents(bool v) {
+    _prefs.setBool(_kHideRecents, v);
+    notifyListeners();
+  }
+
+  /// Whether a new release is looked for when the app starts.
+  bool get autoUpdate => _prefs.getBool(_kAutoUpdate) ?? true;
+  set autoUpdate(bool v) {
+    _prefs.setBool(_kAutoUpdate, v);
+    notifyListeners();
+  }
+
+  SharedPreferences get prefs => _prefs;
 
   /// Adds [view], or replaces the view with the same id.
   void saveView(SavedView view) {
@@ -151,7 +212,7 @@ class AppState extends ChangeNotifier {
   }
 
   void deleteView(String id) {
-    if (_prefs.getString(_kHomeView) == id) _prefs.remove(_kHomeView);
+    if (_homeIds.contains(id)) _storeHomeIds(_homeIds..remove(id));
     _storeViews(views..removeWhere((v) => v.id == id));
   }
 

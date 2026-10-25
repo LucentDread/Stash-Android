@@ -75,9 +75,9 @@ void main() {
       sort: 'date',
     );
     app.saveView(view);
-    app.homeViewId = 'v1';
-    expect(app.homeView?.name, 'Hors groupe');
-    expect(app.homeView?.filter.toGraphQL(), {
+    app.setHomeView('v1', true);
+    expect(app.homeViews.single.name, 'Hors groupe');
+    expect(app.homeViews.single.filter.toGraphQL(), {
       'groups': {'modifier': 'IS_NULL'},
     });
 
@@ -86,6 +86,31 @@ void main() {
 
     app.deleteView('v1');
     expect(app.views, isEmpty);
-    expect(app.homeView, isNull);
+    expect(app.homeViews, isEmpty);
+  });
+
+  test('several home views, in the order of the views list', () async {
+    // Before 1.9, a single home view under "home_view".
+    SharedPreferences.setMockInitialValues({'home_view': 'b'});
+    final app = AppState(await SharedPreferences.getInstance());
+    for (final id in ['a', 'b', 'c']) {
+      app.saveView(SavedView(id: id, name: id, filter: SceneFilter()));
+    }
+    expect([for (final v in app.homeViews) v.id], ['b']);
+
+    app.setHomeView('c', true);
+    app.setHomeView('a', true);
+    expect([for (final v in app.homeViews) v.id], ['a', 'b', 'c']);
+    app.reorderViews(2, 0);
+    expect([for (final v in app.homeViews) v.id], ['c', 'a', 'b']);
+
+    app.setHomeView('a', false);
+    app.deleteView('b');
+    expect([for (final v in app.homeViews) v.id], ['c']);
+    expect(app.isHomeView('c'), isTrue);
+
+    app.clearHomeViews();
+    expect(app.homeViews, isEmpty);
+    expect(app.prefs.getString('home_view'), isNull);
   });
 }

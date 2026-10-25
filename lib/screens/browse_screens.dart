@@ -98,7 +98,7 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
       name: name,
     );
     app.saveView(view);
-    if (asHome) app.homeViewId = view.id;
+    if (asHome) app.setHomeView(view.id, true);
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('Vue « $name » enregistrée')));
   }
@@ -217,7 +217,7 @@ class _SaveViewDialogState extends State<_SaveViewDialog> {
           ),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Utiliser comme page d\'accueil'),
+            title: const Text('Afficher sur la page d\'accueil'),
             value: _asHome,
             onChanged: (v) => setState(() => _asHome = v ?? false),
           ),
