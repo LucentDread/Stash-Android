@@ -12,6 +12,7 @@ class NetImage extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.placeholderIcon = Icons.image_outlined,
     this.alignment = Alignment.center,
+    this.showPlaceholder = true,
   });
 
   final String? url;
@@ -19,19 +20,25 @@ class NetImage extends StatelessWidget {
   final IconData placeholderIcon;
   final Alignment alignment;
 
+  /// When false, nothing is drawn while loading or on error.
+  final bool showPlaceholder;
+
   @override
   Widget build(BuildContext context) {
     final client = context.read<AppState>().client;
     final resolved = client?.mediaUrl(url);
-    final placeholder = ColoredBox(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      child: Center(
-        child: Icon(
-          placeholderIcon,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
+    if (!showPlaceholder && resolved == null) return const SizedBox.shrink();
+    final Widget placeholder = !showPlaceholder
+        ? const SizedBox.shrink()
+        : ColoredBox(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: Center(
+              child: Icon(
+                placeholderIcon,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          );
     if (resolved == null) return placeholder;
     return CachedNetworkImage(
       imageUrl: resolved,

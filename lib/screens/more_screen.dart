@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/app_state.dart';
+import '../widgets/brand_title.dart';
 import 'browse_screens.dart';
 import 'setup_screen.dart';
 import 'views_screen.dart';
@@ -16,7 +17,7 @@ class MoreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     return Scaffold(
-      appBar: AppBar(title: const Text('Plus')),
+      appBar: AppBar(title: const BrandTitle(page: 'Plus')),
       body: ListView(
         children: [
           ListTile(

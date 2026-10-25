@@ -13,12 +13,22 @@ class ResultPage<T> {
 }
 
 class TagRef {
-  TagRef({required this.id, required this.name});
+  TagRef({required this.id, required this.name, this.imagePath});
   final String id;
   final String name;
 
-  factory TagRef.fromJson(Map<String, dynamic> j) =>
-      TagRef(id: j['id'] as String, name: j['name'] as String? ?? '');
+  /// Image URL when the query asked for it (studio logos on scene cards).
+  final String? imagePath;
+
+  /// Stash returns a generated default image URL when there is none.
+  bool get hasImage =>
+      imagePath != null && !imagePath!.contains('default=true');
+
+  factory TagRef.fromJson(Map<String, dynamic> j) => TagRef(
+    id: j['id'] as String,
+    name: j['name'] as String? ?? '',
+    imagePath: j['image_path'] as String?,
+  );
 }
 
 class VideoFile {
@@ -137,6 +147,7 @@ class Scene {
     this.markers = const [],
     this.galleries = const [],
     this.groups = const [],
+    this.groupIndexes = const {},
   });
 
   final String id;
@@ -163,6 +174,9 @@ class Scene {
   final List<SceneMarker> markers;
   final List<TagRef> galleries;
   final List<TagRef> groups;
+
+  /// Scene number within each group, by group id.
+  final Map<String, int?> groupIndexes;
 
   VideoFile? get file => files.isEmpty ? null : files.first;
   double get duration => file?.duration ?? 0;
@@ -214,6 +228,10 @@ class Scene {
         j['groups'],
         (g) => TagRef.fromJson(g['group'] as Map<String, dynamic>),
       ),
+      groupIndexes: {
+        for (final g in (j['groups'] as List? ?? const []))
+          ((g as Map)['group'] as Map)['id'] as String: _int(g['scene_index']),
+      },
     );
   }
 }
@@ -231,6 +249,11 @@ class Performer {
     this.measurements,
     this.hairColor,
     this.eyeColor,
+    this.deathDate,
+    this.weight,
+    this.fakeTits,
+    this.tattoos,
+    this.piercings,
     this.details,
     this.imagePath,
     this.favorite = false,
@@ -255,6 +278,11 @@ class Performer {
   final String? measurements;
   final String? hairColor;
   final String? eyeColor;
+  final String? deathDate;
+  final int? weight;
+  final String? fakeTits;
+  final String? tattoos;
+  final String? piercings;
   final String? details;
   final String? imagePath;
   final bool favorite;
@@ -279,6 +307,11 @@ class Performer {
     measurements: j['measurements'] as String?,
     hairColor: j['hair_color'] as String?,
     eyeColor: j['eye_color'] as String?,
+    deathDate: j['death_date'] as String?,
+    weight: _int(j['weight']),
+    fakeTits: j['fake_tits'] as String?,
+    tattoos: j['tattoos'] as String?,
+    piercings: j['piercings'] as String?,
     details: j['details'] as String?,
     imagePath: j['image_path'] as String?,
     favorite: j['favorite'] as bool? ?? false,
@@ -301,6 +334,7 @@ class Studio {
     this.details,
     this.parent,
     this.favorite = false,
+    this.rating100,
     this.sceneCount = 0,
     this.imageCount = 0,
     this.galleryCount = 0,
@@ -313,6 +347,7 @@ class Studio {
   final String? details;
   final TagRef? parent;
   final bool favorite;
+  final int? rating100;
   final int sceneCount;
   final int imageCount;
   final int galleryCount;
@@ -327,6 +362,7 @@ class Studio {
       details: j['details'] as String?,
       parent: parent == null ? null : TagRef.fromJson(parent),
       favorite: j['favorite'] as bool? ?? false,
+      rating100: _int(j['rating100']),
       sceneCount: _int(j['scene_count']) ?? 0,
       imageCount: _int(j['image_count']) ?? 0,
       galleryCount: _int(j['gallery_count']) ?? 0,
@@ -348,6 +384,7 @@ class Tag {
     this.imageCount = 0,
     this.galleryCount = 0,
     this.aliases = const [],
+    this.parents = const [],
   });
 
   final String id;
@@ -361,6 +398,7 @@ class Tag {
   final int imageCount;
   final int galleryCount;
   final List<String> aliases;
+  final List<TagRef> parents;
 
   factory Tag.fromJson(Map<String, dynamic> j) => Tag(
     id: j['id'] as String,
@@ -374,6 +412,7 @@ class Tag {
     imageCount: _int(j['image_count']) ?? 0,
     galleryCount: _int(j['gallery_count']) ?? 0,
     aliases: (j['aliases'] as List?)?.cast<String>() ?? const [],
+    parents: _list(j['parents'], TagRef.fromJson),
   );
 }
 

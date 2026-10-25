@@ -127,7 +127,7 @@ const _sceneCard =
   resume_time organized
   files { path duration width height size video_codec frame_rate }
   paths { screenshot preview }
-  studio { $_tagRef }
+  studio { $_tagRef image_path }
   performers { $_tagRef }
   tags { $_tagRef }
 ''';
@@ -145,7 +145,7 @@ const _sceneFull =
   performers { $_tagRef }
   tags { $_tagRef }
   galleries { id title }
-  groups { group { $_tagRef } }
+  groups { group { $_tagRef } scene_index }
   scene_markers {
     id title seconds end_seconds screenshot primary_tag { $_tagRef }
   }
@@ -160,19 +160,22 @@ const _performerFull =
     '''
   id name disambiguation gender birthdate country ethnicity height_cm
   measurements hair_color eye_color details image_path favorite rating100
+  death_date weight fake_tits tattoos piercings
   scene_count image_count gallery_count alias_list urls tags { $_tagRef }
 ''';
 
 const _studioFields =
     '''
-  id name image_path details favorite urls
+  id name image_path details favorite rating100 urls
   scene_count image_count gallery_count
   parent_studio { $_tagRef }
 ''';
 
-const _tagFields = '''
+const _tagFields =
+    '''
   id name description image_path favorite aliases
   scene_count scene_marker_count performer_count image_count gallery_count
+  parents { $_tagRef }
 ''';
 
 const _galleryFields =
@@ -196,6 +199,9 @@ const _groupFields =
 
 /// Kinds of entities that can be picked in the scene filter.
 enum RefKind { performers, tags, studios, groups }
+
+/// Kinds of entities that can be edited.
+enum EditKind { scene, performer, studio, tag, group }
 
 const _imageFields = '''
   id title
@@ -482,6 +488,31 @@ class StashRepository {
     final g = d['findGroup'];
     if (g == null) throw StashException('Groupe introuvable');
     return Group.fromJson(g as Map<String, dynamic>);
+  }
+
+  /// Applies a partial update. Only the keys present in [input] are
+  /// changed by Stash; the others keep their current value.
+  Future<void> update(
+    EditKind kind,
+    String id,
+    Map<String, dynamic> input,
+  ) async {
+    final (mutation, type) = switch (kind) {
+      EditKind.scene => ('sceneUpdate', 'SceneUpdateInput'),
+      EditKind.performer => ('performerUpdate', 'PerformerUpdateInput'),
+      EditKind.studio => ('studioUpdate', 'StudioUpdateInput'),
+      EditKind.tag => ('tagUpdate', 'TagUpdateInput'),
+      EditKind.group => ('groupUpdate', 'GroupUpdateInput'),
+    };
+    await client.query(
+      '''
+      mutation Update(\$input: $type!) {
+        $mutation(input: \$input) { id }
+      }''',
+      variables: {
+        'input': {'id': id, ...input},
+      },
+    );
   }
 
   /// Name search used by the filter pickers. Without a query, returns the

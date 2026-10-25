@@ -10,6 +10,7 @@ import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/net_image.dart';
 import 'browse_screens.dart';
+import 'edit/editors.dart';
 
 class PerformerScreen extends StatelessWidget {
   const PerformerScreen({super.key, required this.performerId});
@@ -20,14 +21,20 @@ class PerformerScreen extends StatelessWidget {
     final repo = context.read<AppState>().repo!;
     return AsyncView<Performer>(
       load: () => repo.findPerformer(performerId),
-      builder: (context, p, _) {
+      builder: (context, p, reload) {
         final entity = EntityFilter.performer(p.id);
         return DefaultTabController(
           length: 4,
           child: Scaffold(
             appBar: AppBar(
               title: Text(p.name),
-              actions: [_FavoriteButton(performer: p)],
+              actions: [
+                _FavoriteButton(key: ValueKey(p.favorite), performer: p),
+                EditButton(
+                  onEdit: () => editPerformer(context, p),
+                  onSaved: reload,
+                ),
+              ],
               bottom: TabBar(
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
@@ -55,7 +62,7 @@ class PerformerScreen extends StatelessWidget {
 }
 
 class _FavoriteButton extends StatefulWidget {
-  const _FavoriteButton({required this.performer});
+  const _FavoriteButton({super.key, required this.performer});
   final Performer performer;
 
   @override

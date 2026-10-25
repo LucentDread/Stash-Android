@@ -9,6 +9,7 @@ import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/net_image.dart';
 import 'browse_screens.dart';
+import 'edit/editors.dart';
 
 class StudioScreen extends StatelessWidget {
   const StudioScreen({super.key, required this.studioId});
@@ -19,7 +20,7 @@ class StudioScreen extends StatelessWidget {
     final repo = context.read<AppState>().repo!;
     return AsyncView<Studio>(
       load: () => repo.findStudio(studioId),
-      builder: (context, s, _) {
+      builder: (context, s, reload) {
         final entity = EntityFilter.studio(s.id);
         return DefaultTabController(
           length: 4,
@@ -27,6 +28,12 @@ class StudioScreen extends StatelessWidget {
           child: Scaffold(
             appBar: AppBar(
               title: Text(s.name),
+              actions: [
+                EditButton(
+                  onEdit: () => editStudio(context, s),
+                  onSaved: reload,
+                ),
+              ],
               bottom: TabBar(
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,

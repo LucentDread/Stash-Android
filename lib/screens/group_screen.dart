@@ -10,6 +10,7 @@ import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/net_image.dart';
 import 'browse_screens.dart';
+import 'edit/editors.dart';
 
 class GroupScreen extends StatelessWidget {
   const GroupScreen({super.key, required this.groupId});
@@ -20,12 +21,15 @@ class GroupScreen extends StatelessWidget {
     final repo = context.read<AppState>().repo!;
     return AsyncView<Group>(
       load: () => repo.findGroup(groupId),
-      builder: (context, g, _) => DefaultTabController(
+      builder: (context, g, reload) => DefaultTabController(
         length: 2,
         initialIndex: 1,
         child: Scaffold(
           appBar: AppBar(
             title: Text(g.name),
+            actions: [
+              EditButton(onEdit: () => editGroup(context, g), onSaved: reload),
+            ],
             bottom: TabBar(
               tabs: [
                 const Tab(text: 'Infos'),

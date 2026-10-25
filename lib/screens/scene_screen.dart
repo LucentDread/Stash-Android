@@ -8,6 +8,7 @@ import '../utils/format.dart';
 import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/net_image.dart';
+import 'edit/editors.dart';
 
 class SceneScreen extends StatefulWidget {
   const SceneScreen({super.key, required this.sceneId});
@@ -83,6 +84,9 @@ class _SceneScreenState extends State<SceneScreen> {
         slivers: [
           SliverAppBar(
             pinned: true,
+            actions: [
+              EditButton(onEdit: () => editScene(context, s), onSaved: _load),
+            ],
             expandedHeight: MediaQuery.sizeOf(context).width * 9 / 16,
             flexibleSpace: FlexibleSpaceBar(
               background: GestureDetector(

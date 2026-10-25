@@ -24,6 +24,11 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   accessible par le bouton en haut à droite. Les vues apparaissent aussi en
   lignes sur l'accueil par défaut. Gestion dans **Plus > Vues enregistrées**.
   Exemple : « Groupes : Vide » affiche toutes les scènes hors groupe.
+- **Modification** : bouton crayon sur les fiches scène, performeur,
+  studio, tag et groupe (titre, date, note, studio, performeurs, tags,
+  groupes, liens, description…). Seuls les champs modifiés sont envoyés à
+  Stash ; la position d'une scène dans ses groupes est conservée.
+- **Logo du studio** en filigrane sur les miniatures, quand le studio en a un.
 - **Groupes** : onglet dédié, fiche avec jaquettes et scènes dans l'ordre du
   groupe.
 - **Fiche scène** : performeurs, studio, tags, galeries, marqueurs,

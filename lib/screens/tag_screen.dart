@@ -6,6 +6,7 @@ import '../models/models.dart';
 import '../services/app_state.dart';
 import '../widgets/async_view.dart';
 import 'browse_screens.dart';
+import 'edit/editors.dart';
 
 class TagScreen extends StatelessWidget {
   const TagScreen({super.key, required this.tagId});
@@ -16,13 +17,16 @@ class TagScreen extends StatelessWidget {
     final repo = context.read<AppState>().repo!;
     return AsyncView<Tag>(
       load: () => repo.findTag(tagId),
-      builder: (context, t, _) {
+      builder: (context, t, reload) {
         final entity = EntityFilter.tag(t.id);
         return DefaultTabController(
           length: 4,
           child: Scaffold(
             appBar: AppBar(
               title: Text(t.name),
+              actions: [
+                EditButton(onEdit: () => editTag(context, t), onSaved: reload),
+              ],
               bottom: TabBar(
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,

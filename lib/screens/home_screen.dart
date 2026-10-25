@@ -6,6 +6,7 @@ import '../models/models.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/brand_title.dart';
 import '../widgets/cards.dart';
 import 'browse_screens.dart';
 
@@ -19,7 +20,7 @@ class HomeTab extends StatelessWidget {
     if (view == null) return const HomeScreen();
     return Scaffold(
       appBar: AppBar(
-        title: Text(view.name),
+        title: BrandTitle(page: view.name),
         actions: [
           IconButton(
             tooltip: 'Accueil par défaut',
@@ -64,7 +65,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.standalone ? 'Accueil par défaut' : 'Stash'),
+        title: widget.standalone
+            ? const Text('Accueil par défaut')
+            : const BrandTitle(),
       ),
       body: RefreshIndicator(
         onRefresh: () async => setState(() => _refresh++),

@@ -6,6 +6,7 @@ import '../models/models.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
 import '../widgets/cards.dart';
+import '../widgets/brand_title.dart';
 import '../widgets/paged_grid.dart';
 import 'scene_filter_screen.dart';
 
@@ -295,7 +296,7 @@ class _BrowseScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(title)),
+    appBar: AppBar(title: BrandTitle(page: title)),
     body: child,
   );
 }

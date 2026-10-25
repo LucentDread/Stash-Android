@@ -1,0 +1,599 @@
+import 'package:flutter/material.dart';
+
+import '../../api/stash_repository.dart';
+import '../../models/models.dart';
+import '../../widgets/detail_widgets.dart';
+import '../scene_filter_screen.dart';
+
+/// One editable value of an edit form. Fields remember their initial value
+/// so that only the ones the user actually changed are sent to Stash.
+abstract class EditField {
+  EditField(this.key, this.label);
+
+  /// GraphQL input key.
+  final String key;
+  final String label;
+
+  bool get changed;
+
+  /// Input entries sent when the field changed.
+  Map<String, dynamic> toInput();
+
+  /// Error message, or null when the value is valid.
+  String? validate() => null;
+
+  Widget build(BuildContext context, VoidCallback onChanged);
+
+  void dispose() {}
+}
+
+String? _blankToNull(String s) => s.trim().isEmpty ? null : s.trim();
+
+class TextEditField extends EditField {
+  TextEditField(
+    super.key,
+    super.label,
+    String? initial, {
+    this.multiline = false,
+    this.required = false,
+    this.hint,
+  }) : _initial = initial ?? '',
+       controller = TextEditingController(text: initial ?? '');
+
+  final String _initial;
+  final TextEditingController controller;
+  final bool multiline;
+  final bool required;
+  final String? hint;
+
+  @override
+  bool get changed => controller.text.trim() != _initial.trim();
+
+  @override
+  Map<String, dynamic> toInput() => {key: _blankToNull(controller.text)};
+
+  @override
+  String? validate() => required && controller.text.trim().isEmpty
+      ? '$label est obligatoire'
+      : null;
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) => TextField(
+    controller: controller,
+    onChanged: (_) => onChanged(),
+    minLines: multiline ? 3 : 1,
+    maxLines: multiline ? 12 : 1,
+    textCapitalization: TextCapitalization.sentences,
+    decoration: InputDecoration(
+      labelText: required ? '$label *' : label,
+      alignLabelWithHint: multiline,
+      hintText: hint,
+      border: const OutlineInputBorder(),
+    ),
+  );
+
+  @override
+  void dispose() => controller.dispose();
+}
+
+/// Date as Stash stores it: `YYYY-MM-DD` (or `YYYY-MM` / `YYYY`).
+class DateEditField extends TextEditField {
+  DateEditField(super.key, super.label, super.initial)
+    : super(hint: 'AAAA-MM-JJ');
+
+  static final _pattern = RegExp(r'^\d{4}(-\d{2}(-\d{2})?)?$');
+
+  @override
+  String? validate() {
+    final t = controller.text.trim();
+    return t.isEmpty || _pattern.hasMatch(t)
+        ? null
+        : '$label : format AAAA-MM-JJ attendu';
+  }
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) => TextField(
+    controller: controller,
+    onChanged: (_) => onChanged(),
+    keyboardType: TextInputType.datetime,
+    decoration: InputDecoration(
+      labelText: label,
+      hintText: hint,
+      border: const OutlineInputBorder(),
+      suffixIcon: IconButton(
+        icon: const Icon(Icons.calendar_today_outlined),
+        onPressed: () async {
+          final now = DateTime.now();
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: DateTime.tryParse(controller.text.trim()) ?? now,
+            firstDate: DateTime(1900),
+            lastDate: DateTime(now.year + 5),
+          );
+          if (picked == null) return;
+          controller.text =
+              '${picked.year.toString().padLeft(4, '0')}-'
+              '${picked.month.toString().padLeft(2, '0')}-'
+              '${picked.day.toString().padLeft(2, '0')}';
+          onChanged();
+        },
+      ),
+    ),
+  );
+}
+
+/// Whole number; [factor] converts the displayed unit to Stash's (e.g.
+/// minutes shown, seconds stored).
+class IntEditField extends EditField {
+  IntEditField(
+    super.key,
+    super.label,
+    int? initial, {
+    this.factor = 1,
+    this.suffix,
+  }) : _initialText = initial == null ? '' : '${(initial / factor).round()}',
+       controller = TextEditingController(
+         text: initial == null ? '' : '${(initial / factor).round()}',
+       );
+
+  final String _initialText;
+  final TextEditingController controller;
+  final int factor;
+  final String? suffix;
+
+  @override
+  bool get changed => controller.text.trim() != _initialText;
+
+  @override
+  Map<String, dynamic> toInput() {
+    final v = int.tryParse(controller.text.trim());
+    return {key: v == null ? null : v * factor};
+  }
+
+  @override
+  String? validate() {
+    final t = controller.text.trim();
+    return t.isEmpty || int.tryParse(t) != null
+        ? null
+        : '$label : nombre entier attendu';
+  }
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) => TextField(
+    controller: controller,
+    onChanged: (_) => onChanged(),
+    keyboardType: TextInputType.number,
+    decoration: InputDecoration(
+      labelText: label,
+      suffixText: suffix,
+      border: const OutlineInputBorder(),
+    ),
+  );
+
+  @override
+  void dispose() => controller.dispose();
+}
+
+class ChoiceEditField extends EditField {
+  ChoiceEditField(super.key, super.label, this._initial, this.options)
+    : value = _initial;
+
+  final String? _initial;
+  final Map<String?, String> options;
+  String? value;
+
+  @override
+  bool get changed => value != _initial;
+
+  @override
+  Map<String, dynamic> toInput() => {key: value};
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) =>
+      DropdownButtonFormField<String?>(
+        initialValue: value,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        items: [
+          for (final e in options.entries)
+            DropdownMenuItem(value: e.key, child: Text(e.value)),
+        ],
+        onChanged: (v) {
+          value = v;
+          onChanged();
+        },
+      );
+}
+
+class BoolEditField extends EditField {
+  BoolEditField(super.key, super.label, this._initial) : value = _initial;
+
+  final bool _initial;
+  bool value;
+
+  @override
+  bool get changed => value != _initial;
+
+  @override
+  Map<String, dynamic> toInput() => {key: value};
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) => SwitchListTile(
+    contentPadding: EdgeInsets.zero,
+    title: Text(label),
+    value: value,
+    onChanged: (v) {
+      value = v;
+      onChanged();
+    },
+  );
+}
+
+class RatingEditField extends EditField {
+  RatingEditField(int? initial)
+    : _initial = initial,
+      value = initial,
+      super('rating100', 'Note');
+
+  final int? _initial;
+  int? value;
+
+  @override
+  bool get changed => value != _initial;
+
+  @override
+  Map<String, dynamic> toInput() => {key: value};
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) => Row(
+    children: [
+      Expanded(child: Text(label)),
+      StarRating(
+        rating100: value,
+        onChanged: (v) {
+          value = v;
+          onChanged();
+        },
+      ),
+    ],
+  );
+}
+
+/// Several linked performers / tags / studios / groups.
+class RefsEditField extends EditField {
+  RefsEditField(
+    super.key,
+    super.label,
+    this.kind,
+    List<TagRef> initial, {
+    this.encode,
+  }) : _initialIds = {for (final r in initial) r.id},
+       items = List.of(initial);
+
+  final RefKind kind;
+  final Set<String> _initialIds;
+  final List<TagRef> items;
+
+  /// Custom input mapping (e.g. scene groups keep their scene number).
+  final Map<String, dynamic> Function(List<TagRef> items)? encode;
+
+  @override
+  bool get changed {
+    final ids = {for (final r in items) r.id};
+    return ids.length != _initialIds.length || !ids.containsAll(_initialIds);
+  }
+
+  @override
+  Map<String, dynamic> toInput() =>
+      encode?.call(items) ??
+      {
+        key: [for (final r in items) r.id],
+      };
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) => _RefsEditor(
+    label: label,
+    items: items,
+    onAdd: () async {
+      final picked = await Navigator.of(context).push<List<TagRef>>(
+        MaterialPageRoute(
+          builder: (_) =>
+              RefPickerScreen(title: label, kind: kind, initial: items),
+        ),
+      );
+      if (picked == null) return;
+      items
+        ..clear()
+        ..addAll(picked);
+      onChanged();
+    },
+    onRemove: (r) {
+      items.removeWhere((i) => i.id == r.id);
+      onChanged();
+    },
+  );
+}
+
+/// A single linked studio (or parent studio).
+class RefEditField extends EditField {
+  RefEditField(super.key, super.label, this.kind, TagRef? initial)
+    : _initialId = initial?.id,
+      value = initial;
+
+  final RefKind kind;
+  final String? _initialId;
+  TagRef? value;
+
+  @override
+  bool get changed => value?.id != _initialId;
+
+  @override
+  Map<String, dynamic> toInput() => {key: value?.id};
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) => _RefsEditor(
+    label: label,
+    items: [?value],
+    addLabel: value == null ? 'Choisir' : 'Changer',
+    onAdd: () async {
+      final picked = await Navigator.of(context).push<List<TagRef>>(
+        MaterialPageRoute(
+          builder: (_) => RefPickerScreen(
+            title: label,
+            kind: kind,
+            initial: [?value],
+            single: true,
+          ),
+        ),
+      );
+      if (picked == null) return;
+      value = picked.firstOrNull;
+      onChanged();
+    },
+    onRemove: (_) {
+      value = null;
+      onChanged();
+    },
+  );
+}
+
+class _RefsEditor extends StatelessWidget {
+  const _RefsEditor({
+    required this.label,
+    required this.items,
+    required this.onAdd,
+    required this.onRemove,
+    this.addLabel,
+  });
+
+  final String label;
+  final List<TagRef> items;
+  final VoidCallback onAdd;
+  final ValueChanged<TagRef> onRemove;
+  final String? addLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+      ),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final r in items)
+            InputChip(label: Text(r.name), onDeleted: () => onRemove(r)),
+          ActionChip(
+            avatar: const Icon(Icons.edit_outlined, size: 18),
+            label: Text(addLabel ?? (items.isEmpty ? 'Ajouter' : 'Modifier')),
+            onPressed: onAdd,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Free list of strings (URLs, aliases).
+class StringListEditField extends EditField {
+  StringListEditField(super.key, super.label, List<String> initial, {this.hint})
+    : _initial = List.of(initial),
+      items = List.of(initial);
+
+  final List<String> _initial;
+  final List<String> items;
+  final String? hint;
+  final controller = TextEditingController();
+
+  @override
+  bool get changed {
+    // Text typed but not yet added counts as a change.
+    if (controller.text.trim().isNotEmpty) return true;
+    if (items.length != _initial.length) return true;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i] != _initial[i]) return true;
+    }
+    return false;
+  }
+
+  List<String> get _all => [
+    ...items,
+    if (controller.text.trim().isNotEmpty) controller.text.trim(),
+  ];
+
+  @override
+  Map<String, dynamic> toInput() => {key: _all};
+
+  @override
+  Widget build(BuildContext context, VoidCallback onChanged) {
+    void add() {
+      final t = controller.text.trim();
+      if (t.isEmpty) return;
+      items.add(t);
+      controller.clear();
+      onChanged();
+    }
+
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < items.length; i++)
+            Row(
+              children: [
+                Expanded(child: Text(items[i])),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () {
+                    items.removeAt(i);
+                    onChanged();
+                  },
+                ),
+              ],
+            ),
+          TextField(
+            controller: controller,
+            onChanged: (_) => onChanged(),
+            onSubmitted: (_) => add(),
+            decoration: InputDecoration(
+              hintText: hint ?? 'Ajouter…',
+              isDense: true,
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: add,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() => controller.dispose();
+}
+
+/// Generic edit screen: shows [fields], sends the changed ones to [save].
+class EditScreen extends StatefulWidget {
+  const EditScreen({
+    super.key,
+    required this.title,
+    required this.fields,
+    required this.save,
+  });
+
+  final String title;
+  final List<EditField> fields;
+  final Future<void> Function(Map<String, dynamic> input) save;
+
+  @override
+  State<EditScreen> createState() => _EditScreenState();
+}
+
+class _EditScreenState extends State<EditScreen> {
+  bool _saving = false;
+
+  bool get _changed => widget.fields.any((f) => f.changed);
+
+  @override
+  void dispose() {
+    for (final f in widget.fields) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final error = widget.fields
+        .map((f) => f.validate())
+        .whereType<String>()
+        .firstOrNull;
+    if (error != null) {
+      messenger.showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    final input = <String, dynamic>{
+      for (final f in widget.fields)
+        if (f.changed) ...f.toInput(),
+    };
+    setState(() => _saving = true);
+    try {
+      await widget.save(input);
+      if (!mounted) return;
+      messenger.showSnackBar(const SnackBar(content: Text('Enregistré')));
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<bool> _confirmDiscard() async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Abandonner les modifications ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continuer'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Abandonner'),
+          ),
+        ],
+      ),
+    );
+    return discard ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final changed = _changed;
+    return PopScope(
+      canPop: !changed || _saving,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final navigator = Navigator.of(context);
+        if (await _confirmDiscard()) navigator.pop(false);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilledButton(
+                onPressed: changed && !_saving ? _save : null,
+                child: _saving
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Enregistrer'),
+              ),
+            ),
+          ],
+        ),
+        body: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          itemCount: widget.fields.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 16),
+          itemBuilder: (context, i) =>
+              widget.fields[i].build(context, () => setState(() {})),
+        ),
+      ),
+    );
+  }
+}

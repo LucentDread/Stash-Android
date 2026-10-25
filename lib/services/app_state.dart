@@ -27,6 +27,13 @@ class AppState extends ChangeNotifier {
   StashRepository? _repo;
 
   StashRepository? get repo => _repo;
+
+  @visibleForTesting
+  set repoOverride(StashRepository repo) {
+    _repo = repo;
+    notifyListeners();
+  }
+
   StashClient? get client => _repo?.client;
   bool get isConfigured => _repo != null;
   String? get serverUrl => _prefs.getString(_kUrl);

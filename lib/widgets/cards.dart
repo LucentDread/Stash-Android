@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
@@ -170,6 +172,8 @@ class _SceneCardState extends State<SceneCard> {
                   fit: StackFit.expand,
                   children: [
                     NetImage(s.screenshot, placeholderIcon: Icons.movie),
+                    if (s.studio?.hasImage ?? false)
+                      _StudioWatermark(s.studio!.imagePath!),
                     if (preview != null && preview.value.isInitialized)
                       FittedBox(
                         fit: BoxFit.cover,
@@ -339,6 +343,55 @@ class _SceneCardText extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Studio logo in the top-right corner of a scene thumbnail. A blurred
+/// dark copy behind it keeps light logos readable on light images.
+class _StudioWatermark extends StatelessWidget {
+  const _StudioWatermark(this.url);
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget logo() => NetImage(
+      url,
+      fit: BoxFit.contain,
+      alignment: Alignment.topRight,
+      showPlaceholder: false,
+    );
+    return IgnorePointer(
+      child: Align(
+        alignment: Alignment.topRight,
+        child: FractionallySizedBox(
+          widthFactor: 0.34,
+          heightFactor: 0.22,
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6, right: 6),
+            child: Opacity(
+              opacity: 0.8,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+                    child: ColorFiltered(
+                      colorFilter: const ColorFilter.mode(
+                        Colors.black54,
+                        BlendMode.srcIn,
+                      ),
+                      child: logo(),
+                    ),
+                  ),
+                  logo(),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

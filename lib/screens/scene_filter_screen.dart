@@ -347,11 +347,15 @@ class RefPickerScreen extends StatefulWidget {
     required this.title,
     required this.kind,
     required this.initial,
+    this.single = false,
   });
 
   final String title;
   final RefKind kind;
   final List<TagRef> initial;
+
+  /// Pick one item: tapping it returns immediately.
+  final bool single;
 
   @override
   State<RefPickerScreen> createState() => _RefPickerScreenState();
@@ -376,10 +380,16 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
     });
   }
 
-  void _toggle(TagRef r) => setState(() {
-    final i = _selected.indexWhere((s) => s.id == r.id);
-    i >= 0 ? _selected.removeAt(i) : _selected.add(r);
-  });
+  void _toggle(TagRef r) {
+    if (widget.single) {
+      Navigator.pop(context, [r]);
+      return;
+    }
+    setState(() {
+      final i = _selected.indexWhere((s) => s.id == r.id);
+      i >= 0 ? _selected.removeAt(i) : _selected.add(r);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -387,10 +397,11 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, _selected),
-            child: Text('Valider (${_selected.length})'),
-          ),
+          if (!widget.single)
+            TextButton(
+              onPressed: () => Navigator.pop(context, _selected),
+              child: Text('Valider (${_selected.length})'),
+            ),
         ],
       ),
       body: Column(
@@ -410,7 +421,7 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
               ),
             ),
           ),
-          if (_selected.isNotEmpty)
+          if (_selected.isNotEmpty && !widget.single)
             SizedBox(
               height: 48,
               child: ListView(

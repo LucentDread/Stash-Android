@@ -36,21 +36,21 @@ void main() {
     );
 
     final bar = find.byType(NavigationBar);
-    String appBarTitle() => tester
+    List<String?> appBarTexts() => tester
         .widgetList<Text>(
           find.descendant(
             of: find.byType(AppBar).hitTestable(),
             matching: find.byType(Text),
           ),
         )
-        .first
-        .data!;
+        .map((t) => t.data)
+        .toList();
 
     for (final label in ['Scènes', 'Groupes', 'Performeurs', 'Plus']) {
       await tester.tap(find.descendant(of: bar, matching: find.text(label)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(appBarTitle(), label);
+      expect(appBarTexts(), containsAllInOrder(['Stash', label]));
     }
     expect(
       find.descendant(of: bar, matching: find.text('Galeries')),
