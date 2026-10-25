@@ -9,7 +9,8 @@ import '../widgets/net_image.dart';
 import 'image_viewer_screen.dart';
 import 'player_screen.dart';
 
-/// Scenes, groups and galleries kept on the phone, usable offline.
+/// Scenes, groups, galleries and images kept on the phone, usable
+/// offline.
 class DownloadsScreen extends StatelessWidget {
   const DownloadsScreen({super.key});
 
@@ -33,8 +34,9 @@ class DownloadsScreen extends StatelessWidget {
                     padding: EdgeInsets.all(32),
                     child: Text(
                       'Aucun téléchargement.\n\nUtilisez le bouton de '
-                      'téléchargement d\'une scène, d\'un groupe ou d\'une '
-                      'galerie pour la garder sur le téléphone.',
+                      'téléchargement d\'une scène, d\'un groupe, d\'une '
+                      'galerie ou d\'une image (dans la visionneuse) pour la '
+                      'garder sur le téléphone.',
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -46,6 +48,7 @@ class DownloadsScreen extends StatelessWidget {
                     (OfflineKind.scene, 'Scènes'),
                     (OfflineKind.group, 'Groupes'),
                     (OfflineKind.gallery, 'Galeries'),
+                    (OfflineKind.image, 'Images'),
                   ])
                     if (downloads.entries(kind).isNotEmpty) ...[
                       _Header(title),
@@ -93,9 +96,28 @@ void openOffline(BuildContext context, OfflineEntry e) {
           StashImage(id: '$i', image: path),
       ],
       initialIndex: 0,
+      downloadable: false,
     ),
+    OfflineKind.image => _offlineImages(downloads, e),
   };
   Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+}
+
+/// Every downloaded image, starting at [e]: swiping goes to the others.
+ImageViewerScreen _offlineImages(DownloadManager downloads, OfflineEntry e) {
+  final images = <StashImage>[];
+  var index = 0;
+  for (final other in downloads.entries(OfflineKind.image)) {
+    final path = downloads.galleryImages(other).firstOrNull;
+    if (path == null) continue;
+    if (other.id == e.id) index = images.length;
+    images.add(StashImage(id: other.id, title: other.title, image: path));
+  }
+  return ImageViewerScreen(
+    images: images,
+    initialIndex: index,
+    downloadable: false,
+  );
 }
 
 class DownloadTile extends StatelessWidget {
@@ -134,6 +156,7 @@ class DownloadTile extends StatelessWidget {
       OfflineKind.scene => [if (entry.bytes != null) formatBytes(entry.bytes!)],
       OfflineKind.group => ['${entry.sceneIds.length} scènes'],
       OfflineKind.gallery => ['${entry.files.length} images'],
+      OfflineKind.image => <String>[],
     };
     final status = switch (state) {
       FileState.done => 'Téléchargé',
@@ -163,6 +186,7 @@ class DownloadTile extends StatelessWidget {
               OfflineKind.scene => Icons.movie,
               OfflineKind.group => Icons.video_library,
               OfflineKind.gallery => Icons.photo_library,
+              OfflineKind.image => Icons.image,
             },
           ),
         ),

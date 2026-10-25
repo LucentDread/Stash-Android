@@ -73,7 +73,8 @@ class _OfflineWatcherState extends State<OfflineWatcher> {
         title: const Text('Hors ligne'),
         content: Text(
           'Le serveur Stash (${_app.serverUrl ?? ''}) est injoignable. '
-          'Les scènes, groupes et galeries téléchargés restent disponibles.',
+          'Les scènes, groupes, galeries et images téléchargés restent '
+          'disponibles.',
         ),
         actions: [
           TextButton(

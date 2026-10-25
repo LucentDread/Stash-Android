@@ -1,5 +1,11 @@
 # Historique des versions
 
+## 1.12.1
+- Téléchargement d'une image seule pour la voir hors ligne : bouton dans la
+  visionneuse (Plus > Images, vues d'images, galeries). Les images
+  téléchargées ont leur section dans Plus > Téléchargements et se font
+  défiler ensemble.
+
 ## 1.12.0
 - Correction : sur l'accueil par défaut, après être descendu en bas de la
   page, on ne pouvait plus remonter tout en haut (la page redescendait

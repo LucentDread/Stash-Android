@@ -11,6 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stash_android/api/stash_client.dart';
 import 'package:stash_android/api/stash_repository.dart';
 import 'package:stash_android/main.dart';
+import 'package:stash_android/models/models.dart';
+import 'package:stash_android/screens/image_viewer_screen.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/services/downloads.dart';
 
@@ -91,6 +93,14 @@ http.Client _server() => MockClient((req) async {
   } else if (q.contains('findGallery(')) {
     data = {
       'findGallery': {'id': '8', 'title': 'Vacances', 'paths': {}},
+    };
+  } else if (q.contains('findImage(')) {
+    data = {
+      'findImage': {
+        'id': v['id'],
+        'title': 'Coucher de soleil',
+        'paths': {'image': 'http://stash.test/image/${v['id']}/image'},
+      },
     };
   } else if (q.contains('findImages')) {
     data = {
@@ -200,6 +210,63 @@ void main() {
       '00002.img',
       '00003.img',
     ]);
+  });
+
+  test('single image download, listed with the other images', () async {
+    final (app, fetcher, dir) = await _setup();
+    final d = app.downloads;
+    await d.downloadImage('4');
+    await d.downloadImage('4'); // already there
+    final e = d.entry(OfflineKind.image, '4')!;
+    expect(e.title, 'Coucher de soleil');
+    final task = fetcher.enqueued.entries.single;
+    expect(task.value.url, 'http://stash.test/image/4/image?apikey=k');
+    expect(task.value.path, 'image_4/image.img');
+
+    fetcher.emit(task.key, FileState.done, 1);
+    await Future<void>.delayed(Duration.zero);
+    expect(d.isDone(e), isTrue);
+    expect(d.galleryImages(e), ['${dir.path}/image_4/image.img']);
+    expect(d.coverPath(e), '${dir.path}/image_4/image.img');
+
+    await d.delete(e);
+    expect(d.entries(OfflineKind.image), isEmpty);
+    expect(Directory('${dir.path}/image_4').existsSync(), isFalse);
+  });
+
+  testWidgets('the image viewer offers to download the image shown', (
+    tester,
+  ) async {
+    final (app, fetcher, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: ImageViewerScreen(
+            images: [
+              StashImage(id: '4'),
+              StashImage(id: '5'),
+            ],
+            initialIndex: 0,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byTooltip('Télécharger'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('cette image'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Télécharger'));
+    // Real IO (index file, then the transfer request).
+    for (var i = 0; i < 40 && fetcher.enqueued.isEmpty; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+    }
+    await tester.pump();
+    expect(app.downloads.entry(OfflineKind.image, '4'), isNotNull);
+    expect(app.downloads.entry(OfflineKind.image, '5'), isNull);
+    expect(fetcher.enqueued, hasLength(1));
   });
 
   testWidgets('unreachable server: popup leads to the downloads', (

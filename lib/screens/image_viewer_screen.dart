@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../models/models.dart';
+import '../services/downloads.dart';
+import '../widgets/download_button.dart';
 import '../widgets/net_image.dart';
 
 /// Full-screen swipeable image viewer with pinch-to-zoom.
@@ -10,10 +12,14 @@ class ImageViewerScreen extends StatefulWidget {
     super.key,
     required this.images,
     required this.initialIndex,
+    this.downloadable = true,
   });
 
   final List<StashImage> images;
   final int initialIndex;
+
+  /// Offers to download the image shown (not for offline copies).
+  final bool downloadable;
 
   @override
   State<ImageViewerScreen> createState() => _ImageViewerScreenState();
@@ -48,6 +54,14 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
               backgroundColor: Colors.black45,
               foregroundColor: Colors.white,
               title: Text('${_index + 1} / ${widget.images.length}'),
+              actions: [
+                if (widget.downloadable)
+                  DownloadButton(
+                    key: ValueKey(widget.images[_index].id),
+                    kind: OfflineKind.image,
+                    id: widget.images[_index].id,
+                  ),
+              ],
             )
           : null,
       body: GestureDetector(

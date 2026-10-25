@@ -1080,6 +1080,19 @@ class StashRepository {
     );
   }
 
+  Future<StashImage> findImage(String id) async {
+    final d = await client.query(
+      '''
+      query FindImage(\$id: ID!) {
+        findImage(id: \$id) { $_imageFields }
+      }''',
+      variables: {'id': id},
+    );
+    final image = d['findImage'];
+    if (image == null) throw StashException('Image introuvable');
+    return StashImage.fromJson((image as Map).cast<String, dynamic>());
+  }
+
   Future<ResultPage<SceneMarker>> findMarkers(
     ListQuery q, {
     EntityFilter? entity,

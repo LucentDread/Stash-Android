@@ -8,7 +8,7 @@ import '../api/stash_repository.dart';
 import '../models/models.dart';
 import 'app_state.dart';
 
-enum OfflineKind { scene, group, gallery }
+enum OfflineKind { scene, group, gallery, image }
 
 enum FileState { queued, running, paused, done, failed }
 
@@ -134,7 +134,7 @@ abstract class FileFetcher {
   Future<void> cancel(Iterable<String> taskIds);
 }
 
-/// Offline copies of scenes, groups and galleries.
+/// Offline copies of scenes, groups, galleries and single images.
 class DownloadManager extends ChangeNotifier {
   DownloadManager(this._app, this._fetcher);
 
@@ -414,10 +414,41 @@ class DownloadManager extends ChangeNotifier {
     return images.length;
   }
 
+  /// Downloads one image (from the Images list, a view or a gallery).
+  Future<void> downloadImage(String id) async {
+    await init();
+    if (entry(OfflineKind.image, id) != null) return;
+    final image = await _repo.findImage(id);
+    final title = (image.title?.isNotEmpty ?? false)
+        ? image.title!
+        : 'Image $id';
+    final path = 'image_$id/image.img';
+    await _add(
+      OfflineEntry(
+        kind: OfflineKind.image,
+        id: id,
+        title: title,
+        data: {'id': id, 'title': image.title},
+        added: DateTime.now(),
+        cover: path,
+        files: [
+          if (image.image != null)
+            OfflineFile(
+              taskId: 'image-$id-${DateTime.now().millisecondsSinceEpoch}',
+              url: _url(image.image),
+              path: path,
+            ),
+        ],
+      ),
+      title,
+    );
+  }
+
   static String _imageName(int i) =>
       '${(i + 1).toString().padLeft(5, '0')}.img';
 
-  /// Local image paths of a downloaded gallery, in order.
+  /// Local image paths of a downloaded gallery (or single image), in
+  /// order.
   List<String> galleryImages(OfflineEntry e) => [
     for (final f in e.files)
       if (_states[f.taskId] == FileState.done) absolute(f.path),

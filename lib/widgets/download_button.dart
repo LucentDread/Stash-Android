@@ -6,7 +6,8 @@ import '../services/app_state.dart';
 import '../services/downloads.dart';
 import '../utils/format.dart';
 
-/// App bar button to keep a scene, group or gallery for offline viewing.
+/// App bar button to keep a scene, group, gallery or image for offline
+/// viewing.
 /// Shows the download progress, then a "downloaded" state that opens the
 /// downloads section.
 class DownloadButton extends StatelessWidget {
@@ -27,6 +28,7 @@ class DownloadButton extends StatelessWidget {
     OfflineKind.scene => 'cette scène',
     OfflineKind.group => 'toutes les scènes de ce groupe',
     OfflineKind.gallery => 'toutes les images de cette galerie',
+    OfflineKind.image => 'cette image',
   };
 
   Future<void> _start(BuildContext context, DownloadManager downloads) async {
@@ -64,6 +66,8 @@ class DownloadButton extends StatelessWidget {
           await downloads.downloadGroup(id);
         case OfflineKind.gallery:
           await downloads.downloadGallery(id);
+        case OfflineKind.image:
+          await downloads.downloadImage(id);
       }
       messenger.showSnackBar(
         const SnackBar(

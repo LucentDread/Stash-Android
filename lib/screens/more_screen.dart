@@ -85,7 +85,9 @@ class MoreScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.download_for_offline_outlined),
             title: const Text('Téléchargements'),
-            subtitle: const Text('Scènes, groupes et galeries hors ligne'),
+            subtitle: const Text(
+              'Scènes, groupes, galeries et images hors ligne',
+            ),
             onTap: () => _push(context, const DownloadsScreen()),
           ),
           const Divider(),

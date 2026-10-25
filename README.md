@@ -47,7 +47,8 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   comparaison permet de choisir les valeurs reprises ; les performeurs,
   tags, studios et groupes absents de Stash peuvent y être créés puis liés.
 - **Hors ligne** : téléchargement d'une scène, d'un groupe (toutes ses
-  scènes) ou d'une galerie (bouton dans leur fiche), en arrière-plan avec
+  scènes), d'une galerie (bouton dans leur fiche) ou d'une image (bouton
+  dans la visionneuse), en arrière-plan avec
   notification. Les copies se trouvent dans **Plus > Téléchargements** et se
   lisent sans serveur. Si le serveur devient injoignable, une fenêtre le
   signale et mène aux téléchargements.
