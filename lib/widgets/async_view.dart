@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'data_refresh.dart';
+
 class ErrorView extends StatelessWidget {
   const ErrorView({super.key, required this.error, this.onRetry});
   final Object error;
@@ -46,13 +48,14 @@ class AsyncView<T> extends StatefulWidget {
   State<AsyncView<T>> createState() => _AsyncViewState<T>();
 }
 
-class _AsyncViewState<T> extends State<AsyncView<T>> {
+class _AsyncViewState<T> extends State<AsyncView<T>> with DataRefresh {
   late Future<T> _future = widget.load();
 
   void _reload() => setState(() => _future = widget.load());
 
   @override
   Widget build(BuildContext context) {
+    watchServerData(_reload);
     return FutureBuilder<T>(
       future: _future,
       builder: (context, snap) {

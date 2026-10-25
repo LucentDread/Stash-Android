@@ -6,6 +6,7 @@ import '../navigation.dart';
 import '../services/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/async_view.dart';
+import '../widgets/data_refresh.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/net_image.dart';
 import 'edit/editors.dart';
@@ -18,7 +19,7 @@ class SceneScreen extends StatefulWidget {
   State<SceneScreen> createState() => _SceneScreenState();
 }
 
-class _SceneScreenState extends State<SceneScreen> {
+class _SceneScreenState extends State<SceneScreen> with DataRefresh {
   late final _repo = context.read<AppState>().repo!;
   Scene? _scene;
   Object? _error;
@@ -65,6 +66,7 @@ class _SceneScreenState extends State<SceneScreen> {
 
   @override
   Widget build(BuildContext context) {
+    watchServerData(_load);
     final s = _scene;
     if (s == null) {
       return Scaffold(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../services/app_state.dart';
@@ -9,6 +10,31 @@ import 'views_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
+
+  Future<void> _confirmScan(BuildContext context, AppState app) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Scanner la bibliothèque ?'),
+        content: const Text(
+          'Stash va parcourir vos dossiers avec ses options de scan par '
+          'défaut (Paramètres > Tâches). Le suivi s\'affiche en bas de '
+          'l\'écran ; les pages se rechargeront à la fin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Scanner'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) await app.scan.start();
+  }
 
   void _push(BuildContext context, Widget page) =>
       Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
@@ -82,6 +108,28 @@ class MoreScreen extends StatelessWidget {
             subtitle: Text(app.serverUrl ?? ''),
             onTap: () => _push(context, const SetupScreen(popOnSuccess: true)),
           ),
+          FutureBuilder<String>(
+            future: app.repo?.version(),
+            builder: (context, snap) => ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Version du serveur'),
+              subtitle: Text(snap.data ?? (snap.hasError ? '—' : '…')),
+            ),
+          ),
+          ListenableBuilder(
+            listenable: app.scan,
+            builder: (context, _) => ListTile(
+              leading: const Icon(Icons.sync),
+              title: const Text('Scanner la bibliothèque'),
+              subtitle: Text(
+                app.scan.running
+                    ? 'Scan en cours (suivi en bas de l\'écran)'
+                    : 'Détecte les fichiers ajoutés, modifiés ou supprimés',
+              ),
+              enabled: !app.scan.running,
+              onTap: () => _confirmScan(context, app),
+            ),
+          ),
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Se déconnecter'),
@@ -108,12 +156,18 @@ class MoreScreen extends StatelessWidget {
               if (ok == true) await app.disconnect();
             },
           ),
-          FutureBuilder<String>(
-            future: app.repo?.version(),
+          const Divider(),
+          const _Header('Application'),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
             builder: (context, snap) => ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('Version du serveur'),
-              subtitle: Text(snap.data ?? (snap.hasError ? '—' : '…')),
+              leading: const Icon(Icons.phone_android),
+              title: const Text('Version de l\'application'),
+              subtitle: Text(
+                snap.hasData
+                    ? '${snap.data!.version} (build ${snap.data!.buildNumber})'
+                    : (snap.hasError ? '—' : '…'),
+              ),
             ),
           ),
         ],

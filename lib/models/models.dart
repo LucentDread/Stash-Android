@@ -618,3 +618,40 @@ class Group {
     );
   }
 }
+
+/// A Stash background job (scan, generate…).
+class Job {
+  Job({
+    required this.id,
+    required this.status,
+    required this.description,
+    this.subTasks = const [],
+    this.progress,
+    this.error,
+  });
+
+  final String id;
+
+  /// READY, RUNNING, FINISHED, STOPPING, CANCELLED or FAILED.
+  final String status;
+  final String description;
+
+  /// Tasks in progress, e.g. "Scanning /data/video.mp4".
+  final List<String> subTasks;
+
+  /// 0 to 1, null while the total is unknown.
+  final double? progress;
+  final String? error;
+
+  bool get isDone =>
+      status == 'FINISHED' || status == 'CANCELLED' || status == 'FAILED';
+
+  factory Job.fromJson(Map<String, dynamic> j) => Job(
+    id: j['id'] as String,
+    status: j['status'] as String? ?? 'RUNNING',
+    description: j['description'] as String? ?? '',
+    subTasks: (j['subTasks'] as List?)?.cast<String>() ?? const [],
+    progress: _double(j['progress']),
+    error: j['error'] as String?,
+  );
+}

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_shell.dart';
 import 'screens/setup_screen.dart';
 import 'services/app_state.dart';
+import 'widgets/scan_banner.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,8 @@ class StashApp extends StatelessWidget {
     return MaterialApp(
       title: 'Stash',
       debugShowCheckedModeBanner: false,
+      // Scan progress stays visible above every page.
+      builder: (context, child) => ScanBannerHost(child: child!),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: _seed),
         useMaterial3: true,

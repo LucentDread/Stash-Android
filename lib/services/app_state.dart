@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api/stash_client.dart';
 import '../api/stash_repository.dart';
 import '../models/scene_filter.dart';
+import 'scan_tracker.dart';
 
 /// Holds the server configuration and the API repository built from it.
 class AppState extends ChangeNotifier {
@@ -26,7 +27,21 @@ class AppState extends ChangeNotifier {
   final SharedPreferences _prefs;
   StashRepository? _repo;
 
+  /// Library scan started from the app, shown in a banner on every page.
+  late final ScanTracker scan = ScanTracker(this);
+
   StashRepository? get repo => _repo;
+
+  /// Incremented when server data changed outside the current screens
+  /// (e.g. after a library scan). Lists and detail pages watch it and
+  /// reload in place, without changing the navigation.
+  int get dataVersion => _dataVersion;
+  int _dataVersion = 0;
+
+  void refreshData() {
+    _dataVersion++;
+    notifyListeners();
+  }
 
   @visibleForTesting
   set repoOverride(StashRepository repo) {

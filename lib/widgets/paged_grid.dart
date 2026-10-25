@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../api/stash_repository.dart';
 import '../models/models.dart';
 import 'async_view.dart';
+import 'data_refresh.dart';
 
 typedef PageFetcher<T> = Future<ResultPage<T>> Function(ListQuery query);
 
@@ -63,7 +64,7 @@ class PagedGrid<T> extends StatefulWidget {
   State<PagedGrid<T>> createState() => _PagedGridState<T>();
 }
 
-class _PagedGridState<T> extends State<PagedGrid<T>> {
+class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
   static const _perPage = 40;
 
   final _items = <T>[];
@@ -322,6 +323,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
 
   @override
   Widget build(BuildContext context) {
+    watchServerData(_reset);
     return Column(
       children: [
         if (widget.showToolbar) _toolbar(context),

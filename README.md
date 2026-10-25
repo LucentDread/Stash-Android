@@ -33,6 +33,10 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
 - **Marqueurs** : ajout depuis le lecteur (bouton à côté de la qualité, à la
   position courante), modification ou suppression par appui long. Seuls les champs modifiés sont envoyés à
   Stash ; la position d'une scène dans ses groupes est conservée.
+- **Scan de la bibliothèque** depuis **Plus > Serveur**, avec les options de
+  scan par défaut de Stash. La progression (pourcentage, fichier en cours)
+  s'affiche en bas de toutes les pages ; à la fin, les pages ouvertes se
+  rechargent sans changer de navigation.
 - **Logo du studio** en filigrane sur les miniatures, quand le studio en a un.
 - **Groupes** : onglet dédié, fiche avec jaquettes et scènes dans l'ordre du
   groupe.

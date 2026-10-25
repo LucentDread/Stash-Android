@@ -552,6 +552,57 @@ class StashRepository {
     );
   }
 
+  /// Starts a library scan with the default options set in Stash
+  /// (Settings > Tasks), like the web UI does. Returns the job id.
+  Future<String> startScan() async {
+    final d = await client.query('''
+      query { configuration { defaults { scan {
+        rescan scanGenerateCovers scanGeneratePreviews
+        scanGenerateImagePreviews scanGenerateSprites scanGeneratePhashes
+        scanGenerateImagePhashes scanGenerateThumbnails
+        scanGenerateClipPreviews
+      } } } }''');
+    final options =
+        ((d['configuration'] as Map?)?['defaults'] as Map?)?['scan'];
+    final r = await client.query(
+      '''
+      mutation Scan(\$input: ScanMetadataInput!) {
+        metadataScan(input: \$input)
+      }''',
+      variables: {
+        'input': {
+          if (options is Map)
+            for (final e in options.entries)
+              if (e.value != null) e.key as String: e.value,
+        },
+      },
+    );
+    return r['metadataScan'] as String;
+  }
+
+  /// State of a background job, or null once Stash has dropped it.
+  Future<Job?> findJob(String id) async {
+    final d = await client.query(
+      '''
+      query FindJob(\$id: ID!) {
+        findJob(input: {id: \$id}) {
+          id status subTasks description progress error
+        }
+      }''',
+      variables: {'id': id},
+    );
+    final j = d['findJob'];
+    return j == null ? null : Job.fromJson(j as Map<String, dynamic>);
+  }
+
+  Future<void> stopJob(String id) async {
+    await client.query(
+      '''
+      mutation StopJob(\$id: ID!) { stopJob(job_id: \$id) }''',
+      variables: {'id': id},
+    );
+  }
+
   /// Name search used by the filter pickers. Without a query, returns the
   /// entities with the most scenes first.
   Future<List<TagRef>> searchRefs(RefKind kind, String q) async {

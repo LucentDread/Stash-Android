@@ -72,7 +72,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: () async => setState(() => _refresh++),
         child: ListView(
-          key: ValueKey(_refresh),
+          // Rebuilt (and reloaded) on pull-to-refresh and after a scan.
+          key: ValueKey('$_refresh-${app.dataVersion}'),
           padding: const EdgeInsets.only(bottom: 16),
           children: [
             _StatsRow(load: repo.stats),
