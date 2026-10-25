@@ -1,0 +1,118 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../api/stash_repository.dart';
+import '../models/models.dart';
+import '../navigation.dart';
+import '../services/app_state.dart';
+import '../widgets/async_view.dart';
+import '../widgets/detail_widgets.dart';
+import '../widgets/net_image.dart';
+import '../widgets/paged_grid.dart';
+
+class GalleryScreen extends StatelessWidget {
+  const GalleryScreen({super.key, required this.galleryId});
+  final String galleryId;
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.read<AppState>().repo!;
+    return AsyncView<Gallery>(
+      load: () => repo.findGallery(galleryId),
+      builder: (context, g, _) => Scaffold(
+        appBar: AppBar(
+          title: Text(g.displayTitle),
+          actions: [
+            IconButton(
+              tooltip: 'Informations',
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                showDragHandle: true,
+                builder: (_) => _GalleryInfo(gallery: g),
+              ),
+            ),
+          ],
+        ),
+        body: PagedGrid<StashImage>(
+          showToolbar: false,
+          fetch: (q) => repo.findImages(
+            // Gallery order as defined in Stash (by path/title).
+            ListQuery(
+              page: q.page,
+              perPage: q.perPage,
+              sort: 'path',
+              descending: false,
+            ),
+            entity: EntityFilter.gallery(g.id),
+          ),
+          maxCrossAxisExtent: 160,
+          childAspectRatio: 1,
+          emptyText: 'Galerie vide',
+          itemBuilder: (context, img, i, all) => InkWell(
+            onTap: () => openImages(context, List.of(all), i),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: NetImage(img.thumbnail),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GalleryInfo extends StatelessWidget {
+  const _GalleryInfo({required this.gallery});
+  final Gallery gallery;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = gallery;
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.5,
+      builder: (context, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        children: [
+          Text(g.displayTitle, style: Theme.of(context).textTheme.titleLarge),
+          InfoTable([
+            ('Date', g.date),
+            ('Images', '${g.imageCount}'),
+            ('Chemin', g.folderPath),
+          ]),
+          if (g.studio != null)
+            Section(
+              title: 'Studio',
+              child: RefChips(
+                refs: [g.studio!],
+                icon: Icons.business,
+                onTap: (r) => openStudio(context, r.id),
+              ),
+            ),
+          if (g.performers.isNotEmpty)
+            Section(
+              title: 'Performeurs',
+              child: RefChips(
+                refs: g.performers,
+                icon: Icons.person,
+                onTap: (r) => openPerformer(context, r.id),
+              ),
+            ),
+          if (g.tags.isNotEmpty)
+            Section(
+              title: 'Tags',
+              child: RefChips(
+                refs: g.tags,
+                onTap: (r) => openTag(context, r.id),
+              ),
+            ),
+          if (g.details != null && g.details!.isNotEmpty)
+            Section(title: 'Description', child: Text(g.details!)),
+        ],
+      ),
+    );
+  }
+}

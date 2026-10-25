@@ -1,0 +1,275 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import '../api/stash_repository.dart';
+import '../models/models.dart';
+import 'async_view.dart';
+
+typedef PageFetcher<T> = Future<ResultPage<T>> Function(ListQuery query);
+
+/// Infinite-scrolling grid backed by a paginated Stash query, with an
+/// optional search field and sort selector.
+class PagedGrid<T> extends StatefulWidget {
+  const PagedGrid({
+    super.key,
+    required this.fetch,
+    required this.itemBuilder,
+    this.sortOptions = const [],
+    this.initialSort,
+    this.initialDescending = true,
+    this.maxCrossAxisExtent = 220,
+    this.childAspectRatio = 1,
+    this.showToolbar = true,
+    this.emptyText = 'Aucun résultat',
+    this.countLabel = 'éléments',
+  });
+
+  final PageFetcher<T> fetch;
+  final Widget Function(BuildContext context, T item, int index, List<T> all)
+  itemBuilder;
+  final List<SortOption> sortOptions;
+  final String? initialSort;
+  final bool initialDescending;
+  final double maxCrossAxisExtent;
+  final double childAspectRatio;
+  final bool showToolbar;
+  final String emptyText;
+  final String countLabel;
+
+  @override
+  State<PagedGrid<T>> createState() => _PagedGridState<T>();
+}
+
+class _PagedGridState<T> extends State<PagedGrid<T>> {
+  static const _perPage = 40;
+
+  final _items = <T>[];
+  final _scroll = ScrollController();
+  final _search = TextEditingController();
+  Timer? _debounce;
+
+  int _count = 0;
+  int _page = 0;
+  bool _loading = false;
+  Object? _error;
+  late String? _sort =
+      widget.initialSort ?? widget.sortOptions.firstOrNull?.value;
+  late bool _descending = widget.initialDescending;
+  int _generation = 0;
+
+  bool get _hasMore => _page == 0 || _items.length < _count;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_onScroll);
+    _loadMore();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _scroll.dispose();
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scroll.position.extentAfter < 800) _loadMore();
+  }
+
+  Future<void> _reset() async {
+    _generation++;
+    setState(() {
+      _items.clear();
+      _count = 0;
+      _page = 0;
+      _error = null;
+      _loading = false;
+    });
+    await _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    if (_loading || !_hasMore || _error != null) return;
+    final gen = _generation;
+    setState(() => _loading = true);
+    try {
+      final result = await widget.fetch(
+        ListQuery(
+          q: _search.text.trim(),
+          page: _page + 1,
+          perPage: _perPage,
+          sort: _sort,
+          descending: _descending,
+        ),
+      );
+      if (!mounted || gen != _generation) return;
+      setState(() {
+        _page++;
+        _count = result.count;
+        _items.addAll(result.items);
+        _loading = false;
+      });
+      // Fill the screen if the first page did not make it scrollable.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            _scroll.hasClients &&
+            _scroll.position.extentAfter < 800) {
+          _loadMore();
+        }
+      });
+    } catch (e) {
+      if (!mounted || gen != _generation) return;
+      setState(() {
+        _error = e;
+        _loading = false;
+      });
+    }
+  }
+
+  void _onSearchChanged(String _) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), _reset);
+  }
+
+  Widget _toolbar(BuildContext context) {
+    final current = widget.sortOptions
+        .where((o) => o.value == _sort)
+        .firstOrNull;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Column(
+        children: [
+          TextField(
+            controller: _search,
+            onChanged: _onSearchChanged,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Rechercher…',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _search.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _search.clear();
+                        _reset();
+                      },
+                    ),
+              isDense: true,
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(28)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _page == 0 ? '' : '$_count ${widget.countLabel}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              if (widget.sortOptions.isNotEmpty) ...[
+                PopupMenuButton<String>(
+                  initialValue: _sort,
+                  onSelected: (v) {
+                    _sort = v;
+                    _reset();
+                  },
+                  itemBuilder: (_) => [
+                    for (final o in widget.sortOptions)
+                      PopupMenuItem(value: o.value, child: Text(o.label)),
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.sort, size: 18),
+                        const SizedBox(width: 4),
+                        Text(current?.label ?? 'Trier'),
+                      ],
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: _descending ? 'Décroissant' : 'Croissant',
+                  icon: Icon(
+                    _descending ? Icons.arrow_downward : Icons.arrow_upward,
+                    size: 18,
+                  ),
+                  onPressed: () {
+                    _descending = !_descending;
+                    _reset();
+                  },
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context) {
+    if (_items.isEmpty) {
+      if (_error != null) {
+        return ErrorView(error: _error!, onRetry: _reset);
+      }
+      if (_loading || _page == 0) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return ListView(
+        children: [
+          const SizedBox(height: 80),
+          Center(child: Text(widget.emptyText)),
+        ],
+      );
+    }
+    return GridView.builder(
+      controller: _scroll,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(8),
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: widget.maxCrossAxisExtent,
+        childAspectRatio: widget.childAspectRatio,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+      ),
+      itemCount: _items.length + (_hasMore || _error != null ? 1 : 0),
+      itemBuilder: (context, i) {
+        if (i >= _items.length) {
+          if (_error != null) {
+            return Center(
+              child: IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  setState(() => _error = null);
+                  _loadMore();
+                },
+              ),
+            );
+          }
+          return const Center(child: CircularProgressIndicator());
+        }
+        return widget.itemBuilder(context, _items[i], i, _items);
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (widget.showToolbar) _toolbar(context),
+        Expanded(
+          child: RefreshIndicator(onRefresh: _reset, child: _body(context)),
+        ),
+      ],
+    );
+  }
+}

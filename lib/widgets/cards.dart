@@ -1,0 +1,500 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
+
+import '../models/models.dart';
+import '../navigation.dart';
+import '../services/app_state.dart';
+import '../utils/format.dart';
+import 'net_image.dart';
+
+class _Badge extends StatelessWidget {
+  const _Badge(this.text, {this.icon});
+  final String text;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 11, color: Colors.white),
+            const SizedBox(width: 2),
+          ],
+          Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Aspect ratio of [SceneCard] including its text area, for grid delegates.
+const sceneCardAspectRatio = 16 / 14.5;
+
+class SceneCard extends StatefulWidget {
+  const SceneCard({super.key, required this.scene});
+  final Scene scene;
+
+  @override
+  State<SceneCard> createState() => _SceneCardState();
+}
+
+class _SceneCardState extends State<SceneCard> {
+  VideoPlayerController? _preview;
+
+  Future<void> _startPreview() async {
+    final state = context.read<AppState>();
+    final url = state.client?.mediaUrl(widget.scene.preview);
+    if (!state.playPreviews || url == null) return;
+    final c = VideoPlayerController.networkUrl(
+      Uri.parse(url),
+      httpHeaders: state.client!.authHeaders,
+    );
+    setState(() => _preview = c);
+    try {
+      await c.initialize();
+      await c.setVolume(0);
+      await c.setLooping(true);
+      if (_preview == c) {
+        await c.play();
+        if (mounted) setState(() {});
+      }
+    } catch (_) {
+      _stopPreview();
+    }
+  }
+
+  void _stopPreview() {
+    final c = _preview;
+    if (c == null) return;
+    setState(() => _preview = null);
+    c.dispose();
+  }
+
+  @override
+  void dispose() {
+    _preview?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.scene;
+    final theme = Theme.of(context);
+    final f = s.file;
+    final res = f == null ? null : resolutionLabel(f.width, f.height);
+    final progress = (s.resumeTime != null && s.duration > 0)
+        ? (s.resumeTime! / s.duration).clamp(0.0, 1.0)
+        : 0.0;
+    final subtitle = [
+      if (s.studio != null) s.studio!.name,
+      if (s.date != null) s.date!,
+    ].join(' • ');
+    final preview = _preview;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: () => openScene(context, s.id),
+        onLongPress: _startPreview,
+        onTapCancel: _stopPreview,
+        child: Listener(
+          onPointerUp: (_) => _stopPreview(),
+          onPointerCancel: (_) => _stopPreview(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetImage(s.screenshot, placeholderIcon: Icons.movie),
+                    if (preview != null && preview.value.isInitialized)
+                      FittedBox(
+                        fit: BoxFit.cover,
+                        clipBehavior: Clip.hardEdge,
+                        child: SizedBox(
+                          width: preview.value.size.width,
+                          height: preview.value.size.height,
+                          child: VideoPlayer(preview),
+                        ),
+                      ),
+                    Positioned(
+                      right: 4,
+                      bottom: 6,
+                      child: Row(
+                        children: [
+                          if (res != null) ...[
+                            _Badge(res),
+                            const SizedBox(width: 4),
+                          ],
+                          if (s.duration > 0)
+                            _Badge(formatDuration(s.duration)),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      left: 4,
+                      top: 4,
+                      child: Row(
+                        children: [
+                          if (s.rating100 != null) ...[
+                            _Badge(
+                              starsFromRating(s.rating100)
+                                  .toStringAsFixed(1)
+                                  .replaceAll('.0', ''),
+                              icon: Icons.star,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          if (s.oCounter > 0)
+                            _Badge('${s.oCounter}', icon: Icons.water_drop),
+                        ],
+                      ),
+                    ),
+                    if (progress > 0)
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 3,
+                          backgroundColor: Colors.black45,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.displayTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Card with a tall image and a caption, used for performers.
+class PerformerCard extends StatelessWidget {
+  const PerformerCard({super.key, required this.performer});
+  final Performer performer;
+
+  static const aspectRatio = 2 / 3.4;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = performer;
+    final theme = Theme.of(context);
+    final age = ageFrom(p.birthdate);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: () => openPerformer(context, p.id),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  NetImage(
+                    p.imagePath,
+                    placeholderIcon: Icons.person,
+                    alignment: Alignment.topCenter,
+                  ),
+                  if (p.favorite)
+                    const Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Icon(
+                        Icons.favorite,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
+                    ),
+                  if (p.sceneCount > 0)
+                    Positioned(
+                      right: 4,
+                      bottom: 4,
+                      child: _Badge('${p.sceneCount}', icon: Icons.movie),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    p.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (p.disambiguation != null && p.disambiguation!.isNotEmpty)
+                    Text(
+                      p.disambiguation!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  if (age != null)
+                    Text('$age ans', style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Generic card for studios, tags and galleries.
+class EntityCard extends StatelessWidget {
+  const EntityCard({
+    super.key,
+    required this.title,
+    required this.image,
+    required this.onTap,
+    this.subtitle,
+    this.fit = BoxFit.cover,
+    this.icon = Icons.image_outlined,
+    this.favorite = false,
+    this.imagePadding = EdgeInsets.zero,
+  });
+
+  final String title;
+  final String? image;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final BoxFit fit;
+  final IconData icon;
+  final bool favorite;
+  final EdgeInsets imagePadding;
+
+  static const aspectRatio = 1.05;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Padding(
+                    padding: imagePadding,
+                    child: NetImage(image, fit: fit, placeholderIcon: icon),
+                  ),
+                  if (favorite)
+                    const Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Icon(
+                        Icons.favorite,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class StudioCard extends StatelessWidget {
+  const StudioCard({super.key, required this.studio});
+  final Studio studio;
+
+  @override
+  Widget build(BuildContext context) => EntityCard(
+    title: studio.name,
+    image: studio.imagePath,
+    subtitle: '${studio.sceneCount} scènes',
+    fit: BoxFit.contain,
+    icon: Icons.business,
+    favorite: studio.favorite,
+    imagePadding: const EdgeInsets.all(12),
+    onTap: () => openStudio(context, studio.id),
+  );
+}
+
+class TagCard extends StatelessWidget {
+  const TagCard({super.key, required this.tag});
+  final Tag tag;
+
+  @override
+  Widget build(BuildContext context) => EntityCard(
+    title: tag.name,
+    image: tag.imagePath,
+    subtitle: '${tag.sceneCount} scènes • ${tag.markerCount} marqueurs',
+    icon: Icons.label_outline,
+    favorite: tag.favorite,
+    onTap: () => openTag(context, tag.id),
+  );
+}
+
+class GalleryCard extends StatelessWidget {
+  const GalleryCard({super.key, required this.gallery});
+  final Gallery gallery;
+
+  @override
+  Widget build(BuildContext context) => EntityCard(
+    title: gallery.displayTitle,
+    image: gallery.cover,
+    subtitle: [
+      '${gallery.imageCount} images',
+      if (gallery.date != null) gallery.date!,
+    ].join(' • '),
+    icon: Icons.photo_library_outlined,
+    onTap: () => openGallery(context, gallery.id),
+  );
+}
+
+class MarkerCard extends StatelessWidget {
+  const MarkerCard({super.key, required this.marker});
+  final SceneMarker marker;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = marker;
+    final theme = Theme.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: m.sceneId == null
+            ? null
+            : () => playScene(context, m.sceneId!, start: m.seconds),
+        onLongPress: m.sceneId == null
+            ? null
+            : () => openScene(context, m.sceneId!),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  NetImage(m.screenshot, placeholderIcon: Icons.bookmark),
+                  Positioned(
+                    right: 4,
+                    bottom: 4,
+                    child: _Badge(
+                      formatDuration(m.seconds),
+                      icon: Icons.play_arrow,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      m.displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      m.sceneTitle ?? m.primaryTag.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
