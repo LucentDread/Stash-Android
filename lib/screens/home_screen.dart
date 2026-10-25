@@ -74,6 +74,19 @@ class _StackedViews extends StatefulWidget {
 class _StackedViewsState extends State<_StackedViews> {
   int _refresh = 0;
 
+  /// Sort chosen on the home page for each view (by id), until the app
+  /// closes; the saved views keep their own.
+  final _sorts = <String, (String, bool)>{};
+
+  /// [view] with the sort chosen here, if any.
+  SavedView _sorted(SavedView view) {
+    final s = _sorts[view.id];
+    if (s == null) return view;
+    return SavedView.fromJson(view.toJson())
+      ..sort = s.$1
+      ..descending = s.$2;
+  }
+
   @override
   Widget build(BuildContext context) {
     final version = context.select<AppState, int>((s) => s.dataVersion);
@@ -84,7 +97,14 @@ class _StackedViewsState extends State<_StackedViews> {
         key: ValueKey('$_refresh-$version'),
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          for (final v in widget.views) _ViewSection(view: v),
+          for (final v in widget.views.map(_sorted))
+            _ViewSection(
+              // Reloaded from the first page when its sort changes.
+              key: ValueKey('${v.id}|${v.sort}|${v.descending}'),
+              view: v,
+              onSort: (sort, descending) =>
+                  setState(() => _sorts[v.id] = (sort, descending)),
+            ),
           const SliverToBoxAdapter(child: SizedBox(height: 16)),
         ],
       ),
@@ -93,8 +113,9 @@ class _StackedViewsState extends State<_StackedViews> {
 }
 
 class _ViewSection extends StatefulWidget {
-  const _ViewSection({required this.view});
+  const _ViewSection({super.key, required this.view, required this.onSort});
   final SavedView view;
+  final void Function(String sort, bool descending) onSort;
 
   @override
   State<_ViewSection> createState() => _ViewSectionState();
@@ -155,6 +176,50 @@ class _ViewSectionState extends State<_ViewSection> {
     }
   }
 
+  /// Sort of this view only, like the sort bar of the grids.
+  Widget _sortBar(BuildContext context) {
+    final view = widget.view;
+    final options = sortsFor(view.kind);
+    final current = options.where((o) => o.value == view.sort).firstOrNull;
+    final small = Theme.of(context).textTheme.bodySmall;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          PopupMenuButton<String>(
+            tooltip: 'Trier',
+            initialValue: view.sort,
+            onSelected: (v) => widget.onSort(v, view.descending),
+            itemBuilder: (_) => [
+              for (final o in options)
+                PopupMenuItem(value: o.value, child: Text(o.label)),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.sort, size: 18),
+                  const SizedBox(width: 4),
+                  Text(current?.label ?? 'Trier', style: small),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: view.descending ? 'Décroissant' : 'Croissant',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              view.descending ? Icons.arrow_downward : Icons.arrow_upward,
+              size: 18,
+            ),
+            onPressed: () => widget.onSort(view.sort, !view.descending),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -202,6 +267,7 @@ class _ViewSectionState extends State<_ViewSection> {
             ),
           ),
         ),
+        SliverToBoxAdapter(child: _sortBar(context)),
         if (_items.isNotEmpty)
           SliverPadding(
             padding: const EdgeInsets.all(gridSpacing),

@@ -1,5 +1,10 @@
 # Historique des versions
 
+## 1.10.1
+- Accueil à plusieurs vues : chaque vue a de nouveau un tri (critère et
+  sens), propre à elle. Le choix dure jusqu'à la fermeture de l'app ; la
+  vue enregistrée garde son tri.
+
 ## 1.10.0
 - Vues enregistrées de performeurs, studios, groupes, galeries, tags ou
   marqueurs, en plus des scènes (choix « Contenu »), avec les filtres

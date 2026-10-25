@@ -428,5 +428,66 @@ void main() {
       expect(find.byType(PerformerCard), findsOneWidget);
       expect(find.text('Alice'), findsOneWidget);
     });
+
+    testWidgets('each stacked view of the home page sorts on its own', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 6000);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      final a = await app();
+      a.saveView(SavedView(id: 's', name: 'Scènes', filter: SceneFilter()));
+      a.saveView(
+        SavedView(
+          id: 'p',
+          name: 'Acteurs',
+          kind: ViewKind.performers,
+          filter: SceneFilter(),
+          sort: 'name',
+          descending: false,
+        ),
+      );
+      a.setHomeView('s', true);
+      a.setHomeView('p', true);
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: a,
+          child: const MaterialApp(home: HomeTab()),
+        ),
+      );
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+      List<Map<String, dynamic>> finds(String query) => [
+        for (final r in sent)
+          if ((r['query'] as String).contains(query))
+            r['variables']['filter'] as Map<String, dynamic>,
+      ];
+      expect(find.byTooltip('Trier'), findsNWidgets(2));
+      expect(find.text('Date d\'ajout'), findsOneWidget);
+      expect(find.text('Nom'), findsOneWidget);
+
+      sent.clear();
+      await tester.tap(find.byTooltip('Trier').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Titre').last);
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+      expect(finds('findScenes').single['sort'], 'title');
+      expect(finds('findScenes').single['direction'], 'DESC');
+      expect(finds('findPerformers'), isEmpty, reason: 'other view untouched');
+
+      sent.clear();
+      await tester.tap(find.byTooltip('Croissant'));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+      expect(finds('findPerformers').single, containsPair('direction', 'DESC'));
+      expect(finds('findPerformers').single, containsPair('sort', 'name'));
+      expect(finds('findScenes'), isEmpty);
+      // The saved views keep their own sort.
+      expect(a.viewById('s')!.sort, 'created_at');
+    });
   });
 }
