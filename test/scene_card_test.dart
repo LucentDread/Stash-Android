@@ -91,4 +91,28 @@ void main() {
       });
     }
   }
+
+  testWidgets('performer names are not shown on scene cards', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final scene = cases['short title, studio, tags, performers']!;
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => AppState(prefs),
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Center(
+              child: SizedBox(
+                width: 300,
+                height: SceneCard.heightFor(context, 300),
+                child: SceneCard(scene: scene),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.textContaining('Plage', findRichText: true), findsOneWidget);
+    expect(find.textContaining('Alice', findRichText: true), findsNothing);
+  });
 }

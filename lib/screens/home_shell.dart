@@ -77,7 +77,17 @@ class _HomeShellState extends State<HomeShell> {
             _index = i;
             _visited.add(i);
           }),
-          destinations: [for (final t in _tabs) t.$2],
+          destinations: [
+            // Labels stay on one line (ellipsis) on narrow screens. This
+            // must sit inside the bar: its Material resets the text style.
+            for (final t in _tabs)
+              DefaultTextStyle.merge(
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                child: t.$2,
+              ),
+          ],
         ),
       ),
     );

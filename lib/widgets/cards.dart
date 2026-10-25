@@ -254,8 +254,6 @@ class _SceneCardText extends StatelessWidget {
           text: s.tags.map((t) => t.name).join(' · '),
           style: TextStyle(color: scheme.primary),
         ),
-      if (s.performers.isNotEmpty)
-        TextSpan(text: s.performers.map((p) => p.name).join(', ')),
       if (file.isNotEmpty) TextSpan(text: file, style: dim),
       if (s.details != null && s.details!.trim().isNotEmpty)
         TextSpan(text: s.details!.trim().replaceAll(RegExp(r'\s+'), ' ')),
