@@ -28,6 +28,8 @@ class AppState extends ChangeNotifier {
   static const _kViews = 'saved_views';
   static const _kHomeView = 'home_view';
   static const _kHomeViews = 'home_views';
+  static const _kWebViews = 'web_views';
+  static const _kViewOrder = 'view_order';
   static const _kPip = 'popup_player';
   static const _kHideRecents = 'hide_recents';
   static const _kAutoUpdate = 'auto_update';
@@ -117,9 +119,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Saved scene views (filter + sort), in display order.
-  List<SavedView> get views {
-    final raw = _prefs.getString(_kViews);
+  /// Views made in the app (filter + sort), in creation order.
+  List<SavedView> get views => _readViews(_kViews);
+
+  /// Filters saved in Stash's web UI, as last read from the server.
+  List<SavedView> get webViews => _readViews(_kWebViews);
+
+  List<SavedView> _readViews(String key) {
+    final raw = _prefs.getString(key);
     if (raw == null) return [];
     try {
       return [
@@ -131,8 +138,37 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// App views and web UI filters together, in the order chosen in
+  /// Plus > Vues enregistrées (new ones last).
+  List<SavedView> get allViews {
+    final all = [...views, ...webViews];
+    final order = _prefs.getStringList(_kViewOrder) ?? const [];
+    final index = {for (var i = 0; i < all.length; i++) all[i].id: i};
+    int rank(SavedView v) {
+      final i = order.indexOf(v.id);
+      return i < 0 ? order.length + index[v.id]! : i;
+    }
+
+    return all..sort((a, b) => rank(a).compareTo(rank(b)));
+  }
+
   SavedView? viewById(String? id) =>
-      id == null ? null : views.where((v) => v.id == id).firstOrNull;
+      id == null ? null : allViews.where((v) => v.id == id).firstOrNull;
+
+  /// Reads the filters saved in the web UI again. Returns how many could
+  /// not be used (image lists).
+  Future<int> refreshWebViews() async {
+    final repo = _repo;
+    if (repo == null) return 0;
+    final raw = await repo.savedFilters();
+    final list = [for (final f in raw) ?SavedView.fromServer(f)];
+    _prefs.setString(
+      _kWebViews,
+      jsonEncode([for (final v in list) v.toJson()]),
+    );
+    notifyListeners();
+    return raw.length - list.length;
+  }
 
   /// Ids of the views making up the home page. Before 1.9 only one view
   /// could be chosen, under another key.
@@ -148,12 +184,12 @@ class AppState extends ChangeNotifier {
     _prefs.remove(_kHomeView);
   }
 
-  /// The views stacked on the home page, in the order of [views]. Empty for
-  /// the default dashboard.
+  /// The views stacked on the home page, in the order of [allViews]. Empty
+  /// for the default dashboard.
   List<SavedView> get homeViews {
     final ids = _homeIds.toSet();
     return [
-      for (final v in views)
+      for (final v in allViews)
         if (ids.contains(v.id)) v,
     ];
   }
@@ -216,10 +252,12 @@ class AppState extends ChangeNotifier {
     _storeViews(views..removeWhere((v) => v.id == id));
   }
 
+  /// Moves a view within [allViews].
   void reorderViews(int oldIndex, int newIndex) {
-    final list = views;
+    final list = allViews;
     list.insert(newIndex, list.removeAt(oldIndex));
-    _storeViews(list);
+    _prefs.setStringList(_kViewOrder, [for (final v in list) v.id]);
+    notifyListeners();
   }
 
   void _storeViews(List<SavedView> list) {
@@ -233,6 +271,7 @@ class AppState extends ChangeNotifier {
     final client = StashClient(serverUrl: url, apiKey: apiKey);
     final repo = StashRepository(client);
     final version = await repo.version();
+    if (client.serverUrl != serverUrl) await _prefs.remove(_kWebViews);
     await _prefs.setString(_kUrl, client.serverUrl);
     if (client.apiKey == null) {
       await _prefs.remove(_kKey);
@@ -246,6 +285,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> disconnect() async {
+    // The web UI filters belong to that server.
+    await _prefs.remove(_kWebViews);
     await _prefs.remove(_kUrl);
     await _prefs.remove(_kKey);
     _repo?.client.close();

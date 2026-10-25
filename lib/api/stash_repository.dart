@@ -1,4 +1,6 @@
 import '../models/models.dart';
+import '../models/scene_filter.dart';
+import 'saved_filter.dart';
 import 'stash_client.dart';
 
 /// Sort options offered in list screens. `value` is the Stash sort key.
@@ -366,6 +368,66 @@ class StashRepository {
   StashRepository(this.client);
   final StashClient client;
 
+  /// The filters saved in Stash's web UI (all kinds).
+  Future<List<Map<String, dynamic>>> savedFilters() async {
+    final d = await client.query('''
+      query SavedFilters {
+        findSavedFilters {
+          id mode name
+          find_filter { q sort direction }
+          object_filter
+        }
+      }''');
+    return [
+      for (final f in d['findSavedFilters'] as List)
+        (f as Map).cast<String, dynamic>(),
+    ];
+  }
+
+  Future<FilterSchema>? _filterSchema;
+
+  /// The server's filter input types, read once.
+  Future<FilterSchema> filterSchema() => _filterSchema ??=
+      client
+          .query(FilterSchema.introspectionQuery)
+          .then(FilterSchema.fromIntrospection)
+        ..catchError((Object _) {
+          _filterSchema = null; // try again next time
+          return FilterSchema(const {});
+        });
+
+  /// GraphQL filter type of each kind of list.
+  static String filterType(ViewKind kind) => switch (kind) {
+    ViewKind.scenes => 'SceneFilterType',
+    ViewKind.performers => 'PerformerFilterType',
+    ViewKind.studios => 'StudioFilterType',
+    ViewKind.groups => 'GroupFilterType',
+    ViewKind.galleries => 'GalleryFilterType',
+    ViewKind.tags => 'TagFilterType',
+    ViewKind.markers => 'SceneMarkerFilterType',
+  };
+
+  /// The GraphQL filter of [view]: its own, or its web UI filter converted.
+  Future<Map<String, dynamic>> viewFilter(SavedView view) async {
+    final saved = view.serverFilter;
+    if (saved == null) return view.filter.toGraphQL(view.kind);
+    return (await filterSchema()).convert(filterType(view.kind), saved);
+  }
+
+  /// One page of [view]'s items (scenes, performers… depending on its kind).
+  Future<ResultPage<Object>> findForView(SavedView view, ListQuery q) async {
+    final f = await viewFilter(view);
+    return switch (view.kind) {
+      ViewKind.scenes => await findScenes(q, sceneFilter: f),
+      ViewKind.performers => await findPerformers(q, performerFilter: f),
+      ViewKind.studios => await findStudios(q, studioFilter: f),
+      ViewKind.groups => await findGroups(q, groupFilter: f),
+      ViewKind.galleries => await findGalleries(q, galleryFilter: f),
+      ViewKind.tags => await findTags(q, tagFilter: f),
+      ViewKind.markers => await findMarkers(q, markerFilter: f),
+    };
+  }
+
   Future<String> version() async {
     final d = await client.query('query { version { version } }');
     return (d['version'] as Map?)?['version'] as String? ?? '?';
@@ -455,6 +517,22 @@ class StashRepository {
       }''',
       variables: {'id': id, 'resume': resumeTime, 'duration': playDuration},
     );
+  }
+
+  /// Forgets where playback of the scene stopped.
+  Future<void> resetResume(String id) async {
+    try {
+      await client.query(
+        '''
+        mutation ResetResume(\$id: ID!) {
+          sceneResetActivity(id: \$id, reset_resume: true)
+        }''',
+        variables: {'id': id},
+      );
+    } on StashException {
+      // Before Stash 0.27: no reset mutation, save a zero position.
+      await saveActivity(id, resumeTime: 0);
+    }
   }
 
   Future<int> addPlay(String id) async {
@@ -547,16 +625,19 @@ class StashRepository {
     );
   }
 
-  Future<ResultPage<Studio>> findStudios(ListQuery q) async {
+  Future<ResultPage<Studio>> findStudios(
+    ListQuery q, {
+    Map<String, dynamic>? studioFilter,
+  }) async {
     final d = await client.query(
       '''
-      query FindStudios(\$filter: FindFilterType) {
-        findStudios(filter: \$filter) {
+      query FindStudios(\$filter: FindFilterType, \$sf: StudioFilterType) {
+        findStudios(filter: \$filter, studio_filter: \$sf) {
           count
           studios { $_studioFields }
         }
       }''',
-      variables: {'filter': q.toFilter()},
+      variables: {'filter': q.toFilter(), 'sf': studioFilter ?? {}},
     );
     final r = d['findStudios'] as Map<String, dynamic>;
     return ResultPage(_items(r['studios'], Studio.fromJson), r['count'] as int);
@@ -575,16 +656,19 @@ class StashRepository {
     return Studio.fromJson(s as Map<String, dynamic>);
   }
 
-  Future<ResultPage<Tag>> findTags(ListQuery q) async {
+  Future<ResultPage<Tag>> findTags(
+    ListQuery q, {
+    Map<String, dynamic>? tagFilter,
+  }) async {
     final d = await client.query(
       '''
-      query FindTags(\$filter: FindFilterType) {
-        findTags(filter: \$filter) {
+      query FindTags(\$filter: FindFilterType, \$tf: TagFilterType) {
+        findTags(filter: \$filter, tag_filter: \$tf) {
           count
           tags { $_tagFields }
         }
       }''',
-      variables: {'filter': q.toFilter()},
+      variables: {'filter': q.toFilter(), 'tf': tagFilter ?? {}},
     );
     final r = d['findTags'] as Map<String, dynamic>;
     return ResultPage(_items(r['tags'], Tag.fromJson), r['count'] as int);
@@ -606,6 +690,7 @@ class StashRepository {
   Future<ResultPage<Group>> findGroups(
     ListQuery q, {
     EntityFilter? entity,
+    Map<String, dynamic>? groupFilter,
   }) async {
     final d = await client.query(
       '''
@@ -617,7 +702,7 @@ class StashRepository {
       }''',
       variables: {
         'filter': q.toFilter(),
-        'gf': {...?entity?.toCriterion()},
+        'gf': {...?groupFilter, ...?entity?.toCriterion()},
       },
     );
     final r = d['findGroups'] as Map<String, dynamic>;
@@ -906,6 +991,7 @@ class StashRepository {
   Future<ResultPage<Gallery>> findGalleries(
     ListQuery q, {
     EntityFilter? entity,
+    Map<String, dynamic>? galleryFilter,
   }) async {
     final d = await client.query(
       '''
@@ -917,7 +1003,7 @@ class StashRepository {
       }''',
       variables: {
         'filter': q.toFilter(),
-        'gf': {...?entity?.toCriterion()},
+        'gf': {...?galleryFilter, ...?entity?.toCriterion()},
       },
     );
     final r = d['findGalleries'] as Map<String, dynamic>;
@@ -970,6 +1056,7 @@ class StashRepository {
   Future<ResultPage<SceneMarker>> findMarkers(
     ListQuery q, {
     EntityFilter? entity,
+    Map<String, dynamic>? markerFilter,
   }) async {
     final d = await client.query(
       '''
@@ -981,7 +1068,7 @@ class StashRepository {
       }''',
       variables: {
         'filter': q.toFilter(),
-        'mf': {...?entity?.toCriterion()},
+        'mf': {...?markerFilter, ...?entity?.toCriterion()},
       },
     );
     final r = d['findSceneMarkers'] as Map<String, dynamic>;

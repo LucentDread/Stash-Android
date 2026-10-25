@@ -15,6 +15,7 @@ import 'package:stash_android/screens/edit/edit_form.dart';
 import 'package:stash_android/screens/edit/editors.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/widgets/cards.dart';
+import 'package:stash_android/widgets/view_list.dart';
 
 /// App state whose repository talks to a fake server recording requests.
 Future<(AppState, List<Map<String, dynamic>>)> _app(String reply) async {
@@ -149,7 +150,7 @@ void main() {
       name: 'Hors groupe',
       filter: SceneFilter(groups: EntityCriterion(mode: EntityMode.none)),
     );
-    await tester.pumpWidget(wrap(ScenesBrowser(view: view)));
+    await tester.pumpWidget(wrap(ViewBrowser(view: view)));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.filter_list), findsNothing);
     expect(find.byIcon(Icons.bookmark_add_outlined), findsNothing);

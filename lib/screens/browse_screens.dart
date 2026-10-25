@@ -8,14 +8,8 @@ import '../services/app_state.dart';
 import '../widgets/cards.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/paged_grid.dart';
+import '../widgets/view_list.dart';
 import 'scene_filter_screen.dart';
-
-/// Max card width for scene grids, derived from the column setting.
-double sceneExtent(BuildContext context) {
-  final columns = context.watch<AppState>().gridColumns;
-  // Based on the shortest side so landscape simply shows more columns.
-  return MediaQuery.sizeOf(context).shortestSide / columns;
-}
 
 Widget sceneGrid(BuildContext context, {EntityFilter? entity}) {
   if (entity?.kind == 'groups') {
@@ -37,17 +31,12 @@ class ScenesBrowser extends StatefulWidget {
   const ScenesBrowser({
     super.key,
     this.entity,
-    this.view,
     this.sortOptions = SortOptions.scenes,
     this.initialSort,
     this.initialDescending = true,
   });
 
   final EntityFilter? entity;
-
-  /// Saved view to show. Its filter is locked here: views are edited from
-  /// Plus > Vues enregistrées.
-  final SavedView? view;
   final List<SortOption> sortOptions;
   final String? initialSort;
   final bool initialDescending;
@@ -57,10 +46,10 @@ class ScenesBrowser extends StatefulWidget {
 }
 
 class _ScenesBrowserState extends State<ScenesBrowser> {
-  late SceneFilter _filter = widget.view?.filter.copy() ?? SceneFilter();
-  late String _query = widget.view?.query ?? '';
-  late String? _sort = widget.view?.sort ?? widget.initialSort;
-  late bool _descending = widget.view?.descending ?? widget.initialDescending;
+  SceneFilter _filter = SceneFilter();
+  String _query = '';
+  late String? _sort = widget.initialSort;
+  late bool _descending = widget.initialDescending;
   int _filterVersion = 0;
 
   void _setFilter(SceneFilter f) => setState(() {
@@ -135,7 +124,6 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
   Widget build(BuildContext context) {
     final repo = context.read<AppState>().repo!;
     final count = _filter.activeCount;
-    final locked = widget.view != null;
     return PagedGrid<Scene>(
       itemKey: (item) => item.id,
       fetch: (q) => repo.findScenes(
@@ -153,27 +141,25 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
         _descending = desc;
       },
       reloadKey: _filterVersion,
-      maxCrossAxisExtent: sceneExtent(context),
+      maxCrossAxisExtent: sceneExtentOf(context),
       tileHeight: (w) => SceneCard.heightFor(context, w),
       countLabel: 'scènes',
-      header: locked ? null : _chips(),
+      header: _chips(),
       actions: [
-        if (!locked) ...[
-          IconButton(
-            tooltip: 'Filtres',
-            icon: Badge(
-              isLabelVisible: count > 0,
-              label: Text('$count'),
-              child: const Icon(Icons.filter_list),
-            ),
-            onPressed: _editFilter,
+        IconButton(
+          tooltip: 'Filtres',
+          icon: Badge(
+            isLabelVisible: count > 0,
+            label: Text('$count'),
+            child: const Icon(Icons.filter_list),
           ),
-          IconButton(
-            tooltip: 'Enregistrer comme nouvelle vue',
-            icon: const Icon(Icons.bookmark_add_outlined),
-            onPressed: _saveAsNew,
-          ),
-        ],
+          onPressed: _editFilter,
+        ),
+        IconButton(
+          tooltip: 'Enregistrer comme nouvelle vue',
+          icon: const Icon(Icons.bookmark_add_outlined),
+          onPressed: _saveAsNew,
+        ),
       ],
       itemBuilder: (_, s, _, _) => SceneCard(scene: s),
     );
@@ -268,7 +254,7 @@ Widget markerGrid(BuildContext context, {EntityFilter? entity}) {
     itemKey: (item) => item.id,
     fetch: (q) => repo.findMarkers(q, entity: entity),
     sortOptions: SortOptions.markers,
-    maxCrossAxisExtent: sceneExtent(context),
+    maxCrossAxisExtent: sceneExtentOf(context),
     tileHeight: (w) => MarkerCard.heightFor(context, w),
     countLabel: 'marqueurs',
     emptyText: 'Aucun marqueur',
@@ -342,7 +328,7 @@ class GroupsScreen extends StatelessWidget {
   }
 }
 
-/// Scenes of a saved view, full screen.
+/// A saved view, full screen.
 class ViewScreen extends StatelessWidget {
   const ViewScreen({super.key, required this.view});
   final SavedView view;
@@ -350,7 +336,7 @@ class ViewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _BrowseScaffold(
     title: view.name,
-    child: ScenesBrowser(view: view),
+    child: ViewBrowser(view: view),
   );
 }
 

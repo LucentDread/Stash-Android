@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.10.0
+- Vues enregistrées de performeurs, studios, groupes, galeries, tags ou
+  marqueurs, en plus des scènes (choix « Contenu »), avec les filtres
+  propres à chacun (favoris, note, tags, studios…). L'accueil peut ainsi
+  empiler une vue de scènes puis une vue de studios ou de performeurs.
+- Les filtres enregistrés dans l'interface web de Stash apparaissent dans
+  Plus > Vues enregistrées (icône nuage) : ils s'ouvrent, se placent sur
+  l'accueil et se réordonnent avec les vues de l'app.
+- Fiche scène : bouton pour oublier la position de reprise de la vidéo.
+
 ## 1.9.0
 - Accueil : plusieurs vues enregistrées peuvent former la page d'accueil,
   empilées dans l'ordre de Plus > Vues enregistrées (bouton « Afficher

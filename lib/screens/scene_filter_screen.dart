@@ -11,8 +11,15 @@ import '../widgets/async_view.dart';
 
 /// Edits a [SceneFilter]; pops with the new filter when applied.
 class SceneFilterScreen extends StatefulWidget {
-  const SceneFilterScreen({super.key, required this.initial});
+  const SceneFilterScreen({
+    super.key,
+    required this.initial,
+    this.kind = ViewKind.scenes,
+  });
   final SceneFilter initial;
+
+  /// What is filtered: only its criteria are offered.
+  final ViewKind kind;
 
   @override
   State<SceneFilterScreen> createState() => _SceneFilterScreenState();
@@ -23,9 +30,11 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final has = widget.kind.fields.contains;
+    final kind = widget.kind;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Filtrer les scènes'),
+        title: Text('Filtrer : ${kind.label.toLowerCase()}'),
         actions: [
           TextButton(
             onPressed: () => setState(() {
@@ -41,7 +50,8 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
                 ..organized = null
                 ..played = null
                 ..hasMarkers = null
-                ..performerFavorite = null;
+                ..performerFavorite = null
+                ..favorite = null;
             }),
             child: const Text('Tout effacer'),
           ),
@@ -50,113 +60,135 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 96),
         children: [
-          _EntitySection(
-            title: 'Performeurs',
-            kind: RefKind.performers,
-            criterion: _f.performers,
-            modes: EntityMode.values,
-            onChanged: (c) => setState(() => _f.performers = c),
-          ),
-          _EntitySection(
-            title: 'Tags',
-            kind: RefKind.tags,
-            criterion: _f.tags,
-            modes: EntityMode.values,
-            subLevelsLabel: 'Inclure les sous-tags',
-            onChanged: (c) => setState(() => _f.tags = c),
-          ),
-          _EntitySection(
-            title: 'Studio',
-            kind: RefKind.studios,
-            criterion: _f.studios,
-            // A scene has a single studio: "all" makes no sense.
-            modes: EntityMode.values.where((m) => m != EntityMode.all).toList(),
-            subLevelsLabel: 'Inclure les sous-studios',
-            onChanged: (c) => setState(() => _f.studios = c),
-          ),
-          _EntitySection(
-            title: 'Groupes',
-            kind: RefKind.groups,
-            criterion: _f.groups,
-            modes: EntityMode.values,
-            subLevelsLabel: 'Inclure les sous-groupes',
-            onChanged: (c) => setState(() => _f.groups = c),
-          ),
+          if (has(FilterField.favorite))
+            _TriState(
+              title: 'Favoris',
+              value: _f.favorite,
+              onChanged: (v) => setState(() => _f.favorite = v),
+            ),
+          if (has(FilterField.performers))
+            _EntitySection(
+              title: 'Performeurs',
+              kind: RefKind.performers,
+              criterion: _f.performers,
+              modes: EntityMode.values,
+              onChanged: (c) => setState(() => _f.performers = c),
+            ),
+          if (has(FilterField.tags))
+            _EntitySection(
+              title: 'Tags',
+              kind: RefKind.tags,
+              criterion: _f.tags,
+              modes: EntityMode.values,
+              subLevelsLabel: 'Inclure les sous-tags',
+              onChanged: (c) => setState(() => _f.tags = c),
+            ),
+          if (has(FilterField.studios))
+            _EntitySection(
+              title: kind == ViewKind.performers ? 'Studios' : 'Studio',
+              kind: RefKind.studios,
+              criterion: _f.studios,
+              // A scene has a single studio: "all" makes no sense (a
+              // performer may have several).
+              modes: kind == ViewKind.performers
+                  ? EntityMode.values
+                  : EntityMode.values
+                        .where((m) => m != EntityMode.all)
+                        .toList(),
+              subLevelsLabel: 'Inclure les sous-studios',
+              onChanged: (c) => setState(() => _f.studios = c),
+            ),
+          if (has(FilterField.groups))
+            _EntitySection(
+              title: 'Groupes',
+              kind: RefKind.groups,
+              criterion: _f.groups,
+              modes: EntityMode.values,
+              subLevelsLabel: 'Inclure les sous-groupes',
+              onChanged: (c) => setState(() => _f.groups = c),
+            ),
           const Divider(),
-          ListTile(
-            title: const Text('Note minimale'),
-            trailing: DropdownButton<int?>(
-              value: _f.minStars,
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Toutes')),
-                for (var i = 1; i <= 5; i++)
-                  DropdownMenuItem(value: i, child: Text('≥ $i ★')),
-              ],
-              onChanged: (v) => setState(() => _f.minStars = v),
+          if (has(FilterField.rating))
+            ListTile(
+              title: const Text('Note minimale'),
+              trailing: DropdownButton<int?>(
+                value: _f.minStars,
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Toutes')),
+                  for (var i = 1; i <= 5; i++)
+                    DropdownMenuItem(value: i, child: Text('≥ $i ★')),
+                ],
+                onChanged: (v) => setState(() => _f.minStars = v),
+              ),
             ),
-          ),
-          ListTile(
-            title: const Text('Résolution minimale'),
-            trailing: DropdownButton<String?>(
-              value: _f.minResolution,
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Toutes')),
-                for (final r in ResolutionChoice.all)
-                  DropdownMenuItem(
-                    value: r.aboveEnum,
-                    child: Text('≥ ${r.label}'),
-                  ),
-              ],
-              onChanged: (v) => setState(() => _f.minResolution = v),
+          if (has(FilterField.resolution))
+            ListTile(
+              title: const Text('Résolution minimale'),
+              trailing: DropdownButton<String?>(
+                value: _f.minResolution,
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Toutes')),
+                  for (final r in ResolutionChoice.all)
+                    DropdownMenuItem(
+                      value: r.aboveEnum,
+                      child: Text('≥ ${r.label}'),
+                    ),
+                ],
+                onChanged: (v) => setState(() => _f.minResolution = v),
+              ),
             ),
-          ),
-          ListTile(
-            title: const Text('Durée (minutes)'),
-            subtitle: Row(
-              children: [
-                Expanded(
-                  child: _NumberField(
-                    label: 'Min',
-                    value: _f.minDurationMin,
-                    onChanged: (v) => _f.minDurationMin = v,
+          if (has(FilterField.duration))
+            ListTile(
+              title: const Text('Durée (minutes)'),
+              subtitle: Row(
+                children: [
+                  Expanded(
+                    child: _NumberField(
+                      label: 'Min',
+                      value: _f.minDurationMin,
+                      onChanged: (v) => _f.minDurationMin = v,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _NumberField(
-                    label: 'Max',
-                    value: _f.maxDurationMin,
-                    onChanged: (v) => _f.maxDurationMin = v,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _NumberField(
+                      label: 'Max',
+                      value: _f.maxDurationMin,
+                      onChanged: (v) => _f.maxDurationMin = v,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
           const Divider(),
-          _TriState(
-            title: 'Lecture',
-            value: _f.played,
-            yes: 'Déjà vues',
-            no: 'Jamais vues',
-            onChanged: (v) => setState(() => _f.played = v),
-          ),
-          _TriState(
-            title: 'Organisées',
-            value: _f.organized,
-            onChanged: (v) => setState(() => _f.organized = v),
-          ),
-          _TriState(
-            title: 'Marqueurs',
-            value: _f.hasMarkers,
-            yes: 'Avec',
-            no: 'Sans',
-            onChanged: (v) => setState(() => _f.hasMarkers = v),
-          ),
-          _TriState(
-            title: 'Performeur favori',
-            value: _f.performerFavorite,
-            onChanged: (v) => setState(() => _f.performerFavorite = v),
-          ),
+          if (has(FilterField.played))
+            _TriState(
+              title: 'Lecture',
+              value: _f.played,
+              yes: kind == ViewKind.scenes ? 'Déjà vues' : 'Déjà vu',
+              no: kind == ViewKind.scenes ? 'Jamais vues' : 'Jamais vu',
+              onChanged: (v) => setState(() => _f.played = v),
+            ),
+          if (has(FilterField.organized))
+            _TriState(
+              title: kind == ViewKind.scenes ? 'Organisées' : 'Organisé',
+              value: _f.organized,
+              onChanged: (v) => setState(() => _f.organized = v),
+            ),
+          if (has(FilterField.hasMarkers))
+            _TriState(
+              title: 'Marqueurs',
+              value: _f.hasMarkers,
+              yes: 'Avec',
+              no: 'Sans',
+              onChanged: (v) => setState(() => _f.hasMarkers = v),
+            ),
+          if (has(FilterField.performerFavorite))
+            _TriState(
+              title: 'Performeur favori',
+              value: _f.performerFavorite,
+              onChanged: (v) => setState(() => _f.performerFavorite = v),
+            ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

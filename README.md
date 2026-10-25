@@ -19,9 +19,13 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   tous / aucun de / vide / non vide, avec sous-tags, sous-studios et
   sous-groupes), note minimale, résolution minimale, durée, déjà vues ou
   jamais vues, organisées, marqueurs, performeur favori.
-- **Vues enregistrées** : une recherche + filtres + tri peut être enregistrée
-  (icône signet) et ajoutée à la page d'accueil (icône maison) ; plusieurs
-  vues s'y empilent, une seule donne son nom à la page. L'accueil par défaut
+- **Vues enregistrées** : une recherche + filtres + tri de scènes,
+  performeurs, studios, groupes, galeries, tags ou marqueurs peut être
+  enregistrée (Plus > Vues enregistrées, ou icône signet dans Scènes) et
+  ajoutée à la page d'accueil (icône maison) ; plusieurs vues s'y empilent,
+  une seule donne son nom à la page. Les filtres enregistrés dans
+  l'interface web de Stash sont aussi proposés (convertis d'après le schéma
+  du serveur ; ceux d'images ne sont pas repris). L'accueil par défaut
   reste accessible par le bouton en haut à droite. Les vues apparaissent aussi en
   lignes sur l'accueil par défaut. Leur filtre n'est modifiable que depuis
   **Plus > Vues enregistrées** (création, modification, ordre, suppression).
@@ -54,7 +58,7 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
 - **Fiche scène** : performeurs, studio, tags, galeries, marqueurs,
   description, informations techniques du fichier, note (étoiles) et
   compteur O modifiables.
-- **Lecteur vidéo** : reprise là où vous vous étiez arrêté, double-tap
+- **Lecteur vidéo** : reprise là où vous vous étiez arrêté (position effaçable depuis la fiche), double-tap
   ±10 s, saut aux marqueurs (repères sur la barre de progression), vitesse
   de lecture, choix du flux (direct ou transcodé HLS/DASH/MP4) avec bascule
   automatique sur un flux transcodé si le codec n'est pas supporté.

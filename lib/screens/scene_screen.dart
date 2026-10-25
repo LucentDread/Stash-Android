@@ -175,6 +175,21 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                         child: const Text('Depuis le début'),
                       ),
                     ],
+                    if (resume > 0)
+                      IconButton(
+                        tooltip: 'Oublier la position de reprise',
+                        icon: const Icon(Icons.history_toggle_off),
+                        onPressed: () => _run(() async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          await _repo.resetResume(s.id);
+                          await _load();
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Position de reprise effacée'),
+                            ),
+                          );
+                        }),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),

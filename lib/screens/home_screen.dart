@@ -11,12 +11,25 @@ import '../utils/format.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/cards.dart';
 import '../widgets/paged_grid.dart';
+import '../widgets/view_list.dart';
 import 'browse_screens.dart';
 
 /// First tab: the saved views chosen as home page, or the dashboard.
 /// A single view fills the page (and names it); several are stacked.
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
+
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  @override
+  void initState() {
+    super.initState();
+    // Filters saved in the web UI may have changed since last time.
+    context.read<AppState>().refreshWebViews().catchError((Object _) => 0);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,13 +55,13 @@ class HomeTab extends StatelessWidget {
         ],
       ),
       body: views.length == 1
-          ? ScenesBrowser(key: key, view: views.single)
+          ? ViewBrowser(key: key, view: views.single)
           : _StackedViews(key: key, views: views),
     );
   }
 }
 
-/// Several views one under the other, each with its first scenes and a
+/// Several views one under the other, each with its first items and a
 /// button loading more.
 class _StackedViews extends StatefulWidget {
   const _StackedViews({super.key, required this.views});
@@ -91,8 +104,8 @@ class _ViewSectionState extends State<_ViewSection> {
   /// Divisible by 1 to 4 columns, so that full rows are shown.
   static const _perPage = 12;
 
-  final _items = <Scene>[];
-  final _ids = <String>{};
+  final _items = <Object>[];
+  final _ids = <Object>{};
   int _count = 0;
   int _page = 0;
   bool _loading = false;
@@ -115,7 +128,8 @@ class _ViewSectionState extends State<_ViewSection> {
       _error = null;
     });
     try {
-      final result = await context.read<AppState>().repo!.findScenes(
+      final result = await context.read<AppState>().repo!.findForView(
+        view,
         ListQuery(
           q: view.query,
           page: _page + 1,
@@ -123,13 +137,12 @@ class _ViewSectionState extends State<_ViewSection> {
           sort: view.sort == 'random' ? 'random_$_seed' : view.sort,
           descending: view.descending,
         ),
-        sceneFilter: view.filter.toGraphQL(),
       );
       if (!mounted) return;
       setState(() {
         _page++;
         _count = result.count;
-        _items.addAll(result.items.where((s) => _ids.add(s.id)));
+        _items.addAll(result.items.where((i) => _ids.add(viewItemKey(i))));
         _loading = false;
       });
     } catch (e) {
@@ -145,12 +158,10 @@ class _ViewSectionState extends State<_ViewSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final extent = sceneExtent(context);
+    final style = ViewStyle.of(context, widget.view.kind);
+    final extent = style.maxExtent;
     final width = MediaQuery.sizeOf(context).width - 2 * gridSpacing;
-    final tileHeight = SceneCard.heightFor(
-      context,
-      gridTileWidth(width, extent),
-    );
+    final tileHeight = style.heightFor(context, gridTileWidth(width, extent));
     final more = _page > 0 && _items.length < _count;
 
     return SliverMainAxisGroup(
@@ -202,7 +213,7 @@ class _ViewSectionState extends State<_ViewSection> {
                 crossAxisSpacing: gridSpacing,
               ),
               itemCount: _items.length,
-              itemBuilder: (_, i) => SceneCard(scene: _items[i]),
+              itemBuilder: (_, i) => viewCard(_items[i]),
             ),
           ),
         SliverToBoxAdapter(
@@ -223,7 +234,7 @@ class _ViewSectionState extends State<_ViewSection> {
                   : _page > 0 && _items.isEmpty
                   ? const Padding(
                       padding: EdgeInsets.all(12),
-                      child: Text('Aucune scène'),
+                      child: Text('Rien pour le moment'),
                     )
                   : more
                   ? OutlinedButton.icon(
@@ -254,6 +265,43 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _refresh = 0;
+
+  /// A row of the dashboard for a view made in the app.
+  Widget _viewRow(
+    BuildContext context,
+    StashRepository repo,
+    SavedView view,
+    double sceneWidth,
+  ) {
+    final style = ViewStyle.of(context, view.kind);
+    final width = switch (view.kind) {
+      ViewKind.scenes || ViewKind.markers => sceneWidth,
+      ViewKind.performers || ViewKind.groups => 130.0,
+      _ => 170.0,
+    };
+    final sort = view.sort == 'random'
+        ? 'random_${Random().nextInt(100000000)}'
+        : view.sort;
+    return _Row<Object>(
+      key: ValueKey('view-${view.toJson()}'),
+      title: view.name,
+      onSeeAll: () =>
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => ViewScreen(view: view))),
+      load: () async => (await repo.findForView(
+        view,
+        ListQuery(
+          q: view.query,
+          perPage: 20,
+          sort: sort,
+          descending: view.descending,
+        ),
+      )).items,
+      itemWidth: width,
+      itemHeight: style.heightFor(context, width),
+      builder: viewCard,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -288,25 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
               builder: (s) => SceneCard(scene: s),
             ),
             for (final view in app.views)
-              _Row<Scene>(
-                key: ValueKey('view-${view.toJson()}'),
-                title: view.name,
-                onSeeAll: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => ViewScreen(view: view)),
-                ),
-                load: () async => (await repo.findScenes(
-                  ListQuery(
-                    q: view.query,
-                    perPage: 20,
-                    sort: view.sort,
-                    descending: view.descending,
-                  ),
-                  sceneFilter: view.filter.toGraphQL(),
-                )).items,
-                itemWidth: sceneWidth,
-                itemHeight: sceneHeight,
-                builder: (s) => SceneCard(scene: s),
-              ),
+              _viewRow(context, repo, view, sceneWidth),
             _Row<Scene>(
               title: 'Ajoutées récemment',
               load: () async => (await repo.findScenes(
