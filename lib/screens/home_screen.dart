@@ -248,10 +248,23 @@ class _RowState<T> extends State<_Row<T>> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                widget.title,
-                style: Theme.of(context).textTheme.titleMedium,
+              padding: widget.onSeeAll == null
+                  ? const EdgeInsets.fromLTRB(16, 16, 16, 8)
+                  : const EdgeInsets.fromLTRB(16, 6, 4, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (widget.onSeeAll != null)
+                    TextButton(
+                      onPressed: widget.onSeeAll,
+                      child: const Text('Voir tout'),
+                    ),
+                ],
               ),
             ),
             SizedBox(

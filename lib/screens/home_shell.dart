@@ -16,12 +16,44 @@ class _HomeShellState extends State<HomeShell> {
   int _index = 0;
   final _visited = <int>{0};
 
-  static const _pages = <Widget>[
-    HomeTab(),
-    ScenesScreen(),
-    GroupsScreen(),
-    PerformersScreen(),
-    MoreScreen(),
+  /// Each page with its bottom bar entry, kept together so they match.
+  static const _tabs = <(Widget, NavigationDestination)>[
+    (
+      HomeTab(),
+      NavigationDestination(
+        icon: Icon(Icons.home_outlined),
+        selectedIcon: Icon(Icons.home),
+        label: 'Accueil',
+      ),
+    ),
+    (
+      ScenesScreen(),
+      NavigationDestination(
+        icon: Icon(Icons.movie_outlined),
+        selectedIcon: Icon(Icons.movie),
+        label: 'Scènes',
+      ),
+    ),
+    (
+      GroupsScreen(),
+      NavigationDestination(
+        icon: Icon(Icons.video_library_outlined),
+        selectedIcon: Icon(Icons.video_library),
+        label: 'Groupes',
+      ),
+    ),
+    (
+      PerformersScreen(),
+      NavigationDestination(
+        icon: Icon(Icons.people_outline),
+        selectedIcon: Icon(Icons.people),
+        label: 'Performeurs',
+      ),
+    ),
+    (
+      MoreScreen(),
+      NavigationDestination(icon: Icon(Icons.more_horiz), label: 'Plus'),
+    ),
   ];
 
   @override
@@ -35,8 +67,8 @@ class _HomeShellState extends State<HomeShell> {
         body: IndexedStack(
           index: _index,
           children: [
-            for (var i = 0; i < _pages.length; i++)
-              _visited.contains(i) ? _pages[i] : const SizedBox.shrink(),
+            for (var i = 0; i < _tabs.length; i++)
+              _visited.contains(i) ? _tabs[i].$1 : const SizedBox.shrink(),
           ],
         ),
         bottomNavigationBar: NavigationBar(
@@ -45,29 +77,7 @@ class _HomeShellState extends State<HomeShell> {
             _index = i;
             _visited.add(i);
           }),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Accueil',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.movie_outlined),
-              selectedIcon: Icon(Icons.movie),
-              label: 'Scènes',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.people_outline),
-              selectedIcon: Icon(Icons.people),
-              label: 'Performeurs',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.photo_library_outlined),
-              selectedIcon: Icon(Icons.photo_library),
-              label: 'Galeries',
-            ),
-            NavigationDestination(icon: Icon(Icons.more_horiz), label: 'Plus'),
-          ],
+          destinations: [for (final t in _tabs) t.$2],
         ),
       ),
     );

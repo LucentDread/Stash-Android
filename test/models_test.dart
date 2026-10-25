@@ -25,6 +25,12 @@ void main() {
         {'id': '1', 'name': 'A'},
       ],
       'tags': [],
+      'groups': [
+        {
+          'group': {'id': '6', 'name': 'Saga'},
+          'scene_index': 2,
+        },
+      ],
       'galleries': [
         {'id': '9', 'title': null},
       ],
@@ -42,6 +48,7 @@ void main() {
     expect(s.studio!.name, 'Studio');
     expect(s.markers.single.displayTitle, 'Intro');
     expect(s.galleries.single.name, 'Galerie 9');
+    expect(s.groups.single.name, 'Saga');
     expect(starsFromRating(s.rating100), 4);
   });
 

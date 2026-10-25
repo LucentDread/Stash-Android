@@ -207,6 +207,10 @@ class Scene {
               : 'Galerie ${g['id']}',
         ),
       ),
+      groups: _list(
+        j['groups'],
+        (g) => TagRef.fromJson(g['group'] as Map<String, dynamic>),
+      ),
     );
   }
 }
