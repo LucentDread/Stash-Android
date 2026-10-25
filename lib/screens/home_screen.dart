@@ -60,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
       200.0,
       320.0,
     );
+    final sceneHeight = SceneCard.heightFor(context, sceneWidth);
 
     return Scaffold(
       appBar: AppBar(
@@ -77,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
               hideWhenEmpty: true,
               load: () => repo.continueWatching(),
               itemWidth: sceneWidth,
-              aspectRatio: sceneCardAspectRatio,
+              itemHeight: sceneHeight,
               builder: (s) => SceneCard(scene: s),
             ),
             for (final view in app.views)
@@ -97,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   sceneFilter: view.filter.toGraphQL(),
                 )).items,
                 itemWidth: sceneWidth,
-                aspectRatio: sceneCardAspectRatio,
+                itemHeight: sceneHeight,
                 builder: (s) => SceneCard(scene: s),
               ),
             _Row<Scene>(
@@ -106,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const ListQuery(perPage: 20, sort: 'created_at'),
               )).items,
               itemWidth: sceneWidth,
-              aspectRatio: sceneCardAspectRatio,
+              itemHeight: sceneHeight,
               builder: (s) => SceneCard(scene: s),
             ),
             _Row<Scene>(
@@ -115,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const ListQuery(perPage: 20, sort: 'date'),
               )).items,
               itemWidth: sceneWidth,
-              aspectRatio: sceneCardAspectRatio,
+              itemHeight: sceneHeight,
               builder: (s) => SceneCard(scene: s),
             ),
             _Row<Performer>(
@@ -135,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const ListQuery(perPage: 20, sort: 'random'),
               )).items,
               itemWidth: sceneWidth,
-              aspectRatio: sceneCardAspectRatio,
+              itemHeight: sceneHeight,
               builder: (s) => SceneCard(scene: s),
             ),
             _Row<Gallery>(
@@ -214,7 +215,8 @@ class _Row<T> extends StatefulWidget {
     required this.load,
     required this.builder,
     required this.itemWidth,
-    required this.aspectRatio,
+    this.aspectRatio = 1,
+    this.itemHeight,
     this.hideWhenEmpty = false,
   });
 
@@ -223,6 +225,9 @@ class _Row<T> extends StatefulWidget {
   final Widget Function(T item) builder;
   final double itemWidth;
   final double aspectRatio;
+
+  /// Exact row height; defaults to itemWidth / aspectRatio.
+  final double? itemHeight;
   final bool hideWhenEmpty;
   final VoidCallback? onSeeAll;
 
@@ -235,7 +240,7 @@ class _RowState<T> extends State<_Row<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final height = widget.itemWidth / widget.aspectRatio;
+    final height = widget.itemHeight ?? widget.itemWidth / widget.aspectRatio;
     return FutureBuilder<List<T>>(
       future: _future,
       builder: (context, snap) {

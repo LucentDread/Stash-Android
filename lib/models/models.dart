@@ -125,6 +125,7 @@ class Scene {
     this.playCount = 0,
     this.resumeTime,
     this.lastPlayedAt,
+    this.createdAt,
     this.urls = const [],
     this.files = const [],
     this.screenshot,
@@ -150,6 +151,7 @@ class Scene {
   final int playCount;
   final double? resumeTime;
   final String? lastPlayedAt;
+  final DateTime? createdAt;
   final List<String> urls;
   final List<VideoFile> files;
   final String? screenshot;
@@ -189,6 +191,7 @@ class Scene {
       playCount: _int(j['play_count']) ?? 0,
       resumeTime: _double(j['resume_time']),
       lastPlayedAt: j['last_played_at'] as String?,
+      createdAt: DateTime.tryParse(j['created_at'] as String? ?? ''),
       urls: (j['urls'] as List?)?.cast<String>() ?? const [],
       files: _list(j['files'], VideoFile.fromJson),
       screenshot: paths['screenshot'] as String?,
@@ -235,6 +238,7 @@ class Performer {
     this.sceneCount = 0,
     this.imageCount = 0,
     this.galleryCount = 0,
+    this.oCounter = 0,
     this.aliases = const [],
     this.tags = const [],
     this.urls = const [],
@@ -258,6 +262,7 @@ class Performer {
   final int sceneCount;
   final int imageCount;
   final int galleryCount;
+  final int oCounter;
   final List<String> aliases;
   final List<TagRef> tags;
   final List<String> urls;
@@ -281,6 +286,7 @@ class Performer {
     sceneCount: _int(j['scene_count']) ?? 0,
     imageCount: _int(j['image_count']) ?? 0,
     galleryCount: _int(j['gallery_count']) ?? 0,
+    oCounter: _int(j['o_counter']) ?? 0,
     aliases: (j['alias_list'] as List?)?.cast<String>() ?? const [],
     tags: _list(j['tags'], TagRef.fromJson),
     urls: (j['urls'] as List?)?.cast<String>() ?? const [],

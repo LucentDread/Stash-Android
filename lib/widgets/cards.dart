@@ -42,12 +42,62 @@ class _Badge extends StatelessWidget {
   }
 }
 
-/// Aspect ratio of [SceneCard] including its text area, for grid delegates.
-const sceneCardAspectRatio = 16 / 14.5;
+/// Fixed text metrics of the scene and marker cards, so that grids can give
+/// them exactly the height their content needs.
+class CardText {
+  static const _titleSize = 14.0;
+  static const _titleHeight = 1.25;
+  static const _smallSize = 12.0;
+  static const _smallHeight = 1.3;
+  static const padding = EdgeInsets.fromLTRB(8, 6, 8, 6);
+
+  // Laid-out text lines are rounded up to whole pixels.
+  static double titleLine(BuildContext context) =>
+      (MediaQuery.textScalerOf(context).scale(_titleSize) * _titleHeight)
+          .ceilToDouble();
+
+  static double smallLine(BuildContext context) =>
+      (MediaQuery.textScalerOf(context).scale(_smallSize) * _smallHeight)
+          .ceilToDouble();
+
+  static TextStyle title(BuildContext context) => Theme.of(context)
+      .textTheme
+      .bodyMedium!
+      .copyWith(
+        fontSize: _titleSize,
+        height: _titleHeight,
+        fontWeight: FontWeight.w600,
+      );
+
+  static TextStyle small(BuildContext context, {Color? color}) =>
+      Theme.of(context).textTheme.bodySmall!
+          .copyWith(fontSize: _smallSize, height: _smallHeight, color: color);
+
+  // Forced struts keep every line exactly at the computed height.
+  static const titleStrut = StrutStyle(
+    fontSize: _titleSize,
+    height: _titleHeight,
+    forceStrutHeight: true,
+  );
+  static const smallStrut = StrutStyle(
+    fontSize: _smallSize,
+    height: _smallHeight,
+    forceStrutHeight: true,
+  );
+}
 
 class SceneCard extends StatefulWidget {
   const SceneCard({super.key, required this.scene});
   final Scene scene;
+
+  /// Height of a card [width] wide: 16:9 thumbnail, two title lines and
+  /// three small lines. Space left by a one-line title or a missing studio
+  /// is used for extra details rather than left empty.
+  static double heightFor(BuildContext context, double width) =>
+      width * 9 / 16 +
+      CardText.padding.vertical +
+      2 * CardText.titleLine(context) +
+      3 * CardText.smallLine(context);
 
   @override
   State<SceneCard> createState() => _SceneCardState();
@@ -94,16 +144,11 @@ class _SceneCardState extends State<SceneCard> {
   @override
   Widget build(BuildContext context) {
     final s = widget.scene;
-    final theme = Theme.of(context);
     final f = s.file;
     final res = f == null ? null : resolutionLabel(f.width, f.height);
     final progress = (s.resumeTime != null && s.duration > 0)
         ? (s.resumeTime! / s.duration).clamp(0.0, 1.0)
         : 0.0;
-    final subtitle = [
-      if (s.studio != null) s.studio!.name,
-      if (s.date != null) s.date!,
-    ].join(' • ');
     final preview = _preview;
 
     return Card(
@@ -154,17 +199,13 @@ class _SceneCardState extends State<SceneCard> {
                       top: 4,
                       child: Row(
                         children: [
-                          if (s.rating100 != null) ...[
+                          if (s.rating100 != null)
                             _Badge(
                               starsFromRating(s.rating100)
                                   .toStringAsFixed(1)
                                   .replaceAll('.0', ''),
                               icon: Icons.star,
                             ),
-                            const SizedBox(width: 4),
-                          ],
-                          if (s.oCounter > 0)
-                            _Badge('${s.oCounter}', icon: Icons.water_drop),
                         ],
                       ),
                     ),
@@ -180,34 +221,158 @@ class _SceneCardState extends State<SceneCard> {
                   ],
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        s.displayTitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (subtitle.isNotEmpty)
-                        Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
+              Expanded(child: _SceneCardText(scene: s)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SceneCardText extends StatelessWidget {
+  const _SceneCardText({required this.scene});
+  final Scene scene;
+
+  /// Details filling the space left by the title and studio lines, most
+  /// useful first. The added date and file path always exist, so the area
+  /// is never left blank.
+  List<TextSpan> _details(BuildContext context) {
+    final s = scene;
+    final scheme = Theme.of(context).colorScheme;
+    final dim = TextStyle(color: scheme.onSurfaceVariant);
+    final f = s.file;
+    final file = [
+      if (f != null && f.size > 0) formatBytes(f.size),
+      if (f != null && f.videoCodec.isNotEmpty) f.videoCodec.toUpperCase(),
+      if (f != null && f.frameRate > 0) '${f.frameRate.round()} i/s',
+    ].join(' • ');
+    final added = s.createdAt?.toLocal();
+    final parts = [
+      if (s.tags.isNotEmpty)
+        TextSpan(
+          text: s.tags.map((t) => t.name).join(' · '),
+          style: TextStyle(color: scheme.primary),
+        ),
+      if (s.performers.isNotEmpty)
+        TextSpan(text: s.performers.map((p) => p.name).join(', ')),
+      if (file.isNotEmpty) TextSpan(text: file, style: dim),
+      if (s.details != null && s.details!.trim().isNotEmpty)
+        TextSpan(text: s.details!.trim().replaceAll(RegExp(r'\s+'), ' ')),
+      if (added != null)
+        TextSpan(
+          text:
+              'Ajoutée le ${added.day.toString().padLeft(2, '0')}/'
+              '${added.month.toString().padLeft(2, '0')}/${added.year}',
+          style: dim,
+        ),
+      if (f != null && f.path.isNotEmpty) TextSpan(text: f.path, style: dim),
+    ];
+    return [
+      for (var i = 0; i < parts.length; i++) ...[
+        if (i > 0) const TextSpan(text: '\n'),
+        parts[i],
+      ],
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = scene;
+    final small = CardText.smallLine(context);
+    final dim = Theme.of(context).colorScheme.onSurfaceVariant;
+    final meta = [
+      if (s.studio != null) s.studio!.name,
+      if (s.date != null) s.date!,
+    ].join(' • ');
+
+    return Padding(
+      padding: CardText.padding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            s.displayTitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: CardText.title(context),
+            strutStyle: CardText.titleStrut,
+          ),
+          if (meta.isNotEmpty)
+            Text(
+              meta,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: CardText.small(context),
+              strutStyle: CardText.smallStrut,
+            ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final lines = ((box.maxHeight + 0.5) / small).floor();
+                if (lines <= 0) return const SizedBox.shrink();
+                return Text.rich(
+                  TextSpan(children: _details(context)),
+                  maxLines: lines,
+                  overflow: TextOverflow.ellipsis,
+                  style: CardText.small(context),
+                  strutStyle: CardText.smallStrut,
+                );
+              },
+            ),
+          ),
+          SizedBox(
+            height: small,
+            child: Row(
+              children: [
+                _Stat(Icons.play_arrow, s.playCount, 'lectures', dim),
+                _Stat(Icons.water_drop_outlined, s.oCounter, 'O', dim),
+                _Stat(
+                  Icons.person_outline,
+                  s.performers.length,
+                  'performeurs',
+                  dim,
+                ),
+                if (s.organized) ...[
+                  const Spacer(),
+                  Icon(Icons.check_circle_outline, size: 14, color: dim),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Icon + number in the scene card stats row.
+class _Stat extends StatelessWidget {
+  const _Stat(this.icon, this.value, this.label, this.color);
+  final IconData icon;
+  final int value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    // Zero values are dimmed so non-zero ones stand out.
+    final c = value == 0 ? color.withValues(alpha: 0.45) : color;
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Tooltip(
+        message: '$value $label',
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: c),
+            const SizedBox(width: 2),
+            Text(
+              '$value',
+              style: CardText.small(context, color: c),
+              strutStyle: CardText.smallStrut,
+            ),
+          ],
         ),
       ),
     );
@@ -220,6 +385,17 @@ class PerformerCard extends StatelessWidget {
   final Performer performer;
 
   static const aspectRatio = 2 / 3.4;
+
+  static String _subtitle(Performer p, int? age) {
+    final parts = [
+      if (age != null) '$age ans',
+      if (p.disambiguation != null && p.disambiguation!.isNotEmpty)
+        p.disambiguation!,
+    ];
+    if (parts.isNotEmpty) return parts.join(' • ');
+    final gender = genderLabel(p.gender);
+    return gender.isNotEmpty ? gender : '${p.sceneCount} scènes';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -253,12 +429,20 @@ class PerformerCard extends StatelessWidget {
                         size: 20,
                       ),
                     ),
-                  if (p.sceneCount > 0)
-                    Positioned(
-                      right: 4,
-                      bottom: 4,
-                      child: _Badge('${p.sceneCount}', icon: Icons.movie),
+                  Positioned(
+                    right: 4,
+                    bottom: 4,
+                    child: Row(
+                      children: [
+                        if (p.oCounter > 0) ...[
+                          _Badge('${p.oCounter}', icon: Icons.water_drop),
+                          const SizedBox(width: 4),
+                        ],
+                        if (p.sceneCount > 0)
+                          _Badge('${p.sceneCount}', icon: Icons.movie),
+                      ],
                     ),
+                  ),
                 ],
               ),
             ),
@@ -275,15 +459,13 @@ class PerformerCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (p.disambiguation != null && p.disambiguation!.isNotEmpty)
-                    Text(
-                      p.disambiguation!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  if (age != null)
-                    Text('$age ans', style: theme.textTheme.bodySmall),
+                  // Always one line so every card has the same layout.
+                  Text(
+                    _subtitle(p, age),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ],
               ),
             ),
@@ -434,10 +616,16 @@ class MarkerCard extends StatelessWidget {
   const MarkerCard({super.key, required this.marker});
   final SceneMarker marker;
 
+  /// Height of a card [width] wide: thumbnail, title and one small line.
+  static double heightFor(BuildContext context, double width) =>
+      width * 9 / 16 +
+      CardText.padding.vertical +
+      CardText.titleLine(context) +
+      CardText.smallLine(context);
+
   @override
   Widget build(BuildContext context) {
     final m = marker;
-    final theme = Theme.of(context);
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
@@ -468,28 +656,26 @@ class MarkerCard extends StatelessWidget {
                 ],
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      m.displayTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      m.sceneTitle ?? m.primaryTag.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
-                ),
+            Padding(
+              padding: CardText.padding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    m.displayTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: CardText.title(context),
+                    strutStyle: CardText.titleStrut,
+                  ),
+                  Text(
+                    m.sceneTitle ?? m.primaryTag.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: CardText.small(context),
+                    strutStyle: CardText.smallStrut,
+                  ),
+                ],
               ),
             ),
           ],

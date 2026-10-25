@@ -123,11 +123,13 @@ const _tagRef = 'id name';
 
 const _sceneCard =
     '''
-  id title date rating100 o_counter play_count resume_time organized
-  files { path duration width height size }
+  id title date details created_at rating100 o_counter play_count
+  resume_time organized
+  files { path duration width height size video_codec frame_rate }
   paths { screenshot preview }
   studio { $_tagRef }
   performers { $_tagRef }
+  tags { $_tagRef }
 ''';
 
 const _sceneFull =
@@ -150,7 +152,8 @@ const _sceneFull =
 ''';
 
 const _performerCard = '''
-  id name disambiguation gender image_path favorite rating100 scene_count
+  id name disambiguation gender birthdate image_path favorite rating100
+  scene_count o_counter
 ''';
 
 const _performerFull =

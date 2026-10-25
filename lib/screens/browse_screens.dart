@@ -157,7 +157,7 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
       },
       reloadKey: _filterVersion,
       maxCrossAxisExtent: sceneExtent(context),
-      childAspectRatio: sceneCardAspectRatio,
+      tileHeight: (w) => SceneCard.heightFor(context, w),
       countLabel: 'scènes',
       header: _chips(),
       actions: [
@@ -281,7 +281,7 @@ Widget markerGrid(BuildContext context, {EntityFilter? entity}) {
     fetch: (q) => repo.findMarkers(q, entity: entity),
     sortOptions: SortOptions.markers,
     maxCrossAxisExtent: sceneExtent(context),
-    childAspectRatio: sceneCardAspectRatio,
+    tileHeight: (w) => MarkerCard.heightFor(context, w),
     countLabel: 'marqueurs',
     emptyText: 'Aucun marqueur',
     itemBuilder: (_, m, _, _) => MarkerCard(marker: m),

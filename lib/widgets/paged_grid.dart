@@ -20,6 +20,7 @@ class PagedGrid<T> extends StatefulWidget {
     this.initialDescending = true,
     this.maxCrossAxisExtent = 220,
     this.childAspectRatio = 1,
+    this.tileHeight,
     this.showToolbar = true,
     this.emptyText = 'Aucun résultat',
     this.countLabel = 'éléments',
@@ -38,6 +39,9 @@ class PagedGrid<T> extends StatefulWidget {
   final bool initialDescending;
   final double maxCrossAxisExtent;
   final double childAspectRatio;
+
+  /// Exact tile height for a given tile width; overrides [childAspectRatio].
+  final double Function(double tileWidth)? tileHeight;
   final bool showToolbar;
   final String emptyText;
   final String countLabel;
@@ -254,6 +258,19 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
     );
   }
 
+  static const _spacing = 8.0;
+  static const _padding = 8.0;
+
+  /// Tile width as computed by [SliverGridDelegateWithMaxCrossAxisExtent].
+  double _tileWidth(double gridWidth) {
+    final width = gridWidth - 2 * _padding;
+    final count = (width / (widget.maxCrossAxisExtent + _spacing)).ceil().clamp(
+      1,
+      1000,
+    );
+    return (width - _spacing * (count - 1)) / count;
+  }
+
   Widget _body(BuildContext context) {
     if (_items.isEmpty) {
       if (_error != null) {
@@ -269,34 +286,37 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
         ],
       );
     }
-    return GridView.builder(
-      controller: _scroll,
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(8),
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: widget.maxCrossAxisExtent,
-        childAspectRatio: widget.childAspectRatio,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-      ),
-      itemCount: _items.length + (_hasMore || _error != null ? 1 : 0),
-      itemBuilder: (context, i) {
-        if (i >= _items.length) {
-          if (_error != null) {
-            return Center(
-              child: IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () {
-                  setState(() => _error = null);
-                  _loadMore();
-                },
-              ),
-            );
+    return LayoutBuilder(
+      builder: (context, box) => GridView.builder(
+        controller: _scroll,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(_padding),
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: widget.maxCrossAxisExtent,
+          childAspectRatio: widget.childAspectRatio,
+          mainAxisExtent: widget.tileHeight?.call(_tileWidth(box.maxWidth)),
+          mainAxisSpacing: _spacing,
+          crossAxisSpacing: _spacing,
+        ),
+        itemCount: _items.length + (_hasMore || _error != null ? 1 : 0),
+        itemBuilder: (context, i) {
+          if (i >= _items.length) {
+            if (_error != null) {
+              return Center(
+                child: IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () {
+                    setState(() => _error = null);
+                    _loadMore();
+                  },
+                ),
+              );
+            }
+            return const Center(child: CircularProgressIndicator());
           }
-          return const Center(child: CircularProgressIndicator());
-        }
-        return widget.itemBuilder(context, _items[i], i, _items);
-      },
+          return widget.itemBuilder(context, _items[i], i, _items);
+        },
+      ),
     );
   }
 
