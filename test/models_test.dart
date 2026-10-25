@@ -17,16 +17,16 @@ void main() {
           'width': 1920,
           'height': 1080,
           'size': 1048576,
-        }
+        },
       ],
       'paths': {'screenshot': '/scene/12/screenshot', 'stream': '/s'},
       'studio': {'id': '3', 'name': 'Studio'},
       'performers': [
-        {'id': '1', 'name': 'A'}
+        {'id': '1', 'name': 'A'},
       ],
       'tags': [],
       'galleries': [
-        {'id': '9', 'title': null}
+        {'id': '9', 'title': null},
       ],
       'scene_markers': [
         {
@@ -34,7 +34,7 @@ void main() {
           'title': '',
           'seconds': 30,
           'primary_tag': {'id': '7', 'name': 'Intro'},
-        }
+        },
       ],
     });
     expect(s.displayTitle, 'My Clip.mp4');

@@ -50,6 +50,19 @@ class SortOptions {
     SortOption('rating', 'Note'),
     SortOption('random', 'Aléatoire'),
   ];
+  static const groups = [
+    SortOption('name', 'Nom'),
+    SortOption('created_at', 'Date d\'ajout'),
+    SortOption('date', 'Date'),
+    SortOption('scenes_count', 'Nombre de scènes'),
+    SortOption('rating', 'Note'),
+    SortOption('duration', 'Durée'),
+    SortOption('random', 'Aléatoire'),
+  ];
+  static const groupScenes = [
+    SortOption('group_scene_number', 'Ordre dans le groupe'),
+    ...scenes,
+  ];
   static const markers = [
     SortOption('created_at', 'Date d\'ajout'),
     SortOption('title', 'Titre'),
@@ -89,11 +102,13 @@ class EntityFilter {
   const EntityFilter.studio(this.id) : kind = 'studios';
   const EntityFilter.tag(this.id) : kind = 'tags';
   const EntityFilter.gallery(this.id) : kind = 'galleries';
+  const EntityFilter.group(this.id) : kind = 'groups';
 
   final String kind;
   final String id;
 
-  bool get hierarchical => kind == 'studios' || kind == 'tags';
+  bool get hierarchical =>
+      kind == 'studios' || kind == 'tags' || kind == 'groups';
 
   Map<String, dynamic> toCriterion() => {
     kind: {
@@ -128,6 +143,7 @@ const _sceneFull =
   performers { $_tagRef }
   tags { $_tagRef }
   galleries { id title }
+  groups { group { $_tagRef } }
   scene_markers {
     id title seconds end_seconds screenshot primary_tag { $_tagRef }
   }
@@ -166,6 +182,17 @@ const _galleryFields =
   performers { $_tagRef }
   tags { $_tagRef }
 ''';
+
+const _groupFields =
+    '''
+  id name aliases date duration director synopsis rating100 urls
+  front_image_path back_image_path scene_count
+  studio { $_tagRef }
+  tags { $_tagRef }
+''';
+
+/// Kinds of entities that can be picked in the scene filter.
+enum RefKind { performers, tags, studios, groups }
 
 const _imageFields = '''
   id title
@@ -418,6 +445,66 @@ class StashRepository {
     final t = d['findTag'];
     if (t == null) throw StashException('Tag introuvable');
     return Tag.fromJson(t as Map<String, dynamic>);
+  }
+
+  Future<ResultPage<Group>> findGroups(
+    ListQuery q, {
+    EntityFilter? entity,
+  }) async {
+    final d = await client.query(
+      '''
+      query FindGroups(\$filter: FindFilterType, \$gf: GroupFilterType) {
+        findGroups(filter: \$filter, group_filter: \$gf) {
+          count
+          groups { $_groupFields }
+        }
+      }''',
+      variables: {
+        'filter': q.toFilter(),
+        'gf': {...?entity?.toCriterion()},
+      },
+    );
+    final r = d['findGroups'] as Map<String, dynamic>;
+    return ResultPage(_items(r['groups'], Group.fromJson), r['count'] as int);
+  }
+
+  Future<Group> findGroup(String id) async {
+    final d = await client.query(
+      '''
+      query FindGroup(\$id: ID!) {
+        findGroup(id: \$id) { $_groupFields }
+      }''',
+      variables: {'id': id},
+    );
+    final g = d['findGroup'];
+    if (g == null) throw StashException('Groupe introuvable');
+    return Group.fromJson(g as Map<String, dynamic>);
+  }
+
+  /// Name search used by the filter pickers. Without a query, returns the
+  /// entities with the most scenes first.
+  Future<List<TagRef>> searchRefs(RefKind kind, String q) async {
+    final (query, field) = switch (kind) {
+      RefKind.performers => ('findPerformers', 'performers'),
+      RefKind.tags => ('findTags', 'tags'),
+      RefKind.studios => ('findStudios', 'studios'),
+      RefKind.groups => ('findGroups', 'groups'),
+    };
+    final d = await client.query(
+      '''
+      query SearchRefs(\$filter: FindFilterType) {
+        $query(filter: \$filter) { $field { id name } }
+      }''',
+      variables: {
+        'filter': {
+          if (q.isNotEmpty) 'q': q,
+          'per_page': 50,
+          'sort': q.isEmpty ? 'scenes_count' : 'name',
+          'direction': q.isEmpty ? 'DESC' : 'ASC',
+        },
+      },
+    );
+    return _items((d[query] as Map)[field], TagRef.fromJson);
   }
 
   Future<ResultPage<Gallery>> findGalleries(

@@ -23,6 +23,11 @@ class PagedGrid<T> extends StatefulWidget {
     this.showToolbar = true,
     this.emptyText = 'Aucun résultat',
     this.countLabel = 'éléments',
+    this.initialQuery = '',
+    this.actions = const [],
+    this.header,
+    this.reloadKey,
+    this.onQueryChanged,
   });
 
   final PageFetcher<T> fetch;
@@ -36,6 +41,19 @@ class PagedGrid<T> extends StatefulWidget {
   final bool showToolbar;
   final String emptyText;
   final String countLabel;
+  final String initialQuery;
+
+  /// Extra buttons shown next to the sort selector.
+  final List<Widget> actions;
+
+  /// Widget shown under the toolbar (e.g. active filter chips).
+  final Widget? header;
+
+  /// When this value changes, the list is reloaded from the first page.
+  final Object? reloadKey;
+
+  /// Called when the search text or the sort changes.
+  final void Function(String q, String? sort, bool descending)? onQueryChanged;
 
   @override
   State<PagedGrid<T>> createState() => _PagedGridState<T>();
@@ -46,7 +64,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
 
   final _items = <T>[];
   final _scroll = ScrollController();
-  final _search = TextEditingController();
+  late final _search = TextEditingController(text: widget.initialQuery);
   Timer? _debounce;
 
   int _count = 0;
@@ -66,6 +84,20 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
     _scroll.addListener(_onScroll);
     _loadMore();
   }
+
+  @override
+  void didUpdateWidget(PagedGrid<T> old) {
+    super.didUpdateWidget(old);
+    if (old.reloadKey != widget.reloadKey) {
+      // Reset after this build: didUpdateWidget runs inside the parent's.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reset();
+      });
+    }
+  }
+
+  void _notifyQuery() =>
+      widget.onQueryChanged?.call(_search.text.trim(), _sort, _descending);
 
   @override
   void dispose() {
@@ -131,7 +163,10 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
 
   void _onSearchChanged(String _) {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), _reset);
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      _notifyQuery();
+      _reset();
+    });
   }
 
   Widget _toolbar(BuildContext context) {
@@ -155,6 +190,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         _search.clear();
+                        _notifyQuery();
                         _reset();
                       },
                     ),
@@ -178,6 +214,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
                   initialValue: _sort,
                   onSelected: (v) {
                     _sort = v;
+                    _notifyQuery();
                     _reset();
                   },
                   itemBuilder: (_) => [
@@ -204,10 +241,12 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
                   ),
                   onPressed: () {
                     _descending = !_descending;
+                    _notifyQuery();
                     _reset();
                   },
                 ),
               ],
+              ...widget.actions,
             ],
           ),
         ],
@@ -266,6 +305,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> {
     return Column(
       children: [
         if (widget.showToolbar) _toolbar(context),
+        ?widget.header,
         Expanded(
           child: RefreshIndicator(onRefresh: _reset, child: _body(context)),
         ),

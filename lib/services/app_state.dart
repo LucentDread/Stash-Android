@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/stash_client.dart';
 import '../api/stash_repository.dart';
+import '../models/scene_filter.dart';
 
 /// Holds the server configuration and the API repository built from it.
 class AppState extends ChangeNotifier {
@@ -17,6 +20,8 @@ class AppState extends ChangeNotifier {
   static const _kKey = 'api_key';
   static const _kColumns = 'grid_columns';
   static const _kPreview = 'play_previews';
+  static const _kViews = 'saved_views';
+  static const _kHomeView = 'home_view';
 
   final SharedPreferences _prefs;
   StashRepository? _repo;
@@ -38,6 +43,63 @@ class AppState extends ChangeNotifier {
   bool get playPreviews => _prefs.getBool(_kPreview) ?? true;
   set playPreviews(bool v) {
     _prefs.setBool(_kPreview, v);
+    notifyListeners();
+  }
+
+  /// Saved scene views (filter + sort), in display order.
+  List<SavedView> get views {
+    final raw = _prefs.getString(_kViews);
+    if (raw == null) return [];
+    try {
+      return [
+        for (final v in jsonDecode(raw) as List)
+          SavedView.fromJson((v as Map).cast<String, dynamic>()),
+      ];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  SavedView? viewById(String? id) =>
+      id == null ? null : views.where((v) => v.id == id).firstOrNull;
+
+  /// The view shown as home page, or null for the default dashboard.
+  SavedView? get homeView => viewById(_prefs.getString(_kHomeView));
+
+  set homeViewId(String? id) {
+    if (id == null) {
+      _prefs.remove(_kHomeView);
+    } else {
+      _prefs.setString(_kHomeView, id);
+    }
+    notifyListeners();
+  }
+
+  /// Adds [view], or replaces the view with the same id.
+  void saveView(SavedView view) {
+    final list = views;
+    final i = list.indexWhere((v) => v.id == view.id);
+    if (i >= 0) {
+      list[i] = view;
+    } else {
+      list.add(view);
+    }
+    _storeViews(list);
+  }
+
+  void deleteView(String id) {
+    if (_prefs.getString(_kHomeView) == id) _prefs.remove(_kHomeView);
+    _storeViews(views..removeWhere((v) => v.id == id));
+  }
+
+  void reorderViews(int oldIndex, int newIndex) {
+    final list = views;
+    list.insert(newIndex, list.removeAt(oldIndex));
+    _storeViews(list);
+  }
+
+  void _storeViews(List<SavedView> list) {
+    _prefs.setString(_kViews, jsonEncode([for (final v in list) v.toJson()]));
     notifyListeners();
   }
 

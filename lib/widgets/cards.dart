@@ -498,3 +498,68 @@ class MarkerCard extends StatelessWidget {
     );
   }
 }
+
+/// Group (DVD-style) card with the front cover.
+class GroupCard extends StatelessWidget {
+  const GroupCard({super.key, required this.group});
+  final Group group;
+
+  static const aspectRatio = 2 / 3.4;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = group;
+    final theme = Theme.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: () => openGroup(context, g.id),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  NetImage(g.frontImage, placeholderIcon: Icons.video_library),
+                  if (g.sceneCount > 0)
+                    Positioned(
+                      right: 4,
+                      bottom: 4,
+                      child: _Badge('${g.sceneCount}', icon: Icons.movie),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    g.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    [
+                      if (g.studio != null) g.studio!.name,
+                      if (g.date != null) g.date!,
+                    ].join(' • '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

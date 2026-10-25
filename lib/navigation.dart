@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'models/models.dart';
 import 'screens/gallery_screen.dart';
+import 'screens/group_screen.dart';
 import 'screens/image_viewer_screen.dart';
 import 'screens/performer_screen.dart';
 import 'screens/player_screen.dart';
@@ -23,6 +24,9 @@ void openStudio(BuildContext context, String id) =>
 
 void openTag(BuildContext context, String id) =>
     _push(context, TagScreen(tagId: id));
+
+void openGroup(BuildContext context, String id) =>
+    _push(context, GroupScreen(groupId: id));
 
 void openGallery(BuildContext context, String id) =>
     _push(context, GalleryScreen(galleryId: id));

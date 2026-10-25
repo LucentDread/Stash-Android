@@ -263,6 +263,15 @@ class _SceneScreenState extends State<SceneScreen> {
                       onTap: (r) => openTag(context, r.id),
                     ),
                   ),
+                if (s.groups.isNotEmpty)
+                  Section(
+                    title: 'Groupes',
+                    child: RefChips(
+                      refs: s.groups,
+                      icon: Icons.video_library_outlined,
+                      onTap: (r) => openGroup(context, r.id),
+                    ),
+                  ),
                 if (s.galleries.isNotEmpty)
                   Section(
                     title: 'Galeries',

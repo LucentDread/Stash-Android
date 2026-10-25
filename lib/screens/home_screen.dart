@@ -3,13 +3,47 @@ import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
 import '../models/models.dart';
+import '../models/scene_filter.dart';
 import '../services/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/cards.dart';
+import 'browse_screens.dart';
+
+/// First tab: the saved view chosen as home page, or the dashboard.
+class HomeTab extends StatelessWidget {
+  const HomeTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final view = context.select<AppState, SavedView?>((s) => s.homeView);
+    if (view == null) return const HomeScreen();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(view.name),
+        actions: [
+          IconButton(
+            tooltip: 'Accueil par défaut',
+            icon: const Icon(Icons.dashboard_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const HomeScreen(standalone: true),
+              ),
+            ),
+          ),
+        ],
+      ),
+      // Keyed so that editing the view from elsewhere reloads it.
+      body: ScenesBrowser(key: ValueKey(view.toJson().toString()), view: view),
+    );
+  }
+}
 
 /// Dashboard with horizontal rows, similar to the Android TV client.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.standalone = false});
+
+  /// Opened from a custom home page (shows a back button).
+  final bool standalone;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,14 +54,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repo = context.watch<AppState>().repo!;
+    final app = context.watch<AppState>();
+    final repo = app.repo!;
     final sceneWidth = (MediaQuery.sizeOf(context).shortestSide * 0.62).clamp(
       200.0,
       320.0,
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Stash')),
+      appBar: AppBar(
+        title: Text(widget.standalone ? 'Accueil par défaut' : 'Stash'),
+      ),
       body: RefreshIndicator(
         onRefresh: () async => setState(() => _refresh++),
         child: ListView(
@@ -43,6 +80,26 @@ class _HomeScreenState extends State<HomeScreen> {
               aspectRatio: sceneCardAspectRatio,
               builder: (s) => SceneCard(scene: s),
             ),
+            for (final view in app.views)
+              _Row<Scene>(
+                key: ValueKey('view-${view.toJson()}'),
+                title: view.name,
+                onSeeAll: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ViewScreen(view: view)),
+                ),
+                load: () async => (await repo.findScenes(
+                  ListQuery(
+                    q: view.query,
+                    perPage: 20,
+                    sort: view.sort,
+                    descending: view.descending,
+                  ),
+                  sceneFilter: view.filter.toGraphQL(),
+                )).items,
+                itemWidth: sceneWidth,
+                aspectRatio: sceneCardAspectRatio,
+                builder: (s) => SceneCard(scene: s),
+              ),
             _Row<Scene>(
               title: 'Ajoutées récemment',
               load: () async => (await repo.findScenes(
@@ -151,7 +208,9 @@ class _StatsRow extends StatelessWidget {
 
 class _Row<T> extends StatefulWidget {
   const _Row({
+    super.key,
     required this.title,
+    this.onSeeAll,
     required this.load,
     required this.builder,
     required this.itemWidth,
@@ -165,6 +224,7 @@ class _Row<T> extends StatefulWidget {
   final double itemWidth;
   final double aspectRatio;
   final bool hideWhenEmpty;
+  final VoidCallback? onSeeAll;
 
   @override
   State<_Row<T>> createState() => _RowState<T>();

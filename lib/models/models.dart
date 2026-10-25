@@ -135,6 +135,7 @@ class Scene {
     this.tags = const [],
     this.markers = const [],
     this.galleries = const [],
+    this.groups = const [],
   });
 
   final String id;
@@ -159,6 +160,7 @@ class Scene {
   final List<TagRef> tags;
   final List<SceneMarker> markers;
   final List<TagRef> galleries;
+  final List<TagRef> groups;
 
   VideoFile? get file => files.isEmpty ? null : files.first;
   double get duration => file?.duration ?? 0;
@@ -490,4 +492,60 @@ class Stats {
     studioCount: _int(j['studio_count']) ?? 0,
     tagCount: _int(j['tag_count']) ?? 0,
   );
+}
+
+class Group {
+  Group({
+    required this.id,
+    required this.name,
+    this.aliases,
+    this.date,
+    this.duration,
+    this.director,
+    this.synopsis,
+    this.frontImage,
+    this.backImage,
+    this.rating100,
+    this.sceneCount = 0,
+    this.studio,
+    this.tags = const [],
+    this.urls = const [],
+  });
+
+  final String id;
+  final String name;
+  final String? aliases;
+  final String? date;
+
+  /// Duration in seconds.
+  final int? duration;
+  final String? director;
+  final String? synopsis;
+  final String? frontImage;
+  final String? backImage;
+  final int? rating100;
+  final int sceneCount;
+  final TagRef? studio;
+  final List<TagRef> tags;
+  final List<String> urls;
+
+  factory Group.fromJson(Map<String, dynamic> j) {
+    final studio = j['studio'] as Map<String, dynamic>?;
+    return Group(
+      id: j['id'] as String,
+      name: j['name'] as String? ?? '',
+      aliases: j['aliases'] as String?,
+      date: j['date'] as String?,
+      duration: _int(j['duration']),
+      director: j['director'] as String?,
+      synopsis: j['synopsis'] as String?,
+      frontImage: j['front_image_path'] as String?,
+      backImage: j['back_image_path'] as String?,
+      rating100: _int(j['rating100']),
+      sceneCount: _int(j['scene_count']) ?? 0,
+      studio: studio == null ? null : TagRef.fromJson(studio),
+      tags: _list(j['tags'], TagRef.fromJson),
+      urls: (j['urls'] as List?)?.cast<String>() ?? const [],
+    );
+  }
 }

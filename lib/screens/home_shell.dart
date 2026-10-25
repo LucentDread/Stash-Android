@@ -17,10 +17,10 @@ class _HomeShellState extends State<HomeShell> {
   final _visited = <int>{0};
 
   static const _pages = <Widget>[
-    HomeScreen(),
+    HomeTab(),
     ScenesScreen(),
+    GroupsScreen(),
     PerformersScreen(),
-    GalleriesScreen(),
     MoreScreen(),
   ];
 

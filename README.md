@@ -15,6 +15,17 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
 - **Scènes** : grille avec défilement infini, recherche, tri (date d'ajout,
   date, titre, note, lectures, compteur O, durée, taille, aléatoire),
   aperçu vidéo par appui long.
+- **Filtres par champ** : performeurs, tags, studio, groupes (au moins un /
+  tous / aucun de / vide / non vide, avec sous-tags, sous-studios et
+  sous-groupes), note minimale, résolution minimale, durée, déjà vues ou
+  jamais vues, organisées, marqueurs, performeur favori.
+- **Vues enregistrées** : une recherche + filtres + tri peut être enregistrée
+  (icône signet) et choisie comme page d'accueil ; l'accueil par défaut reste
+  accessible par le bouton en haut à droite. Les vues apparaissent aussi en
+  lignes sur l'accueil par défaut. Gestion dans **Plus > Vues enregistrées**.
+  Exemple : « Groupes : Vide » affiche toutes les scènes hors groupe.
+- **Groupes** : onglet dédié, fiche avec jaquettes et scènes dans l'ordre du
+  groupe.
 - **Fiche scène** : performeurs, studio, tags, galeries, marqueurs,
   description, informations techniques du fichier, note (étoiles) et
   compteur O modifiables.
@@ -23,7 +34,7 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   de lecture, choix du flux (direct ou transcodé HLS/DASH/MP4) avec bascule
   automatique sur un flux transcodé si le codec n'est pas supporté.
   La position et le temps de visionnage sont renvoyés à Stash.
-- **Performeurs**, **studios**, **tags** : fiches détaillées avec leurs
+- **Performeurs**, **studios**, **tags**, **galeries** (dans **Plus**) : fiches détaillées avec leurs
   scènes, galeries, marqueurs ; ajout/retrait des favoris (performeurs).
 - **Galeries** : grille d'images et visionneuse plein écran (glisser,
   pincer pour zoomer, double-tap).
@@ -45,6 +56,24 @@ flutter build apk --release --split-per-abi
 
 Les APK se trouvent dans `build/app/outputs/flutter-apk/` ; pour la plupart
 des téléphones récents, installez `app-arm64-v8a-release.apk`.
+
+### Signature
+
+Les APK de release sont signés avec la clé décrite par `android/key.properties`
+(fichier et keystore exclus de git) :
+
+```properties
+storePassword=…
+keyPassword=…
+keyAlias=stash
+storeFile=../stash-release.jks
+```
+
+Placez `stash-release.jks` et `key.properties` dans `android/` avant de
+compiler. Sans eux, l'APK est signé avec la clé de debug et ne pourra pas
+mettre à jour une version installée signée avec la clé de release.
+**Conservez la clé en lieu sûr** : si elle est perdue, il faudra désinstaller
+l'application pour installer une nouvelle version.
 
 ## Configuration
 

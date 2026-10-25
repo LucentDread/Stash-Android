@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/app_state.dart';
 import 'browse_screens.dart';
 import 'setup_screen.dart';
+import 'views_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -18,6 +19,22 @@ class MoreScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('Plus')),
       body: ListView(
         children: [
+          ListTile(
+            leading: const Icon(Icons.bookmarks),
+            title: const Text('Vues enregistrées'),
+            subtitle: Text(
+              app.homeView == null
+                  ? 'Accueil : par défaut'
+                  : 'Accueil : ${app.homeView!.name}',
+            ),
+            onTap: () => _push(context, const ViewsScreen()),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Galeries'),
+            onTap: () => _push(context, const GalleriesScreen()),
+          ),
           ListTile(
             leading: const Icon(Icons.business),
             title: const Text('Studios'),
