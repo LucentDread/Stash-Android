@@ -11,6 +11,7 @@ import 'package:stash_android/api/stash_repository.dart';
 import 'package:stash_android/models/models.dart';
 import 'package:stash_android/models/scene_filter.dart';
 import 'package:stash_android/screens/browse_screens.dart';
+import 'package:stash_android/screens/scene_screen.dart';
 import 'package:stash_android/screens/edit/edit_form.dart';
 import 'package:stash_android/screens/edit/editors.dart';
 import 'package:stash_android/services/app_state.dart';
@@ -155,5 +156,38 @@ void main() {
     expect(find.byIcon(Icons.filter_list), findsNothing);
     expect(find.byIcon(Icons.bookmark_add_outlined), findsNothing);
     expect(find.text('Sans groupe'), findsNothing);
+  });
+
+  testWidgets('scene page shows the studio logo, only when it has one', (
+    tester,
+  ) async {
+    Future<void> open(String imagePath) async {
+      await tester.pumpWidget(const SizedBox()); // fresh page state
+      final (app, _) = await _app(
+        jsonEncode({
+          'data': {
+            'findScene': {
+              'id': '1',
+              'title': 'Plage',
+              'paths': <String, dynamic>{},
+              'studio': {'id': '2', 'name': 'Studio', 'image_path': imagePath},
+            },
+          },
+        }),
+      );
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: app,
+          child: const MaterialApp(home: SceneScreen(sceneId: '1')),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+    }
+
+    await open('http://stash.test/studio/2/image');
+    expect(find.byType(StudioWatermark), findsOneWidget);
+    await open('http://stash.test/studio/2/image?default=true');
+    expect(find.byType(StudioWatermark), findsNothing);
   });
 }

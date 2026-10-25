@@ -174,7 +174,7 @@ class _SceneCardState extends State<SceneCard> {
                   children: [
                     NetImage(s.screenshot, placeholderIcon: Icons.movie),
                     if (s.studio?.hasImage ?? false)
-                      _StudioWatermark(s.studio!.imagePath!),
+                      StudioWatermark(s.studio!.imagePath!),
                     if (preview != null && preview.value.isInitialized)
                       FittedBox(
                         fit: BoxFit.cover,
@@ -350,10 +350,11 @@ class _SceneCardText extends StatelessWidget {
   }
 }
 
-/// Studio logo in the top-right corner of a scene thumbnail. A blurred
-/// dark copy behind it keeps light logos readable on light images.
-class _StudioWatermark extends StatelessWidget {
-  const _StudioWatermark(this.url);
+/// Studio logo in the top-right corner of a scene thumbnail (or of the
+/// scene page header). A blurred dark copy behind it keeps light logos
+/// readable on light images.
+class StudioWatermark extends StatelessWidget {
+  const StudioWatermark(this.url, {super.key});
   final String url;
 
   @override

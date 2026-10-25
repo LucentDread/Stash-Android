@@ -33,6 +33,7 @@ class AppState extends ChangeNotifier {
   static const _kPip = 'popup_player';
   static const _kHideRecents = 'hide_recents';
   static const _kAutoUpdate = 'auto_update';
+  static const _kTabs = 'tabs';
 
   final SharedPreferences _prefs;
   StashRepository? _repo;
@@ -216,6 +217,18 @@ class AppState extends ChangeNotifier {
   /// Back to the default dashboard.
   void clearHomeViews() {
     _storeHomeIds([]);
+    notifyListeners();
+  }
+
+  /// Names of the screens chosen as bottom bar tabs (see AppScreen), or
+  /// null for the default bar.
+  List<String>? get tabNames => _prefs.getStringList(_kTabs);
+  set tabNames(List<String>? v) {
+    if (v == null) {
+      _prefs.remove(_kTabs);
+    } else {
+      _prefs.setStringList(_kTabs, v);
+    }
     notifyListeners();
   }
 

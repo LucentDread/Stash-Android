@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import 'browse_screens.dart';
-import 'home_screen.dart';
+import '../services/app_state.dart';
+import 'app_screens.dart';
 import 'more_screen.dart';
 
-/// Root screen with the bottom navigation bar.
+/// Root screen with the bottom navigation bar: the tabs chosen in
+/// Plus > Onglets, then Plus. Rebuilt (from the first tab) when they
+/// change.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -16,48 +19,28 @@ class _HomeShellState extends State<HomeShell> {
   int _index = 0;
   final _visited = <int>{0};
 
-  /// Each page with its bottom bar entry, kept together so they match.
-  static const _tabs = <(Widget, NavigationDestination)>[
-    (
-      HomeTab(),
-      NavigationDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home),
-        label: 'Accueil',
-      ),
-    ),
-    (
-      ScenesScreen(),
-      NavigationDestination(
-        icon: Icon(Icons.movie_outlined),
-        selectedIcon: Icon(Icons.movie),
-        label: 'Scènes',
-      ),
-    ),
-    (
-      GroupsScreen(),
-      NavigationDestination(
-        icon: Icon(Icons.video_library_outlined),
-        selectedIcon: Icon(Icons.video_library),
-        label: 'Groupes',
-      ),
-    ),
-    (
-      PerformersScreen(),
-      NavigationDestination(
-        icon: Icon(Icons.people_outline),
-        selectedIcon: Icon(Icons.people),
-        label: 'Performeurs',
-      ),
-    ),
-    (
-      MoreScreen(),
-      NavigationDestination(icon: Icon(Icons.more_horiz), label: 'Plus'),
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final tabs = AppScreen.tabsOf(context.read<AppState>());
+    // Each page with its bottom bar entry, kept together so they match.
+    final pages = <(Widget, NavigationDestination)>[
+      for (final t in tabs)
+        (
+          t.build(),
+          NavigationDestination(
+            icon: Icon(t.icon),
+            selectedIcon: Icon(t.selectedIcon),
+            label: t.label,
+          ),
+        ),
+      (
+        const MoreScreen(),
+        const NavigationDestination(
+          icon: Icon(Icons.more_horiz),
+          label: 'Plus',
+        ),
+      ),
+    ];
     return PopScope(
       canPop: _index == 0,
       onPopInvokedWithResult: (didPop, _) {
@@ -67,8 +50,8 @@ class _HomeShellState extends State<HomeShell> {
         body: IndexedStack(
           index: _index,
           children: [
-            for (var i = 0; i < _tabs.length; i++)
-              _visited.contains(i) ? _tabs[i].$1 : const SizedBox.shrink(),
+            for (var i = 0; i < pages.length; i++)
+              _visited.contains(i) ? pages[i].$1 : const SizedBox.shrink(),
           ],
         ),
         bottomNavigationBar: NavigationBar(
@@ -80,12 +63,12 @@ class _HomeShellState extends State<HomeShell> {
           destinations: [
             // Labels stay on one line (ellipsis) on narrow screens. This
             // must sit inside the bar: its Material resets the text style.
-            for (final t in _tabs)
+            for (final p in pages)
               DefaultTextStyle.merge(
                 maxLines: 1,
                 softWrap: false,
                 overflow: TextOverflow.ellipsis,
-                child: t.$2,
+                child: p.$2,
               ),
           ],
         ),

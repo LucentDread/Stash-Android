@@ -34,6 +34,9 @@ class StashApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final configured = context.select<AppState, bool>((s) => s.isConfigured);
     final serverUrl = context.select<AppState, String?>((s) => s.serverUrl);
+    final tabs = context.select<AppState, String>(
+      (s) => s.tabNames?.join(',') ?? '',
+    );
     return MaterialApp(
       title: 'Stash',
       debugShowCheckedModeBanner: false,
@@ -62,7 +65,7 @@ class StashApp extends StatelessWidget {
       themeMode: ThemeMode.dark,
       // Rebuild the whole tree when the server changes so caches reset.
       home: configured
-          ? HomeShell(key: ValueKey(serverUrl))
+          ? HomeShell(key: ValueKey('$serverUrl|$tabs'))
           : const SetupScreen(),
     );
   }

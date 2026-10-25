@@ -55,7 +55,10 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   scan par défaut de Stash. La progression (pourcentage, fichier en cours)
   s'affiche en bas de toutes les pages ; à la fin, les pages ouvertes se
   rechargent sans changer de navigation.
-- **Logo du studio** en filigrane sur les miniatures, quand le studio en a un.
+- **Logo du studio** en filigrane sur les miniatures et la fiche scène,
+  quand le studio en a un.
+- **Onglets** au choix (**Plus > Affichage > Onglets**) : jusqu'à 4 écrans
+  dans la barre du bas, dans l'ordre voulu ; les autres sont dans **Plus**.
 - **Groupes** : onglet dédié, fiche avec jaquettes et scènes dans l'ordre du
   groupe.
 - **Fiche scène** : performeurs, studio, tags, galeries, marqueurs,

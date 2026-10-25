@@ -1,5 +1,13 @@
 # Historique des versions
 
+## 1.11.0
+- Plus > Affichage > Onglets : choix et ordre des écrans de la barre du bas
+  (jusqu'à 4, plus « Plus ») parmi Accueil, Scènes, Groupes, Performeurs,
+  Galeries, Images, Studios, Tags et Marqueurs. Les autres restent dans
+  Plus.
+- Fiche scène : logo du studio en filigrane en haut à droite de l'image,
+  comme sur les cartes.
+
 ## 1.10.2
 - Plus > Images : toutes les images de la bibliothèque, avec recherche et
   tri ; un appui ouvre la visionneuse.

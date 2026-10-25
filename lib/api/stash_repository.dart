@@ -153,7 +153,7 @@ const _sceneFull =
     bit_rate format
   }
   paths { screenshot preview stream }
-  studio { $_tagRef }
+  studio { $_tagRef image_path }
   performers { $_tagRef }
   tags { $_tagRef }
   galleries { id title }

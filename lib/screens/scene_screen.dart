@@ -7,6 +7,7 @@ import '../services/app_state.dart';
 import '../services/downloads.dart';
 import '../utils/format.dart';
 import '../widgets/async_view.dart';
+import '../widgets/cards.dart';
 import '../widgets/data_refresh.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/download_button.dart';
@@ -104,6 +105,16 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                   fit: StackFit.expand,
                   children: [
                     NetImage(s.screenshot, placeholderIcon: Icons.movie),
+                    if (s.studio?.hasImage ?? false)
+                      // Under the app bar buttons, as on the scene cards.
+                      Padding(
+                        padding: EdgeInsets.only(
+                          top:
+                              MediaQuery.paddingOf(context).top +
+                              kToolbarHeight,
+                        ),
+                        child: StudioWatermark(s.studio!.imagePath!),
+                      ),
                     const DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(

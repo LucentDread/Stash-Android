@@ -4,10 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../services/app_state.dart';
 import '../widgets/brand_title.dart';
-import 'browse_screens.dart';
+import 'app_screens.dart';
 import 'downloads_screen.dart';
 import 'settings_screen.dart';
 import 'setup_screen.dart';
+import 'tabs_screen.dart';
 import 'views_screen.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -45,6 +46,7 @@ class MoreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
     final home = app.homeViews;
+    final tabs = AppScreen.tabsOf(app);
     return Scaffold(
       appBar: AppBar(title: const BrandTitle(page: 'Plus')),
       body: ListView(
@@ -60,31 +62,14 @@ class MoreScreen extends StatelessWidget {
             onTap: () => _push(context, const ViewsScreen()),
           ),
           const Divider(),
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: const Text('Galeries'),
-            onTap: () => _push(context, const GalleriesScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.image_outlined),
-            title: const Text('Images'),
-            onTap: () => _push(context, const ImagesScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.business),
-            title: const Text('Studios'),
-            onTap: () => _push(context, const StudiosScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.label_outline),
-            title: const Text('Tags'),
-            onTap: () => _push(context, const TagsScreen()),
-          ),
-          ListTile(
-            leading: const Icon(Icons.bookmarks_outlined),
-            title: const Text('Marqueurs'),
-            onTap: () => _push(context, const MarkersScreen()),
-          ),
+          // The screens that are not bottom bar tabs.
+          for (final s in AppScreen.values)
+            if (!tabs.contains(s))
+              ListTile(
+                leading: Icon(s.icon),
+                title: Text(s.label),
+                onTap: () => _push(context, s.build()),
+              ),
           ListTile(
             leading: const Icon(Icons.download_for_offline_outlined),
             title: const Text('Téléchargements'),
@@ -93,6 +78,16 @@ class MoreScreen extends StatelessWidget {
           ),
           const Divider(),
           const _Header('Affichage'),
+          ListTile(
+            leading: const Icon(Icons.tab_outlined),
+            title: const Text('Onglets'),
+            subtitle: Text(
+              '${tabs.map((t) => t.label).join(', ')}, Plus',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            onTap: () => _push(context, const TabsScreen()),
+          ),
           ListTile(
             leading: const Icon(Icons.grid_view),
             title: const Text('Colonnes de scènes (portrait)'),
