@@ -5,8 +5,10 @@ import '../api/stash_repository.dart';
 import '../models/models.dart';
 import '../navigation.dart';
 import '../services/app_state.dart';
+import '../services/downloads.dart';
 import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
+import '../widgets/download_button.dart';
 import '../widgets/net_image.dart';
 import '../widgets/paged_grid.dart';
 import 'edit/editors.dart';
@@ -34,6 +36,7 @@ class GalleryScreen extends StatelessWidget {
                 builder: (_) => _GalleryInfo(gallery: g),
               ),
             ),
+            DownloadButton(kind: OfflineKind.gallery, id: g.id),
             EditButton(onEdit: () => editGallery(context, g), onSaved: reload),
           ],
         ),

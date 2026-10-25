@@ -5,9 +5,11 @@ import '../api/stash_repository.dart';
 import '../models/models.dart';
 import '../navigation.dart';
 import '../services/app_state.dart';
+import '../services/downloads.dart';
 import '../utils/format.dart';
 import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
+import '../widgets/download_button.dart';
 import '../widgets/net_image.dart';
 import 'browse_screens.dart';
 import 'edit/editors.dart';
@@ -28,6 +30,7 @@ class GroupScreen extends StatelessWidget {
           appBar: AppBar(
             title: Text(g.name),
             actions: [
+              DownloadButton(kind: OfflineKind.group, id: g.id),
               EditButton(onEdit: () => editGroup(context, g), onSaved: reload),
             ],
             bottom: TabBar(

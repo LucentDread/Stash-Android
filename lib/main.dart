@@ -5,17 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/home_shell.dart';
 import 'screens/setup_screen.dart';
 import 'services/app_state.dart';
+import 'widgets/offline_watcher.dart';
 import 'widgets/scan_banner.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(prefs),
-      child: const StashApp(),
-    ),
-  );
+  final app = AppState(prefs);
+  // Picks up downloads that progressed while the app was closed.
+  app.downloads.init().ignore();
+  runApp(ChangeNotifierProvider.value(value: app, child: const StashApp()));
 }
 
 class StashApp extends StatelessWidget {
@@ -24,6 +23,9 @@ class StashApp extends StatelessWidget {
   // Stash's web UI uses a dark theme with a blue accent.
   static const _seed = Color(0xFF137CBD);
 
+  static final navigatorKey = GlobalKey<NavigatorState>();
+  static final messengerKey = GlobalKey<ScaffoldMessengerState>();
+
   @override
   Widget build(BuildContext context) {
     final configured = context.select<AppState, bool>((s) => s.isConfigured);
@@ -31,8 +33,14 @@ class StashApp extends StatelessWidget {
     return MaterialApp(
       title: 'Stash',
       debugShowCheckedModeBanner: false,
-      // Scan progress stays visible above every page.
-      builder: (context, child) => ScanBannerHost(child: child!),
+      navigatorKey: navigatorKey,
+      scaffoldMessengerKey: messengerKey,
+      // Scan progress and the offline popup work above every page.
+      builder: (context, child) => OfflineWatcher(
+        navigatorKey: navigatorKey,
+        messengerKey: messengerKey,
+        child: ScanBannerHost(child: child!),
+      ),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: _seed),
         useMaterial3: true,

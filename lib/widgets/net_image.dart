@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -39,6 +41,15 @@ class NetImage extends StatelessWidget {
               ),
             ),
           );
+    // Offline copies are absolute file paths.
+    if (url != null && url!.startsWith('/')) {
+      return Image.file(
+        File(url!),
+        fit: fit,
+        alignment: alignment,
+        errorBuilder: (_, _, _) => placeholder,
+      );
+    }
     if (resolved == null) return placeholder;
     return CachedNetworkImage(
       imageUrl: resolved,

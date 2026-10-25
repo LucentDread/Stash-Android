@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/app_state.dart';
 import '../widgets/brand_title.dart';
 import 'browse_screens.dart';
+import 'downloads_screen.dart';
 import 'setup_screen.dart';
 import 'views_screen.dart';
 
@@ -76,6 +77,12 @@ class MoreScreen extends StatelessWidget {
             leading: const Icon(Icons.bookmarks_outlined),
             title: const Text('Marqueurs'),
             onTap: () => _push(context, const MarkersScreen()),
+          ),
+          ListTile(
+            leading: const Icon(Icons.download_for_offline_outlined),
+            title: const Text('Téléchargements'),
+            subtitle: const Text('Scènes, groupes et galeries hors ligne'),
+            onTap: () => _push(context, const DownloadsScreen()),
           ),
           const Divider(),
           const _Header('Affichage'),

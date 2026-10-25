@@ -33,6 +33,15 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
 - **Marqueurs** : ajout depuis le lecteur (bouton à côté de la qualité, à la
   position courante), modification ou suppression par appui long. Seuls les champs modifiés sont envoyés à
   Stash ; la position d'une scène dans ses groupes est conservée.
+- **Scraping** des scènes depuis l'écran de modification (bouton loupe) :
+  stash-box et scrapers configurés sur le serveur, ou une URL. Un écran de
+  comparaison permet de choisir les valeurs reprises ; seuls les
+  performeurs, tags, studios et groupes existant dans Stash sont liés.
+- **Hors ligne** : téléchargement d'une scène, d'un groupe (toutes ses
+  scènes) ou d'une galerie (bouton dans leur fiche), en arrière-plan avec
+  notification. Les copies se trouvent dans **Plus > Téléchargements** et se
+  lisent sans serveur. Si le serveur devient injoignable, une fenêtre le
+  signale et mène aux téléchargements.
 - **Scan de la bibliothèque** depuis **Plus > Serveur**, avec les options de
   scan par défaut de Stash. La progression (pourcentage, fichier en cours)
   s'affiche en bas de toutes les pages ; à la fin, les pages ouvertes se

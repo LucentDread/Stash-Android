@@ -581,6 +581,14 @@ class ImageEditField extends EditField {
   @override
   Map<String, dynamic> toInput() => {key: value};
 
+  /// Uses [image] (data URI or URL), e.g. a scraped cover.
+  void setImage(String image) {
+    _pickedBytes = image.startsWith('data:')
+        ? UriData.parse(image).contentAsBytes()
+        : null;
+    value = image;
+  }
+
   Future<void> _pick(VoidCallback onChanged) async {
     final file = await ImagePicker().pickImage(
       source: ImageSource.gallery,
@@ -692,11 +700,17 @@ class EditScreen extends StatefulWidget {
     this.create = false,
     this.delete,
     this.deleteLabel = 'Supprimer',
+    this.extraActions,
   });
 
   final String title;
   final List<EditField> fields;
   final Future<void> Function(Map<String, dynamic> input) save;
+
+  /// More app bar buttons; `refresh` redraws the form after they change
+  /// field values (e.g. scraping).
+  final List<Widget> Function(BuildContext context, VoidCallback refresh)?
+  extraActions;
 
   /// Creation form: every field is sent and saving needs no change.
   final bool create;
@@ -814,6 +828,7 @@ class _EditScreenState extends State<EditScreen> {
         appBar: AppBar(
           title: Text(widget.title),
           actions: [
+            ...?widget.extraActions?.call(context, () => setState(() {})),
             if (widget.delete != null)
               IconButton(
                 tooltip: widget.deleteLabel,

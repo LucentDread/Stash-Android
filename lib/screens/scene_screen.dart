@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 import '../models/models.dart';
 import '../navigation.dart';
 import '../services/app_state.dart';
+import '../services/downloads.dart';
 import '../utils/format.dart';
 import '../widgets/async_view.dart';
 import '../widgets/data_refresh.dart';
 import '../widgets/detail_widgets.dart';
+import '../widgets/download_button.dart';
 import '../widgets/net_image.dart';
 import 'edit/editors.dart';
 
@@ -87,6 +89,11 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
           SliverAppBar(
             pinned: true,
             actions: [
+              DownloadButton(
+                kind: OfflineKind.scene,
+                id: s.id,
+                sizeHint: s.file?.size,
+              ),
               EditButton(onEdit: () => editScene(context, s), onSaved: _load),
             ],
             expandedHeight: MediaQuery.sizeOf(context).width * 9 / 16,

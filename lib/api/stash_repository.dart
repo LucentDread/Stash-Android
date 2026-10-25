@@ -202,6 +202,44 @@ const _groupFields =
 /// Kinds of entities that can be picked in the scene filter.
 enum RefKind { performers, tags, studios, groups }
 
+/// Where to scrape scene data from: a scraper or a stash-box endpoint.
+class ScrapeSource {
+  const ScrapeSource({
+    required this.label,
+    this.scraperId,
+    this.stashBoxEndpoint,
+    this.byFragment = true,
+    this.byName = false,
+  });
+
+  final String label;
+  final String? scraperId;
+  final String? stashBoxEndpoint;
+
+  /// Can identify the scene from its own data (or fingerprints).
+  final bool byFragment;
+
+  /// Can search by a text query.
+  final bool byName;
+
+  bool get isStashBox => stashBoxEndpoint != null;
+
+  Map<String, dynamic> toInput() => {
+    'scraper_id': ?scraperId,
+    'stash_box_endpoint': ?stashBoxEndpoint,
+  };
+}
+
+const _scrapedRef = 'stored_id name';
+const _scrapedScene =
+    '''
+  title code details director date image urls
+  studio { $_scrapedRef }
+  performers { $_scrapedRef }
+  tags { $_scrapedRef }
+  groups { $_scrapedRef }
+''';
+
 /// Kinds of entities that can be edited.
 enum EditKind { scene, performer, studio, tag, group, gallery, marker }
 
@@ -275,7 +313,11 @@ class StashRepository {
     return page.items;
   }
 
-  Future<Scene> findScene(String id) async {
+  Future<Scene> findScene(String id) async =>
+      Scene.fromJson(await sceneJson(id));
+
+  /// Raw scene data, kept as is for offline copies.
+  Future<Map<String, dynamic>> sceneJson(String id) async {
     final d = await client.query(
       '''
       query FindScene(\$id: ID!) {
@@ -285,7 +327,7 @@ class StashRepository {
     );
     final s = d['findScene'];
     if (s == null) throw StashException('Scène introuvable');
-    return Scene.fromJson(s as Map<String, dynamic>);
+    return s as Map<String, dynamic>;
   }
 
   Future<List<StreamEndpoint>> sceneStreams(String id) async {
@@ -480,7 +522,10 @@ class StashRepository {
     return ResultPage(_items(r['groups'], Group.fromJson), r['count'] as int);
   }
 
-  Future<Group> findGroup(String id) async {
+  Future<Group> findGroup(String id) async =>
+      Group.fromJson(await groupJson(id));
+
+  Future<Map<String, dynamic>> groupJson(String id) async {
     final d = await client.query(
       '''
       query FindGroup(\$id: ID!) {
@@ -490,7 +535,7 @@ class StashRepository {
     );
     final g = d['findGroup'];
     if (g == null) throw StashException('Groupe introuvable');
-    return Group.fromJson(g as Map<String, dynamic>);
+    return g as Map<String, dynamic>;
   }
 
   /// Applies a partial update. Only the keys present in [input] are
@@ -603,6 +648,74 @@ class StashRepository {
     );
   }
 
+  /// Stash-box endpoints and scene scrapers configured on the server.
+  Future<List<ScrapeSource>> sceneScrapeSources() async {
+    final d = await client.query('''
+      query {
+        configuration { general { stashBoxes { endpoint name } } }
+        listScrapers(types: [SCENE]) {
+          id name scene { supported_scrapes }
+        }
+      }''');
+    final boxes =
+        ((d['configuration'] as Map?)?['general'] as Map?)?['stashBoxes']
+            as List? ??
+        const [];
+    final scrapers = d['listScrapers'] as List? ?? const [];
+    return [
+      for (final b in boxes.cast<Map>())
+        ScrapeSource(
+          label: (b['name'] as String?)?.isNotEmpty == true
+              ? b['name'] as String
+              : b['endpoint'] as String,
+          stashBoxEndpoint: b['endpoint'] as String,
+          byName: true,
+        ),
+      for (final s in scrapers.cast<Map>())
+        if (((s['scene'] as Map?)?['supported_scrapes'] as List?)
+            case final kinds?
+            when kinds.contains('FRAGMENT') || kinds.contains('NAME'))
+          ScrapeSource(
+            label: s['name'] as String,
+            scraperId: s['id'] as String,
+            byFragment: kinds.contains('FRAGMENT'),
+            byName: kinds.contains('NAME'),
+          ),
+    ];
+  }
+
+  /// Scrapes a scene from its own data, or by [query] when given.
+  Future<List<ScrapedScene>> scrapeScene(
+    ScrapeSource source,
+    String sceneId, {
+    String? query,
+  }) async {
+    final d = await client.query(
+      '''
+      query Scrape(\$source: ScraperSourceInput!, \$input: ScrapeSingleSceneInput!) {
+        scrapeSingleScene(source: \$source, input: \$input) { $_scrapedScene }
+      }''',
+      variables: {
+        'source': source.toInput(),
+        'input': query == null ? {'scene_id': sceneId} : {'query': query},
+      },
+    );
+    return _items(d['scrapeSingleScene'], ScrapedScene.fromJson);
+  }
+
+  /// Scrapes a scene page URL with the scraper that handles its site.
+  Future<ScrapedScene?> scrapeSceneUrl(String url) async {
+    final d = await client.query(
+      '''
+      query ScrapeUrl(\$url: String!) {
+        scrapeSceneURL(url: \$url) { $_scrapedScene }
+      }''',
+      variables: {'url': url},
+    );
+    final s = d['scrapeSceneURL'];
+    return s == null ? null : ScrapedScene.fromJson(s as Map<String, dynamic>);
+  }
+
   /// Name search used by the filter pickers. Without a query, returns the
   /// entities with the most scenes first.
   Future<List<TagRef>> searchRefs(RefKind kind, String q) async {
@@ -653,7 +766,10 @@ class StashRepository {
     );
   }
 
-  Future<Gallery> findGallery(String id) async {
+  Future<Gallery> findGallery(String id) async =>
+      Gallery.fromJson(await galleryJson(id));
+
+  Future<Map<String, dynamic>> galleryJson(String id) async {
     final d = await client.query(
       '''
       query FindGallery(\$id: ID!) {
@@ -663,7 +779,7 @@ class StashRepository {
     );
     final g = d['findGallery'];
     if (g == null) throw StashException('Galerie introuvable');
-    return Gallery.fromJson(g as Map<String, dynamic>);
+    return g as Map<String, dynamic>;
   }
 
   Future<ResultPage<StashImage>> findImages(

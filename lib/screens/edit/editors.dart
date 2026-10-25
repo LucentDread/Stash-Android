@@ -5,6 +5,7 @@ import '../../api/stash_repository.dart';
 import '../../models/models.dart';
 import '../../services/app_state.dart';
 import 'edit_form.dart';
+import 'scrape.dart';
 
 /// Opens an edit form; returns true when changes were saved.
 Future<bool> _open(
@@ -15,6 +16,7 @@ Future<bool> _open(
   required List<EditField> fields,
   Future<void> Function()? delete,
   String deleteLabel = 'Supprimer',
+  List<Widget> Function(BuildContext, VoidCallback)? extraActions,
 }) async {
   final repo = context.read<AppState>().repo!;
   final saved = await Navigator.of(context).push<bool>(
@@ -25,6 +27,7 @@ Future<bool> _open(
         save: (input) => repo.update(kind, id, input),
         delete: delete,
         deleteLabel: deleteLabel,
+        extraActions: extraActions,
       ),
     ),
   );
@@ -75,13 +78,25 @@ List<EditField> sceneFields(Scene s) => [
   TextEditField('details', 'Description', s.details, multiline: true),
 ];
 
-Future<bool> editScene(BuildContext context, Scene s) => _open(
-  context,
-  title: 'Modifier la scène',
-  kind: EditKind.scene,
-  id: s.id,
-  fields: sceneFields(s),
-);
+Future<bool> editScene(BuildContext context, Scene s) {
+  final fields = sceneFields(s);
+  return _open(
+    context,
+    title: 'Modifier la scène',
+    kind: EditKind.scene,
+    id: s.id,
+    fields: fields,
+    extraActions: (context, refresh) => [
+      IconButton(
+        tooltip: 'Scraper',
+        icon: const Icon(Icons.travel_explore),
+        onPressed: () async {
+          if (await scrapeIntoFields(context, s.id, fields)) refresh();
+        },
+      ),
+    ],
+  );
+}
 
 /// Editable fields of a performer.
 List<EditField> performerFields(Performer p) => [

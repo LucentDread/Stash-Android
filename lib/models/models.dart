@@ -655,3 +655,67 @@ class Job {
     error: j['error'] as String?,
   );
 }
+
+/// Performer, tag, studio or group proposed by a scraper. [storedId] is
+/// set when Stash matched it to an existing entry.
+class ScrapedRef {
+  ScrapedRef({this.storedId, required this.name});
+  final String? storedId;
+  final String name;
+
+  TagRef? get ref =>
+      storedId == null ? null : TagRef(id: storedId!, name: name);
+
+  factory ScrapedRef.fromJson(Map<String, dynamic> j) => ScrapedRef(
+    storedId: j['stored_id'] as String?,
+    name: j['name'] as String? ?? '',
+  );
+}
+
+/// Scene data returned by a scraper or a stash-box.
+class ScrapedScene {
+  ScrapedScene({
+    this.title,
+    this.code,
+    this.details,
+    this.director,
+    this.date,
+    this.image,
+    this.urls = const [],
+    this.studio,
+    this.performers = const [],
+    this.tags = const [],
+    this.groups = const [],
+  });
+
+  final String? title;
+  final String? code;
+  final String? details;
+  final String? director;
+  final String? date;
+
+  /// Cover as a data URI or URL.
+  final String? image;
+  final List<String> urls;
+  final ScrapedRef? studio;
+  final List<ScrapedRef> performers;
+  final List<ScrapedRef> tags;
+  final List<ScrapedRef> groups;
+
+  factory ScrapedScene.fromJson(Map<String, dynamic> j) {
+    final studio = j['studio'] as Map<String, dynamic>?;
+    return ScrapedScene(
+      title: j['title'] as String?,
+      code: j['code'] as String?,
+      details: j['details'] as String?,
+      director: j['director'] as String?,
+      date: j['date'] as String?,
+      image: j['image'] as String?,
+      urls: (j['urls'] as List?)?.cast<String>() ?? const [],
+      studio: studio == null ? null : ScrapedRef.fromJson(studio),
+      performers: _list(j['performers'], ScrapedRef.fromJson),
+      tags: _list(j['tags'], ScrapedRef.fromJson),
+      groups: _list(j['groups'], ScrapedRef.fromJson),
+    );
+  }
+}

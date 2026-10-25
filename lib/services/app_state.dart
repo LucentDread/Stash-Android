@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -6,11 +7,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api/stash_client.dart';
 import '../api/stash_repository.dart';
 import '../models/scene_filter.dart';
+import 'background_fetcher.dart';
+import 'downloads.dart';
 import 'scan_tracker.dart';
 
 /// Holds the server configuration and the API repository built from it.
 class AppState extends ChangeNotifier {
-  AppState(this._prefs) {
+  AppState(this._prefs, {this._fetcher}) {
     final url = _prefs.getString(_kUrl);
     if (url != null && url.isNotEmpty) {
       _connect(url, _prefs.getString(_kKey));
@@ -30,6 +33,44 @@ class AppState extends ChangeNotifier {
   /// Library scan started from the app, shown in a banner on every page.
   late final ScanTracker scan = ScanTracker(this);
 
+  final FileFetcher? _fetcher;
+
+  /// Scenes, groups and galleries kept for offline viewing.
+  late final DownloadManager downloads = DownloadManager(
+    this,
+    _fetcher ?? BackgroundFetcher(),
+  );
+
+  /// True while the Stash server cannot be reached.
+  bool get offline => _offline;
+  bool _offline = false;
+  Timer? _probe;
+
+  void _onReachability(bool reachable) {
+    if (reachable != _offline) return;
+    _offline = !reachable;
+    notifyListeners();
+    if (_offline) {
+      // Nothing else may hit the server meanwhile: check it regularly.
+      _probe = Timer.periodic(const Duration(seconds: 20), (_) {
+        _repo?.version().ignore();
+      });
+    } else {
+      _probe?.cancel();
+      refreshData();
+    }
+  }
+
+  void _use(StashRepository? repo) {
+    _repo?.client.onReachability = null;
+    _repo = repo;
+    repo?.client.onReachability = _onReachability;
+    if (repo == null && _offline) {
+      _offline = false;
+      _probe?.cancel();
+    }
+  }
+
   StashRepository? get repo => _repo;
 
   /// Incremented when server data changed outside the current screens
@@ -45,7 +86,7 @@ class AppState extends ChangeNotifier {
 
   @visibleForTesting
   set repoOverride(StashRepository repo) {
-    _repo = repo;
+    _use(repo);
     notifyListeners();
   }
 
@@ -138,7 +179,7 @@ class AppState extends ChangeNotifier {
       await _prefs.setString(_kKey, client.apiKey!);
     }
     _repo?.client.close();
-    _repo = repo;
+    _use(repo);
     notifyListeners();
     return version;
   }
@@ -147,11 +188,11 @@ class AppState extends ChangeNotifier {
     await _prefs.remove(_kUrl);
     await _prefs.remove(_kKey);
     _repo?.client.close();
-    _repo = null;
+    _use(null);
     notifyListeners();
   }
 
   void _connect(String url, String? key) {
-    _repo = StashRepository(StashClient(serverUrl: url, apiKey: key));
+    _use(StashRepository(StashClient(serverUrl: url, apiKey: key)));
   }
 }

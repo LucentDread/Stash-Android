@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,15 +17,31 @@ import 'edit/editors.dart';
 
 /// A playable source: the direct file or one of Stash's transcodes.
 class _Source {
-  const _Source(this.label, this.url, {this.hint});
+  const _Source(this.label, this.url, {this.hint, this.local = false});
   final String label;
   final String url;
   final VideoFormat? hint;
+
+  /// [url] is a file path on the phone (offline copy).
+  final bool local;
 }
 
 class PlayerScreen extends StatefulWidget {
-  const PlayerScreen({super.key, required this.sceneId, this.startAt});
+  const PlayerScreen({
+    super.key,
+    required this.sceneId,
+    this.startAt,
+    this.offlinePath,
+    this.offlineData,
+  });
   final String sceneId;
+
+  /// Downloaded video and scene data: plays without the server and sends
+  /// nothing back (no play count, no resume point).
+  final String? offlinePath;
+  final Map<String, dynamic>? offlineData;
+
+  bool get offline => offlinePath != null;
 
   /// Start position in seconds; defaults to the saved resume position.
   final double? startAt;
@@ -80,15 +97,23 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Future<void> _init() async {
     setState(() => _error = null);
     try {
-      final scene = await _repo.findScene(widget.sceneId);
-      List<StreamEndpoint> streams = const [];
-      try {
-        streams = await _repo.sceneStreams(widget.sceneId);
-      } catch (_) {
-        // Older servers: fall back to the direct stream only.
+      final Scene scene;
+      if (widget.offline) {
+        scene = Scene.fromJson(widget.offlineData!);
+        _sources = [
+          _Source('Copie hors ligne', widget.offlinePath!, local: true),
+        ];
+      } else {
+        scene = await _repo.findScene(widget.sceneId);
+        List<StreamEndpoint> streams = const [];
+        try {
+          streams = await _repo.sceneStreams(widget.sceneId);
+        } catch (_) {
+          // Older servers: fall back to the direct stream only.
+        }
+        _sources = _buildSources(scene, streams);
       }
       _scene = scene;
-      _sources = _buildSources(scene, streams);
       if (_sources.isEmpty) throw StashException('Aucun flux disponible');
 
       final f = scene.file;
@@ -160,11 +185,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
     await old?.dispose();
 
     final source = _sources[index];
-    final c = VideoPlayerController.networkUrl(
-      Uri.parse(source.url),
-      formatHint: source.hint,
-      httpHeaders: _app.client!.authHeaders,
-    );
+    final c = source.local
+        ? VideoPlayerController.file(File(source.url))
+        : VideoPlayerController.networkUrl(
+            Uri.parse(source.url),
+            formatHint: source.hint,
+            httpHeaders: _app.client!.authHeaders,
+          );
     try {
       await c.initialize();
       if (position > Duration.zero) await c.seekTo(position);
@@ -209,7 +236,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (c.value.isPlaying && delta > 0 && delta < 2) {
       _unsavedPlay += delta;
       _totalPlay += delta;
-      if (!_playCounted && _totalPlay >= 10) {
+      if (!_playCounted && _totalPlay >= 10 && !widget.offline) {
         _playCounted = true;
         _repo.addPlay(widget.sceneId).ignore();
       }
@@ -222,6 +249,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _saveActivity({bool finalSave = false}) {
+    if (widget.offline) return;
     final c = _controller;
     if (c == null || !c.value.isInitialized) return;
     if (_unsavedPlay <= 0 && !finalSave) return;
@@ -506,11 +534,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         icon: const Icon(Icons.bookmarks_outlined),
                         onPressed: _pickMarker,
                       ),
-                    IconButton(
-                      tooltip: 'Ajouter un marqueur ici',
-                      icon: const Icon(Icons.bookmark_add_outlined),
-                      onPressed: c == null ? null : _addMarker,
-                    ),
+                    if (!widget.offline)
+                      IconButton(
+                        tooltip: 'Ajouter un marqueur ici',
+                        icon: const Icon(Icons.bookmark_add_outlined),
+                        onPressed: c == null ? null : _addMarker,
+                      ),
                     if (_sources.length > 1)
                       IconButton(
                         tooltip: 'Flux',
@@ -523,23 +552,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         'cover' => _useFrameAsCover(),
                         _ => _pickSpeed(),
                       },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(
                           value: 'speed',
                           child: ListTile(
                             leading: Icon(Icons.speed),
                             title: Text('Vitesse de lecture'),
                           ),
                         ),
-                        PopupMenuItem(
-                          value: 'cover',
-                          child: ListTile(
-                            leading: Icon(Icons.wallpaper),
-                            title: Text(
-                              'Utiliser cette image comme couverture',
+                        if (!widget.offline)
+                          const PopupMenuItem(
+                            value: 'cover',
+                            child: ListTile(
+                              leading: Icon(Icons.wallpaper),
+                              title: Text(
+                                'Utiliser cette image comme couverture',
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ],

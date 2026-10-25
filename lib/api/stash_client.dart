@@ -26,6 +26,9 @@ class StashClient {
   final String? apiKey;
   final http.Client _http;
 
+  /// Told whether the server answered (true) or could not be reached.
+  void Function(bool reachable)? onReachability;
+
   static String normalizeUrl(String url) {
     var u = url.trim();
     if (u.isEmpty) return u;
@@ -77,8 +80,10 @@ class StashClient {
           )
           .timeout(const Duration(seconds: 30));
     } catch (e) {
+      onReachability?.call(false);
       throw StashException('Impossible de joindre le serveur : $e');
     }
+    onReachability?.call(true);
 
     if (res.statusCode == 401 || res.statusCode == 403) {
       throw StashException(
