@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../api/stash_repository.dart';
 import '../models/models.dart';
 import '../models/scene_filter.dart';
+import '../navigation.dart';
 import '../services/app_state.dart';
 import 'cards.dart';
+import 'net_image.dart';
 import 'paged_grid.dart';
 
 /// How the items of a kind of view are shown: card, grid size, sorts.
@@ -70,6 +72,11 @@ class ViewStyle {
       sortOptions: SortOptions.markers,
       countLabel: 'marqueurs',
     ),
+    ViewKind.images => const ViewStyle._(
+      160,
+      sortOptions: SortOptions.images,
+      countLabel: 'images',
+    ),
   };
 
   double heightFor(BuildContext context, double width) =>
@@ -85,6 +92,7 @@ List<SortOption> sortsFor(ViewKind kind) => switch (kind) {
   ViewKind.galleries => SortOptions.galleries,
   ViewKind.tags => SortOptions.tags,
   ViewKind.markers => SortOptions.markers,
+  ViewKind.images => SortOptions.images,
 };
 
 /// Max scene card width, derived from the column setting.
@@ -94,8 +102,14 @@ double sceneExtentOf(BuildContext context) {
   return MediaQuery.sizeOf(context).shortestSide / columns;
 }
 
-/// The card of a view item.
-Widget viewCard(Object item) => switch (item) {
+/// The card of a view item. Images open the viewer on [all] (the items
+/// loaded so far, [item] being at [index]) to swipe through them.
+Widget viewCard(Object item, [List<Object>? all, int? index]) => switch (item) {
+  StashImage i => ImageTile(
+    image: i,
+    all: all == null ? [i] : all.whereType<StashImage>().toList(),
+    index: all == null ? 0 : index ?? 0,
+  ),
   Scene s => SceneCard(scene: s),
   Performer p => PerformerCard(performer: p),
   Studio s => StudioCard(studio: s),
@@ -115,6 +129,7 @@ Object viewItemKey(Object item) => switch (item) {
   Gallery g => g.id,
   Tag t => t.id,
   SceneMarker m => m.id,
+  StashImage i => i.id,
   _ => item,
 };
 
@@ -126,7 +141,31 @@ IconData viewKindIcon(ViewKind kind) => switch (kind) {
   ViewKind.galleries => Icons.photo_library_outlined,
   ViewKind.tags => Icons.label_outline,
   ViewKind.markers => Icons.bookmarks_outlined,
+  ViewKind.images => Icons.image_outlined,
 };
+
+/// Square image thumbnail opening the full screen viewer.
+class ImageTile extends StatelessWidget {
+  const ImageTile({
+    super.key,
+    required this.image,
+    required this.all,
+    required this.index,
+  });
+
+  final StashImage image;
+  final List<StashImage> all;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () => openImages(context, List.of(all), index),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: NetImage(image.thumbnail),
+    ),
+  );
+}
 
 /// A saved view as a full grid. Its filter is locked (views are edited
 /// from Plus > Vues enregistrées); search and sort can change.
@@ -151,7 +190,7 @@ class ViewBrowser extends StatelessWidget {
           ? null
           : (w) => style.heightFor(context, w),
       countLabel: style.countLabel,
-      itemBuilder: (_, item, _, _) => viewCard(item),
+      itemBuilder: (_, item, i, all) => viewCard(item, all, i),
     );
   }
 }

@@ -21,8 +21,13 @@ class _ViewsScreenState extends State<ViewsScreen> {
   bool _loadingWeb = true;
   Object? _webError;
 
-  /// Web filters of kinds the app cannot list (images).
+  /// Web filters of kinds the app cannot list.
   int _unsupported = 0;
+
+  /// Criteria left out of each web filter (by view id).
+  Map<String, List<String>> _skipped = {};
+
+  static const _warning = Color(0xFFFFB74D);
 
   @override
   void initState() {
@@ -43,7 +48,31 @@ class _ViewsScreenState extends State<ViewsScreen> {
     } finally {
       if (mounted) setState(() => _loadingWeb = false);
     }
+    await _checkCriteria();
   }
+
+  /// Finds the web filters the app shows only partly.
+  Future<void> _checkCriteria() async {
+    final app = context.read<AppState>();
+    final repo = app.repo;
+    if (repo == null) return;
+    final skipped = <String, List<String>>{};
+    try {
+      for (final v in app.webViews) {
+        final s = await repo.skippedCriteria(v);
+        if (s.isNotEmpty) skipped[v.id] = s;
+      }
+    } catch (_) {
+      return; // schema unavailable: nothing to tell
+    }
+    if (mounted) setState(() => _skipped = skipped);
+  }
+
+  static String _criterionLabel(String key) => switch (key) {
+    'folder' => 'dossier',
+    'custom_fields' => 'champs personnalisés',
+    _ => key.replaceAll('_', ' '),
+  };
 
   void _edit([SavedView? view]) =>
       Navigator.of(context)
@@ -132,8 +161,37 @@ class _ViewsScreenState extends State<ViewsScreen> {
                 leading: const Icon(Icons.info_outline),
                 title: Text(
                   _unsupported == 1
-                      ? '1 filtre web d\'images n\'est pas repris'
-                      : '$_unsupported filtres web d\'images ne sont pas repris',
+                      ? '1 filtre web d\'un type inconnu de l\'app n\'est pas '
+                            'repris'
+                      : '$_unsupported filtres web d\'un type inconnu de l\'app '
+                            'ne sont pas repris',
+                ),
+              ),
+            if (_skipped.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _warning.withValues(alpha: 0.12),
+                  border: Border.all(color: _warning),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: _warning),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '${_skipped.length == 1 ? 'Un filtre web utilise' : '${_skipped.length} filtres web utilisent'} '
+                        'des critères que l\'app ne sait pas reprendre '
+                        '(détail sous chaque filtre concerné). Ces critères '
+                        'sont ignorés : la vue affiche plus d\'éléments que '
+                        'sur le web.',
+                        style: const TextStyle(color: _warning),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ListTile(
@@ -203,10 +261,31 @@ class _ViewsScreenState extends State<ViewsScreen> {
           ],
         ],
       ),
-      subtitle: Text(
-        _describe(v),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_describe(v), maxLines: 2, overflow: TextOverflow.ellipsis),
+          if (_skipped[v.id] case final skipped?)
+            Text.rich(
+              TextSpan(
+                children: [
+                  const WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Icon(
+                      Icons.warning_amber_rounded,
+                      size: 16,
+                      color: _warning,
+                    ),
+                  ),
+                  TextSpan(
+                    text:
+                        ' Ignoré : ${skipped.map(_criterionLabel).join(', ')}',
+                  ),
+                ],
+              ),
+              style: const TextStyle(color: _warning),
+            ),
+        ],
       ),
       onTap: () =>
           Navigator.of(context)

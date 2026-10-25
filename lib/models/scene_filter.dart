@@ -63,6 +63,15 @@ enum ViewKind {
   markers('Marqueurs', 'SCENE_MARKERS', 'created_at', {
     FilterField.performers,
     FilterField.tags,
+  }),
+  images('Images', 'IMAGES', 'created_at', {
+    FilterField.performers,
+    FilterField.tags,
+    FilterField.studios,
+    FilterField.rating,
+    FilterField.resolution,
+    FilterField.organized,
+    FilterField.performerFavorite,
   });
 
   const ViewKind(this.label, this.filterMode, this.defaultSort, this.fields);
@@ -422,7 +431,7 @@ class SavedView {
   );
 
   /// A filter saved in the web UI (`SavedFilter`), or null for the kinds
-  /// the app does not list (images).
+  /// the app does not list.
   static SavedView? fromServer(Map<String, dynamic> j) {
     final kind = ViewKind.fromFilterMode(j['mode'] as String?);
     if (kind == null) return null;

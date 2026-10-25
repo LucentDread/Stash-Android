@@ -279,7 +279,7 @@ class _ViewSectionState extends State<_ViewSection> {
                 crossAxisSpacing: gridSpacing,
               ),
               itemCount: _items.length,
-              itemBuilder: (_, i) => viewCard(_items[i]),
+              itemBuilder: (_, i) => viewCard(_items[i], _items, i),
             ),
           ),
         SliverToBoxAdapter(

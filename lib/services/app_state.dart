@@ -67,11 +67,20 @@ class AppState extends ChangeNotifier {
       });
     } else {
       _probe?.cancel();
+      _serverVersion = null; // may have failed while offline
       refreshData();
     }
   }
 
+  /// Version reported by the server, asked once per connection (pages
+  /// rebuilding would otherwise start new requests, whose errors nobody
+  /// listens to).
+  Future<String>? get serverVersion =>
+      _serverVersion ??= _repo?.version()?..ignore();
+  Future<String>? _serverVersion;
+
   void _use(StashRepository? repo) {
+    _serverVersion = null;
     _repo?.client.onReachability = null;
     _repo = repo;
     repo?.client.onReachability = _onReachability;

@@ -1,5 +1,15 @@
 # Historique des versions
 
+## 1.10.2
+- Plus > Images : toutes les images de la bibliothèque, avec recherche et
+  tri ; un appui ouvre la visionneuse.
+- Vues d'images : nouveau contenu possible des vues (filtres par
+  performeurs, tags, studio, note, résolution…). Les filtres d'images
+  enregistrés dans l'interface web sont désormais repris.
+- Vues enregistrées : avertissement en orange quand un filtre web contient
+  des critères que l'app ne sait pas reprendre (listés sous le filtre) ;
+  ils sont ignorés, la vue montre donc plus d'éléments que sur le web.
+
 ## 1.10.1
 - Accueil à plusieurs vues : chaque vue a de nouveau un tri (critère et
   sens), propre à elle. Le choix dure jusqu'à la fermeture de l'app ; la

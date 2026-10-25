@@ -66,6 +66,11 @@ class MoreScreen extends StatelessWidget {
             onTap: () => _push(context, const GalleriesScreen()),
           ),
           ListTile(
+            leading: const Icon(Icons.image_outlined),
+            title: const Text('Images'),
+            onTap: () => _push(context, const ImagesScreen()),
+          ),
+          ListTile(
             leading: const Icon(Icons.business),
             title: const Text('Studios'),
             onTap: () => _push(context, const StudiosScreen()),
@@ -118,7 +123,7 @@ class MoreScreen extends StatelessWidget {
             onTap: () => _push(context, const SetupScreen(popOnSuccess: true)),
           ),
           FutureBuilder<String>(
-            future: app.repo?.version(),
+            future: app.serverVersion,
             builder: (context, snap) => ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('Version du serveur'),

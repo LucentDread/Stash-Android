@@ -12,6 +12,7 @@ import 'package:stash_android/api/stash_repository.dart';
 import 'package:stash_android/models/models.dart';
 import 'package:stash_android/models/scene_filter.dart';
 import 'package:stash_android/screens/home_screen.dart';
+import 'package:stash_android/screens/views_screen.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/widgets/cards.dart';
 
@@ -250,7 +251,11 @@ void main() {
       expect(v.descending, isFalse);
       expect(v.query, 'abc');
       expect(SavedView.fromJson(v.toJson()).serverFilter, v.serverFilter);
-      expect(SavedView.fromServer({'id': 1, 'mode': 'IMAGES'}), isNull);
+      expect(
+        SavedView.fromServer({'id': 1, 'mode': 'IMAGES'})!.kind,
+        ViewKind.images,
+      );
+      expect(SavedView.fromServer({'id': 1, 'mode': 'FOO'}), isNull);
     });
   });
 
@@ -309,7 +314,16 @@ void main() {
                       },
                     },
                   },
-                  {'id': '4', 'mode': 'IMAGES', 'name': 'Images'},
+                  {
+                    'id': '4',
+                    'mode': 'IMAGES',
+                    'name': 'Photos organisées',
+                    'object_filter': {
+                      'organized': {'value': 'true', 'modifier': 'EQUALS'},
+                      'folder': {'value': 'x', 'modifier': 'INCLUDES'},
+                    },
+                  },
+                  {'id': '5', 'mode': 'FOO', 'name': 'Inconnu'},
                 ],
               };
             } else if (query.contains('__schema')) {
@@ -318,6 +332,9 @@ void main() {
                   'types': [
                     _input('PerformerFilterType', {
                       'filter_favorites': _named('SCALAR', 'Boolean'),
+                    }),
+                    _input('ImageFilterType', {
+                      'organized': _named('SCALAR', 'Boolean'),
                     }),
                   ],
                 },
@@ -328,6 +345,15 @@ void main() {
                   'count': 1,
                   'performers': [
                     {'id': '1', 'name': 'Alice'},
+                  ],
+                },
+              };
+            } else if (query.contains('findImages')) {
+              data = {
+                'findImages': {
+                  'count': 1,
+                  'images': [
+                    {'id': '8', 'title': 'Photo', 'paths': <String, dynamic>{}},
                   ],
                 },
               };
@@ -364,8 +390,8 @@ void main() {
     test('web filters join the views, in one order', () async {
       final a = await app();
       a.saveView(SavedView(id: 'l', name: 'Locale', filter: SceneFilter()));
-      expect(await a.refreshWebViews(), 1, reason: 'images are left out');
-      expect([for (final v in a.allViews) v.id], ['l', 'web:3']);
+      expect(await a.refreshWebViews(), 1, reason: 'unknown kind left out');
+      expect([for (final v in a.allViews) v.id], ['l', 'web:3', 'web:4']);
 
       a.reorderViews(1, 0);
       a.setHomeView('l', true);
@@ -381,6 +407,37 @@ void main() {
       );
       expect((page.items.single as Performer).name, 'Alice');
       expect(sent.last['variables']['pf'], {'filter_favorites': true});
+    });
+
+    test('image views list images; unreadable criteria are reported', () async {
+      final a = await app();
+      await a.refreshWebViews();
+      final photos = a.viewById('web:4')!;
+      expect(photos.kind, ViewKind.images);
+      final page = await a.repo!.findForView(photos, const ListQuery());
+      expect((page.items.single as StashImage).id, '8');
+      expect(sent.last['variables']['imf'], {'organized': true});
+      expect(await a.repo!.skippedCriteria(photos), ['folder']);
+      expect(await a.repo!.skippedCriteria(a.viewById('web:3')!), isEmpty);
+    });
+
+    testWidgets('saved views page warns about ignored criteria', (
+      tester,
+    ) async {
+      final a = await app();
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: a,
+          child: const MaterialApp(home: ViewsScreen()),
+        ),
+      );
+      for (var i = 0; i < 6; i++) {
+        await tester.pump();
+      }
+      expect(find.textContaining('Un filtre web utilise'), findsOneWidget);
+      expect(find.textContaining('Ignoré : dossier'), findsOneWidget);
+      expect(find.text('Photos organisées'), findsOneWidget);
+      expect(find.text('Favorites du web'), findsOneWidget);
     });
 
     test('resume point reset, also on servers before 0.27', () async {

@@ -20,12 +20,15 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   sous-groupes), note minimale, résolution minimale, durée, déjà vues ou
   jamais vues, organisées, marqueurs, performeur favori.
 - **Vues enregistrées** : une recherche + filtres + tri de scènes,
-  performeurs, studios, groupes, galeries, tags ou marqueurs peut être
+  performeurs, studios, groupes, galeries, tags, marqueurs ou images peut être
   enregistrée (Plus > Vues enregistrées, ou icône signet dans Scènes) et
   ajoutée à la page d'accueil (icône maison) ; plusieurs vues s'y empilent,
   une seule donne son nom à la page. Les filtres enregistrés dans
   l'interface web de Stash sont aussi proposés (convertis d'après le schéma
-  du serveur ; ceux d'images ne sont pas repris). L'accueil par défaut
+  du serveur ; un avertissement orange signale les critères ignorés).
+- **Images** (dans **Plus**) : toutes les images de la bibliothèque, avec
+  recherche et tri, et visionneuse plein écran. Les vues peuvent aussi
+  lister des images. L'accueil par défaut
   reste accessible par le bouton en haut à droite. Les vues apparaissent aussi en
   lignes sur l'accueil par défaut. Leur filtre n'est modifiable que depuis
   **Plus > Vues enregistrées** (création, modification, ordre, suppression).

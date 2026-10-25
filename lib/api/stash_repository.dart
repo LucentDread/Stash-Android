@@ -65,6 +65,16 @@ class SortOptions {
     SortOption('group_scene_number', 'Ordre dans le groupe'),
     ...scenes,
   ];
+  static const images = [
+    SortOption('created_at', 'Date d\'ajout'),
+    SortOption('date', 'Date'),
+    SortOption('title', 'Titre'),
+    SortOption('rating', 'Note'),
+    SortOption('o_counter', 'Compteur O'),
+    SortOption('filesize', 'Taille'),
+    SortOption('path', 'Chemin'),
+    SortOption('random', 'Aléatoire'),
+  ];
   static const markers = [
     SortOption('created_at', 'Date d\'ajout'),
     SortOption('title', 'Titre'),
@@ -405,6 +415,7 @@ class StashRepository {
     ViewKind.galleries => 'GalleryFilterType',
     ViewKind.tags => 'TagFilterType',
     ViewKind.markers => 'SceneMarkerFilterType',
+    ViewKind.images => 'ImageFilterType',
   };
 
   /// The GraphQL filter of [view]: its own, or its web UI filter converted.
@@ -412,6 +423,20 @@ class StashRepository {
     final saved = view.serverFilter;
     if (saved == null) return view.filter.toGraphQL(view.kind);
     return (await filterSchema()).convert(filterType(view.kind), saved);
+  }
+
+  /// Criteria of a web UI filter that the conversion leaves out (unknown
+  /// to this server's schema, or in a format the app cannot read).
+  Future<List<String>> skippedCriteria(SavedView view) async {
+    final saved = view.serverFilter;
+    if (saved == null) return const [];
+    final skipped = <String>[];
+    (await filterSchema()).convert(
+      filterType(view.kind),
+      saved,
+      skipped: skipped,
+    );
+    return skipped;
   }
 
   /// One page of [view]'s items (scenes, performers… depending on its kind).
@@ -425,6 +450,7 @@ class StashRepository {
       ViewKind.galleries => await findGalleries(q, galleryFilter: f),
       ViewKind.tags => await findTags(q, tagFilter: f),
       ViewKind.markers => await findMarkers(q, markerFilter: f),
+      ViewKind.images => await findImages(q, imageFilter: f),
     };
   }
 
@@ -1032,6 +1058,7 @@ class StashRepository {
   Future<ResultPage<StashImage>> findImages(
     ListQuery q, {
     EntityFilter? entity,
+    Map<String, dynamic>? imageFilter,
   }) async {
     final d = await client.query(
       '''
@@ -1043,7 +1070,7 @@ class StashRepository {
       }''',
       variables: {
         'filter': q.toFilter(),
-        'imf': {...?entity?.toCriterion()},
+        'imf': {...?imageFilter, ...?entity?.toCriterion()},
       },
     );
     final r = d['findImages'] as Map<String, dynamic>;

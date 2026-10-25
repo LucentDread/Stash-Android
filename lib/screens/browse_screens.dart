@@ -298,6 +298,29 @@ class GalleriesScreen extends StatelessWidget {
       _BrowseScaffold(title: 'Galeries', child: galleryGrid(context));
 }
 
+/// Every image of the library, whatever its gallery.
+class ImagesScreen extends StatelessWidget {
+  const ImagesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.read<AppState>().repo!;
+    return _BrowseScaffold(
+      title: 'Images',
+      child: PagedGrid<StashImage>(
+        itemKey: (item) => item.id,
+        fetch: repo.findImages,
+        sortOptions: SortOptions.images,
+        maxCrossAxisExtent: 160,
+        countLabel: 'images',
+        emptyText: 'Aucune image',
+        itemBuilder: (_, img, i, all) =>
+            ImageTile(image: img, all: all, index: i),
+      ),
+    );
+  }
+}
+
 class MarkersScreen extends StatelessWidget {
   const MarkersScreen({super.key});
 
