@@ -27,117 +27,243 @@ class MergeItem {
   final String? image;
 }
 
-/// Changes a scraped scene would bring to the scene edit [fields], plus the
+/// A scraped record: raw data as returned by Stash (sent back as a
+/// fragment for a full record) and its values keyed by edit field key.
+class Scraped {
+  Scraped(this.raw, this.values);
+  final Map<String, dynamic> raw;
+  final Map<String, Object?> values;
+
+  String get title =>
+      (values['title'] ?? values['name']) as String? ?? 'Sans titre';
+
+  String? get preview =>
+      (values['cover_image'] ?? values['image'] ?? values['front_image'])
+          as String?;
+
+  String get subtitle => [
+    if (values['studio_id'] case final ScrapedRef s) s.name,
+    if (values['disambiguation'] case final String d when d.isNotEmpty) d,
+    if (values['date'] case final String d) d,
+    if (values['birthdate'] case final String d) d,
+    if (values['performer_ids'] case final List<ScrapedRef> p when p.isNotEmpty)
+      p.map((e) => e.name).join(', '),
+  ].join(' • ');
+}
+
+List<ScrapedRef> _refs(Object? v) => [
+  for (final e in (v as List?) ?? const [])
+    ScrapedRef.fromJson((e as Map).cast<String, dynamic>()),
+];
+
+ScrapedRef? _ref(Object? v) =>
+    v == null ? null : ScrapedRef.fromJson((v as Map).cast<String, dynamic>());
+
+List<String> _strings(Object? v) => (v as List?)?.cast<String>() ?? const [];
+
+/// "170", "170 cm" → 170.
+int? _number(Object? v) {
+  final m = RegExp(r'\d+').firstMatch(v?.toString() ?? '');
+  return m == null ? null : int.parse(m.group(0)!);
+}
+
+/// "Transgender Female" → TRANSGENDER_FEMALE, Stash's enum spelling.
+String? _gender(Object? v) =>
+    (v as String?)?.trim().toUpperCase().replaceAll(RegExp(r'[\s-]+'), '_');
+
+/// Maps raw scraped data of [kind] onto the keys of its edit form.
+Scraped toScraped(ScrapeKind kind, Map<String, dynamic> j) {
+  final values = <String, Object?>{
+    ...switch (kind) {
+      ScrapeKind.scene => {
+        'title': j['title'],
+        'code': j['code'],
+        'date': j['date'],
+        'director': j['director'],
+        'details': j['details'],
+        'studio_id': _ref(j['studio']),
+        'performer_ids': _refs(j['performers']),
+        'tag_ids': _refs(j['tags']),
+        'groups': _refs(j['groups']),
+        'urls': _strings(j['urls']),
+        'cover_image': j['image'],
+      },
+      ScrapeKind.performer => {
+        'name': j['name'],
+        'disambiguation': j['disambiguation'],
+        'alias_list': [
+          for (final a in (j['aliases'] as String? ?? '').split(','))
+            if (a.trim().isNotEmpty) a.trim(),
+        ],
+        'gender': _gender(j['gender']),
+        'birthdate': j['birthdate'],
+        'death_date': j['death_date'],
+        'country': j['country'],
+        'ethnicity': j['ethnicity'],
+        'hair_color': j['hair_color'],
+        'eye_color': j['eye_color'],
+        'height_cm': _number(j['height']),
+        'weight': _number(j['weight']),
+        'measurements': j['measurements'],
+        'fake_tits': j['fake_tits'],
+        'tattoos': j['tattoos'],
+        'piercings': j['piercings'],
+        'tag_ids': _refs(j['tags']),
+        'urls': _strings(j['urls']),
+        'details': j['details'],
+        'image': _strings(j['images']).firstOrNull,
+      },
+      ScrapeKind.group => {
+        'name': j['name'],
+        'aliases': j['aliases'],
+        'date': j['date'],
+        'duration': TimeEditField.parse(j['duration'] as String? ?? '')
+            ?.round(),
+        'director': j['director'],
+        'studio_id': _ref(j['studio']),
+        'tag_ids': _refs(j['tags']),
+        'urls': _strings(j['urls']),
+        'synopsis': j['synopsis'],
+        'front_image': j['front_image'],
+        'back_image': j['back_image'],
+      },
+      ScrapeKind.gallery => {
+        'title': j['title'],
+        'code': j['code'],
+        'date': j['date'],
+        'photographer': j['photographer'],
+        'studio_id': _ref(j['studio']),
+        'performer_ids': _refs(j['performers']),
+        'tag_ids': _refs(j['tags']),
+        'urls': _strings(j['urls']),
+        'details': j['details'],
+      },
+      ScrapeKind.studio => {
+        'name': j['name'],
+        'parent_id': _ref(j['parent']),
+        'urls': _strings(j['urls']),
+        'details': j['details'],
+        'image': j['image'],
+      },
+    },
+  };
+  return Scraped(j, values);
+}
+
+/// Changes a scraped record would bring to the edit [fields], plus the
 /// names it found that do not exist in Stash (which cannot be linked).
-(List<MergeItem>, List<String>) mergeItems(
-  ScrapedScene r,
-  List<EditField> fields,
-) {
-  T? field<T extends EditField>(String key) =>
-      fields.whereType<T>().where((f) => f.key == key).firstOrNull;
+(List<MergeItem>, List<String>) mergeItems(Scraped r, List<EditField> fields) {
   final items = <MergeItem>[];
   final missing = <String>[];
 
-  void text(String key, String? value) {
-    final f = field<TextEditField>(key);
-    final v = value?.trim();
-    if (f == null || v == null || v.isEmpty) return;
-    final current = f.controller.text.trim();
-    if (current == v) return;
-    items.add(
-      MergeItem(
-        label: f.label,
-        current: current.isEmpty ? null : current,
-        proposed: v,
-        // Fill empty fields by default; replacing needs a tick.
-        checked: current.isEmpty,
-        apply: () => f.controller.text = v,
-      ),
-    );
-  }
-
-  text('title', r.title);
-  text('code', r.code);
-  text('date', r.date);
-  text('director', r.director);
-  text('details', r.details);
-
-  final studio = field<RefEditField>('studio_id');
-  if (studio != null && r.studio != null) {
-    final ref = r.studio!.ref;
-    if (ref == null) {
-      missing.add('Studio : ${r.studio!.name}');
-    } else if (ref.id != studio.value?.id) {
-      items.add(
-        MergeItem(
-          label: studio.label,
-          current: studio.value?.name,
-          proposed: ref.name,
-          checked: studio.value == null,
-          apply: () => studio.value = ref,
-        ),
-      );
+  for (final f in fields) {
+    final v = r.values[f.key];
+    if (v == null) continue;
+    switch (f) {
+      case ImageEditField() when v is String && v.isNotEmpty:
+        items.add(
+          MergeItem(
+            label: f.label,
+            current: null,
+            proposed: 'Nouvelle image',
+            image: v,
+            // Replacing the current image is opt-in.
+            checked: false,
+            apply: () => f.setImage(v),
+          ),
+        );
+      case TextEditField() when v is String:
+        final value = v.trim();
+        final current = f.controller.text.trim();
+        if (value.isEmpty || value == current) continue;
+        items.add(
+          MergeItem(
+            label: f.label,
+            current: current.isEmpty ? null : current,
+            proposed: value,
+            // Fill empty fields by default; replacing needs a tick.
+            checked: current.isEmpty,
+            apply: () => f.controller.text = value,
+          ),
+        );
+      case IntEditField() when v is int:
+        final value = '${(v / f.factor).round()}';
+        final current = f.controller.text.trim();
+        if (value == current) continue;
+        final unit = f.suffix == null ? '' : ' ${f.suffix}';
+        items.add(
+          MergeItem(
+            label: f.label,
+            current: current.isEmpty ? null : '$current$unit',
+            proposed: '$value$unit',
+            checked: current.isEmpty,
+            apply: () => f.controller.text = value,
+          ),
+        );
+      case ChoiceEditField() when v is String:
+        if (!f.options.containsKey(v) || v == f.value) continue;
+        items.add(
+          MergeItem(
+            label: f.label,
+            current: f.value == null ? null : f.options[f.value],
+            proposed: f.options[v]!,
+            checked: f.value == null,
+            apply: () => f.value = v,
+          ),
+        );
+      case RefEditField() when v is ScrapedRef:
+        final ref = v.ref;
+        if (ref == null) {
+          missing.add('${f.label} : ${v.name}');
+        } else if (ref.id != f.value?.id) {
+          items.add(
+            MergeItem(
+              label: f.label,
+              current: f.value?.name,
+              proposed: ref.name,
+              checked: f.value == null,
+              apply: () => f.value = ref,
+            ),
+          );
+        }
+      case RefsEditField() when v is List<ScrapedRef>:
+        final have = {for (final r in f.items) r.id};
+        final add = [
+          for (final s in v)
+            if (s.ref case final ref? when !have.contains(ref.id)) ref,
+        ];
+        missing.addAll([
+          for (final s in v)
+            if (s.storedId == null) '${f.label} : ${s.name}',
+        ]);
+        if (add.isEmpty) continue;
+        items.add(
+          MergeItem(
+            label: f.label,
+            current: f.items.isEmpty
+                ? null
+                : f.items.map((i) => i.name).join(', '),
+            proposed: '+ ${add.map((a) => a.name).join(', ')}',
+            apply: () => f.items.addAll(add),
+          ),
+        );
+      case StringListEditField() when v is List<String>:
+        final add = [
+          for (final s in v)
+            if (!f.items.contains(s)) s,
+        ];
+        if (add.isEmpty) continue;
+        items.add(
+          MergeItem(
+            label: f.label,
+            current: f.items.isEmpty ? null : f.items.join(', '),
+            proposed: '+ ${add.join('\n+ ')}',
+            apply: () => f.items.addAll(add),
+          ),
+        );
+      default:
+        break;
     }
-  }
-
-  void refs(String key, List<ScrapedRef> scraped, String noun) {
-    final f = field<RefsEditField>(key);
-    if (f == null) return;
-    final have = {for (final r in f.items) r.id};
-    final add = [
-      for (final s in scraped)
-        if (s.ref case final ref? when !have.contains(ref.id)) ref,
-    ];
-    missing.addAll([
-      for (final s in scraped)
-        if (s.storedId == null) '$noun : ${s.name}',
-    ]);
-    if (add.isEmpty) return;
-    items.add(
-      MergeItem(
-        label: f.label,
-        current: f.items.isEmpty ? null : f.items.map((i) => i.name).join(', '),
-        proposed: '+ ${add.map((a) => a.name).join(', ')}',
-        apply: () => f.items.addAll(add),
-      ),
-    );
-  }
-
-  refs('performer_ids', r.performers, 'Performeur');
-  refs('tag_ids', r.tags, 'Tag');
-  refs('groups', r.groups, 'Groupe');
-
-  final urls = field<StringListEditField>('urls');
-  if (urls != null) {
-    final add = [
-      for (final u in r.urls)
-        if (!urls.items.contains(u)) u,
-    ];
-    if (add.isNotEmpty) {
-      items.add(
-        MergeItem(
-          label: urls.label,
-          current: urls.items.isEmpty ? null : '${urls.items.length} lien(s)',
-          proposed: '+ ${add.join('\n+ ')}',
-          apply: () => urls.items.addAll(add),
-        ),
-      );
-    }
-  }
-
-  final cover = field<ImageEditField>('cover_image');
-  if (cover != null && r.image != null && r.image!.isNotEmpty) {
-    items.add(
-      MergeItem(
-        label: cover.label,
-        current: null,
-        proposed: 'Nouvelle image',
-        image: r.image,
-        // Replacing the current cover is opt-in.
-        checked: false,
-        apply: () => cover.setImage(r.image!),
-      ),
-    );
   }
   return (items, missing);
 }
@@ -152,68 +278,76 @@ Widget _preview(String image, {double size = 72}) {
   );
 }
 
-/// Scrapes the scene and lets the user pick which values go into the edit
-/// [fields]. Returns true when the form changed.
+/// Scrapes item [id] of [kind] and lets the user pick which values go into
+/// the edit [fields]. Returns true when the form changed.
 Future<bool> scrapeIntoFields(
   BuildContext context,
-  String sceneId,
+  ScrapeKind kind,
+  String id,
   List<EditField> fields,
 ) async {
   final repo = context.read<AppState>().repo!;
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
+  T? field<T extends EditField>(String key) =>
+      fields.whereType<T>().where((f) => f.key == key).firstOrNull;
 
   final List<ScrapeSource> sources;
   try {
-    sources = await _withProgress(context, repo.sceneScrapeSources());
+    sources = await _withProgress(context, repo.scrapeSources(kind));
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     return false;
   }
   if (!context.mounted) return false;
 
-  final sceneUrls =
-      fields
-          .whereType<StringListEditField>()
-          .where((f) => f.key == 'urls')
-          .firstOrNull
-          ?.items ??
-      const <String>[];
+  // Studios cannot be scraped from a URL.
+  final urls = kind == ScrapeKind.studio
+      ? null
+      : (field<StringListEditField>('urls')?.items ?? const <String>[]);
   final choice = await showModalBottomSheet<Object>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (context) => _SourceSheet(sources: sources, urls: sceneUrls),
+    builder: (context) => _SourceSheet(sources: sources, urls: urls),
   );
   if (choice == null || !context.mounted) return false;
 
-  List<ScrapedScene> results;
+  var results = <Scraped>[];
+  var searched = false;
   try {
     if (choice is ScrapeSource) {
-      results = choice.byFragment
-          ? await _withProgress(context, repo.scrapeScene(choice, sceneId))
-          : const [];
+      if (choice.byFragment) {
+        results = [
+          for (final r in await _withProgress(
+            context,
+            repo.scrape(kind, choice, id),
+          ))
+            toScraped(kind, r),
+        ];
+      }
       if (results.isEmpty && choice.byName && context.mounted) {
-        // Nothing from the scene itself: offer a search by name.
-        final title = fields
-            .whereType<TextEditField>()
-            .where((f) => f.key == 'title')
-            .firstOrNull
-            ?.controller
-            .text;
-        final query = await _askQuery(context, choice, title ?? '');
+        final name =
+            (field<TextEditField>('title') ?? field<TextEditField>('name'))
+                ?.controller
+                .text;
+        final query = await _askQuery(context, choice, name ?? '');
         if (query == null || !context.mounted) return false;
-        results = await _withProgress(
-          context,
-          repo.scrapeScene(choice, sceneId, query: query),
-        );
+        searched = true;
+        results = [
+          for (final r in await _withProgress(
+            context,
+            repo.scrape(kind, choice, id, query: query),
+          ))
+            toScraped(kind, r),
+        ];
       }
     } else {
       final r = await _withProgress(
         context,
-        repo.scrapeSceneUrl(choice as String),
+        repo.scrapeUrl(kind, choice as String),
       );
-      results = [?r];
+      if (r != null) results = [toScraped(kind, r)];
     }
   } catch (e) {
     messenger.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -225,14 +359,31 @@ Future<bool> scrapeIntoFields(
     return false;
   }
 
-  final picked = results.length == 1
+  var picked = results.length == 1
       ? results.single
-      : await navigator.push<ScrapedScene>(
+      : await navigator.push<Scraped>(
           MaterialPageRoute(builder: (_) => _ResultsScreen(results: results)),
         );
-  if (picked == null) return false;
+  if (picked == null || !context.mounted) return false;
 
-  final (items, missing) = mergeItems(picked, fields);
+  // A scraper's search results are summaries: ask it for the full record,
+  // as the web UI does. Stash-box results are already complete.
+  if (searched &&
+      choice is ScrapeSource &&
+      !choice.isStashBox &&
+      kind != ScrapeKind.studio) {
+    try {
+      final full = await _withProgress(
+        context,
+        repo.scrape(kind, choice, id, fragment: picked.raw),
+      );
+      if (full.isNotEmpty) picked = toScraped(kind, full.first);
+    } catch (_) {
+      // Keep the summary.
+    }
+  }
+
+  final (items, missing) = mergeItems(picked!, fields);
   if (items.isEmpty && missing.isEmpty) {
     messenger.showSnackBar(
       const SnackBar(content: Text('Rien de nouveau dans ce résultat')),
@@ -299,7 +450,9 @@ Future<String?> _askQuery(
 class _SourceSheet extends StatelessWidget {
   const _SourceSheet({required this.sources, required this.urls});
   final List<ScrapeSource> sources;
-  final List<String> urls;
+
+  /// Item URLs to scrape, or null when URL scraping is not available.
+  final List<String>? urls;
 
   Future<void> _otherUrl(BuildContext context) async {
     final controller = TextEditingController();
@@ -361,7 +514,11 @@ class _SourceSheet extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.inventory_2_outlined),
               title: Text(s.label),
-              subtitle: const Text('Par empreinte, sinon par recherche'),
+              subtitle: Text(
+                s.byFragment
+                    ? 'Par empreinte, sinon par recherche'
+                    : 'Par recherche',
+              ),
               onTap: () => Navigator.pop(context, s),
             ),
           if (scrapers.isNotEmpty) header('Scrapers'),
@@ -377,24 +534,26 @@ class _SourceSheet extends StatelessWidget {
               ),
               onTap: () => Navigator.pop(context, s),
             ),
-          header('Depuis une URL'),
-          for (final u in urls)
+          if (urls != null) ...[
+            header('Depuis une URL'),
+            for (final u in urls!)
+              ListTile(
+                leading: const Icon(Icons.link),
+                title: Text(u, maxLines: 1, overflow: TextOverflow.ellipsis),
+                onTap: () => Navigator.pop(context, u),
+              ),
             ListTile(
-              leading: const Icon(Icons.link),
-              title: Text(u, maxLines: 1, overflow: TextOverflow.ellipsis),
-              onTap: () => Navigator.pop(context, u),
+              leading: const Icon(Icons.add_link),
+              title: const Text('Autre URL…'),
+              onTap: () => _otherUrl(context),
             ),
-          ListTile(
-            leading: const Icon(Icons.add_link),
-            title: const Text('Autre URL…'),
-            onTap: () => _otherUrl(context),
-          ),
+          ],
           if (sources.isEmpty)
             const Padding(
               padding: EdgeInsets.all(16),
               child: Text(
-                'Aucun scraper de scènes ni stash-box n\'est configuré sur le '
-                'serveur (Paramètres > Métadonnées).',
+                'Aucun scraper ni stash-box n\'est configuré pour ce type sur '
+                'le serveur (Paramètres > Métadonnées).',
               ),
             ),
         ],
@@ -405,7 +564,7 @@ class _SourceSheet extends StatelessWidget {
 
 class _ResultsScreen extends StatelessWidget {
   const _ResultsScreen({required this.results});
-  final List<ScrapedScene> results;
+  final List<Scraped> results;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -414,15 +573,10 @@ class _ResultsScreen extends StatelessWidget {
       children: [
         for (final r in results)
           ListTile(
-            leading: r.image == null ? null : _preview(r.image!, size: 40),
-            title: Text(r.title ?? 'Sans titre'),
+            leading: r.preview == null ? null : _preview(r.preview!, size: 40),
+            title: Text(r.title),
             subtitle: Text(
-              [
-                if (r.studio != null) r.studio!.name,
-                if (r.date != null) r.date!,
-                if (r.performers.isNotEmpty)
-                  r.performers.map((p) => p.name).join(', '),
-              ].join(' • '),
+              r.subtitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),

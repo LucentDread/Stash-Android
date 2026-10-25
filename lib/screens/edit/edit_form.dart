@@ -203,6 +203,8 @@ class ChoiceEditField extends EditField {
   @override
   Widget build(BuildContext context, VoidCallback onChanged) =>
       DropdownButtonFormField<String?>(
+        // Rebuilt when the value is set from outside (scraping).
+        key: ValueKey(value),
         initialValue: value,
         decoration: InputDecoration(
           labelText: label,

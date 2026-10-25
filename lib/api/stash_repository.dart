@@ -202,7 +202,10 @@ const _groupFields =
 /// Kinds of entities that can be picked in the scene filter.
 enum RefKind { performers, tags, studios, groups }
 
-/// Where to scrape scene data from: a scraper or a stash-box endpoint.
+/// Kinds of items that can be scraped.
+enum ScrapeKind { scene, performer, group, gallery, studio }
+
+/// Where to scrape data from: a scraper or a stash-box endpoint.
 class ScrapeSource {
   const ScrapeSource({
     required this.label,
@@ -216,7 +219,7 @@ class ScrapeSource {
   final String? scraperId;
   final String? stashBoxEndpoint;
 
-  /// Can identify the scene from its own data (or fingerprints).
+  /// Can identify the item from its own data (or fingerprints).
   final bool byFragment;
 
   /// Can search by a text query.
@@ -231,14 +234,99 @@ class ScrapeSource {
 }
 
 const _scrapedRef = 'stored_id name';
-const _scrapedScene =
-    '''
-  title code details director date image urls
-  studio { $_scrapedRef }
-  performers { $_scrapedRef }
-  tags { $_scrapedRef }
-  groups { $_scrapedRef }
-''';
+
+/// Scraped fields requested for each kind, plus the GraphQL names used to
+/// scrape it.
+const _scrapeFields = <ScrapeKind, String>{
+  ScrapeKind.scene:
+      '''
+    title code details director date image urls remote_site_id
+    studio { $_scrapedRef }
+    performers { $_scrapedRef }
+    tags { $_scrapedRef }
+    groups { $_scrapedRef }
+  ''',
+  ScrapeKind.performer:
+      '''
+    name disambiguation gender urls birthdate death_date ethnicity country
+    eye_color hair_color height weight measurements fake_tits tattoos
+    piercings aliases details images remote_site_id
+    tags { $_scrapedRef }
+  ''',
+  ScrapeKind.group:
+      '''
+    name aliases duration date director urls synopsis front_image back_image
+    studio { $_scrapedRef }
+    tags { $_scrapedRef }
+  ''',
+  ScrapeKind.gallery:
+      '''
+    title code details photographer urls date
+    studio { $_scrapedRef }
+    performers { $_scrapedRef }
+    tags { $_scrapedRef }
+  ''',
+  ScrapeKind.studio:
+      '''
+    stored_id name urls image details
+    parent { $_scrapedRef }
+  ''',
+};
+
+/// Fields a scraper accepts back as a fragment (`<kind>_input`) to turn a
+/// search result into a full record.
+const _fragmentKeys = <ScrapeKind, Set<String>>{
+  ScrapeKind.scene: {
+    'title',
+    'code',
+    'details',
+    'director',
+    'urls',
+    'date',
+    'remote_site_id',
+  },
+  ScrapeKind.performer: {
+    'name',
+    'disambiguation',
+    'gender',
+    'urls',
+    'birthdate',
+    'death_date',
+    'ethnicity',
+    'country',
+    'eye_color',
+    'hair_color',
+    'height',
+    'weight',
+    'measurements',
+    'fake_tits',
+    'tattoos',
+    'piercings',
+    'aliases',
+    'details',
+    'remote_site_id',
+  },
+  ScrapeKind.group: {
+    'name',
+    'aliases',
+    'duration',
+    'date',
+    'director',
+    'urls',
+    'synopsis',
+  },
+  ScrapeKind.gallery: {
+    'title',
+    'code',
+    'details',
+    'photographer',
+    'urls',
+    'date',
+  },
+};
+
+String _capitalized(ScrapeKind k) =>
+    k.name[0].toUpperCase() + k.name.substring(1);
 
 /// Kinds of entities that can be edited.
 enum EditKind { scene, performer, studio, tag, group, gallery, marker }
@@ -648,14 +736,20 @@ class StashRepository {
     );
   }
 
-  /// Stash-box endpoints and scene scrapers configured on the server.
-  Future<List<ScrapeSource>> sceneScrapeSources() async {
+  /// Stash-box endpoints and scrapers configured on the server for [kind].
+  /// Stash-boxes handle scenes, performers and studios; scrapers handle
+  /// scenes, performers, groups and galleries.
+  Future<List<ScrapeSource>> scrapeSources(ScrapeKind kind) async {
+    final withBoxes =
+        kind == ScrapeKind.scene ||
+        kind == ScrapeKind.performer ||
+        kind == ScrapeKind.studio;
+    final withScrapers = kind != ScrapeKind.studio;
+    final type = kind.name.toUpperCase();
     final d = await client.query('''
       query {
-        configuration { general { stashBoxes { endpoint name } } }
-        listScrapers(types: [SCENE]) {
-          id name scene { supported_scrapes }
-        }
+        ${withBoxes ? 'configuration { general { stashBoxes { endpoint name } } }' : ''}
+        ${withScrapers ? 'listScrapers(types: [$type]) { id name ${kind.name} { supported_scrapes } }' : ''}
       }''');
     final boxes =
         ((d['configuration'] as Map?)?['general'] as Map?)?['stashBoxes']
@@ -669,10 +763,12 @@ class StashRepository {
               ? b['name'] as String
               : b['endpoint'] as String,
           stashBoxEndpoint: b['endpoint'] as String,
+          // Only scenes are matched by fingerprint; the rest by name.
+          byFragment: kind == ScrapeKind.scene,
           byName: true,
         ),
       for (final s in scrapers.cast<Map>())
-        if (((s['scene'] as Map?)?['supported_scrapes'] as List?)
+        if (((s[kind.name] as Map?)?['supported_scrapes'] as List?)
             case final kinds?
             when kinds.contains('FRAGMENT') || kinds.contains('NAME'))
           ScrapeSource(
@@ -684,36 +780,53 @@ class StashRepository {
     ];
   }
 
-  /// Scrapes a scene from its own data, or by [query] when given.
-  Future<List<ScrapedScene>> scrapeScene(
+  /// Scrapes item [id] of [kind] from its own data, by [query], or from a
+  /// search result [fragment] (to get the full record). Returns raw results.
+  Future<List<Map<String, dynamic>>> scrape(
+    ScrapeKind kind,
     ScrapeSource source,
-    String sceneId, {
+    String id, {
     String? query,
+    Map<String, dynamic>? fragment,
   }) async {
+    final name = _capitalized(kind);
+    final Map<String, dynamic> input;
+    if (fragment != null) {
+      final keys = _fragmentKeys[kind] ?? const <String>{};
+      input = {
+        '${kind.name}_input': {
+          for (final e in fragment.entries)
+            if (keys.contains(e.key) && e.value != null) e.key: e.value,
+        },
+      };
+    } else if (query != null || kind == ScrapeKind.studio) {
+      input = {'query': query ?? id};
+    } else {
+      input = {'${kind.name}_id': id};
+    }
     final d = await client.query(
       '''
-      query Scrape(\$source: ScraperSourceInput!, \$input: ScrapeSingleSceneInput!) {
-        scrapeSingleScene(source: \$source, input: \$input) { $_scrapedScene }
+      query Scrape(\$source: ScraperSourceInput!, \$input: ScrapeSingle${name}Input!) {
+        scrapeSingle$name(source: \$source, input: \$input) { ${_scrapeFields[kind]} }
       }''',
-      variables: {
-        'source': source.toInput(),
-        'input': query == null ? {'scene_id': sceneId} : {'query': query},
-      },
+      variables: {'source': source.toInput(), 'input': input},
     );
-    return _items(d['scrapeSingleScene'], ScrapedScene.fromJson);
+    return (d['scrapeSingle$name'] as List? ?? const [])
+        .cast<Map<String, dynamic>>();
   }
 
-  /// Scrapes a scene page URL with the scraper that handles its site.
-  Future<ScrapedScene?> scrapeSceneUrl(String url) async {
+  /// Scrapes a page URL with the scraper that handles its site (scenes,
+  /// performers, groups and galleries).
+  Future<Map<String, dynamic>?> scrapeUrl(ScrapeKind kind, String url) async {
+    final field = 'scrape${_capitalized(kind)}URL';
     final d = await client.query(
       '''
       query ScrapeUrl(\$url: String!) {
-        scrapeSceneURL(url: \$url) { $_scrapedScene }
+        $field(url: \$url) { ${_scrapeFields[kind]} }
       }''',
       variables: {'url': url},
     );
-    final s = d['scrapeSceneURL'];
-    return s == null ? null : ScrapedScene.fromJson(s as Map<String, dynamic>);
+    return d[field] as Map<String, dynamic>?;
   }
 
   /// Name search used by the filter pickers. Without a query, returns the

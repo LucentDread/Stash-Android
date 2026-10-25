@@ -78,25 +78,41 @@ List<EditField> sceneFields(Scene s) => [
   TextEditField('details', 'Description', s.details, multiline: true),
 ];
 
-Future<bool> editScene(BuildContext context, Scene s) {
-  final fields = sceneFields(s);
-  return _open(
-    context,
-    title: 'Modifier la scène',
-    kind: EditKind.scene,
-    id: s.id,
-    fields: fields,
-    extraActions: (context, refresh) => [
-      IconButton(
-        tooltip: 'Scraper',
-        icon: const Icon(Icons.travel_explore),
-        onPressed: () async {
-          if (await scrapeIntoFields(context, s.id, fields)) refresh();
-        },
-      ),
-    ],
-  );
-}
+/// Opens an edit form with a "Scraper" button filling its [fields].
+Future<bool> _openScrapable(
+  BuildContext context, {
+  required String title,
+  required EditKind kind,
+  required ScrapeKind scrapeKind,
+  required String id,
+  required List<EditField> fields,
+}) => _open(
+  context,
+  title: title,
+  kind: kind,
+  id: id,
+  fields: fields,
+  extraActions: (context, refresh) => [
+    IconButton(
+      tooltip: 'Scraper',
+      icon: const Icon(Icons.travel_explore),
+      onPressed: () async {
+        if (await scrapeIntoFields(context, scrapeKind, id, fields)) {
+          refresh();
+        }
+      },
+    ),
+  ],
+);
+
+Future<bool> editScene(BuildContext context, Scene s) => _openScrapable(
+  context,
+  title: 'Modifier la scène',
+  kind: EditKind.scene,
+  scrapeKind: ScrapeKind.scene,
+  id: s.id,
+  fields: sceneFields(s),
+);
 
 /// Editable fields of a performer.
 List<EditField> performerFields(Performer p) => [
@@ -124,10 +140,11 @@ List<EditField> performerFields(Performer p) => [
   TextEditField('details', 'Description', p.details, multiline: true),
 ];
 
-Future<bool> editPerformer(BuildContext context, Performer p) => _open(
+Future<bool> editPerformer(BuildContext context, Performer p) => _openScrapable(
   context,
   title: 'Modifier le performeur',
   kind: EditKind.performer,
+  scrapeKind: ScrapeKind.performer,
   id: p.id,
   fields: performerFields(p),
 );
@@ -143,10 +160,11 @@ List<EditField> studioFields(Studio s) => [
   TextEditField('details', 'Description', s.details, multiline: true),
 ];
 
-Future<bool> editStudio(BuildContext context, Studio s) => _open(
+Future<bool> editStudio(BuildContext context, Studio s) => _openScrapable(
   context,
   title: 'Modifier le studio',
   kind: EditKind.studio,
+  scrapeKind: ScrapeKind.studio,
   id: s.id,
   fields: studioFields(s),
 );
@@ -185,10 +203,11 @@ List<EditField> groupFields(Group g) => [
   TextEditField('synopsis', 'Synopsis', g.synopsis, multiline: true),
 ];
 
-Future<bool> editGroup(BuildContext context, Group g) => _open(
+Future<bool> editGroup(BuildContext context, Group g) => _openScrapable(
   context,
   title: 'Modifier le groupe',
   kind: EditKind.group,
+  scrapeKind: ScrapeKind.group,
   id: g.id,
   fields: groupFields(g),
 );
@@ -229,10 +248,11 @@ List<EditField> galleryFields(Gallery g) => [
   TextEditField('details', 'Description', g.details, multiline: true),
 ];
 
-Future<bool> editGallery(BuildContext context, Gallery g) => _open(
+Future<bool> editGallery(BuildContext context, Gallery g) => _openScrapable(
   context,
   title: 'Modifier la galerie',
   kind: EditKind.gallery,
+  scrapeKind: ScrapeKind.gallery,
   id: g.id,
   fields: galleryFields(g),
 );
