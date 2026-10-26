@@ -156,6 +156,7 @@
   "password": "Passwort",
   "wrongPassword": "Falsches Passwort",
   "unlock": "Entsperren",
+  "clearRating": "Wertung entfernen",
   "info": "Infos",
   "information": "Informationen",
   "parentStudio": "Übergeordnetes Studio",

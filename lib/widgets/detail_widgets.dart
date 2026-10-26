@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 
 /// Wrap of tappable chips for linked performers / tags / studios.
@@ -165,7 +166,55 @@ class StarRating extends StatelessWidget {
               ),
             ),
           ),
+        // Keeps its room when unrated so the stars do not move.
+        if (onChanged != null)
+          Visibility.maintain(
+            visible: rating100 != null,
+            child: IconButton(
+              tooltip: tr.clearRating,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.close, size: 20),
+              onPressed: () => onChanged!(null),
+            ),
+          ),
       ],
     );
   }
+}
+
+/// Rating of an item, saved as soon as it changes (and restored if the
+/// server refuses it).
+class LiveRating extends StatefulWidget {
+  const LiveRating({super.key, required this.initial, required this.save});
+  final int? initial;
+  final Future<void> Function(int? rating100) save;
+
+  @override
+  State<LiveRating> createState() => _LiveRatingState();
+}
+
+class _LiveRatingState extends State<LiveRating> {
+  late int? _value = widget.initial;
+
+  @override
+  void didUpdateWidget(LiveRating old) {
+    super.didUpdateWidget(old);
+    if (old.initial != widget.initial) _value = widget.initial;
+  }
+
+  Future<void> _set(int? rating) async {
+    final old = _value;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _value = rating);
+    try {
+      await widget.save(rating);
+    } catch (e) {
+      if (mounted) setState(() => _value = old);
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      StarRating(rating100: _value, onChanged: _set);
 }

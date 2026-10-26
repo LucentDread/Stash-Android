@@ -35,7 +35,7 @@ class GalleryScreen extends StatelessWidget {
                 context: context,
                 isScrollControlled: true,
                 showDragHandle: true,
-                builder: (_) => _GalleryInfo(gallery: g),
+                builder: (_) => _GalleryInfo(gallery: g, onRated: reload),
               ),
             ),
             DownloadButton(kind: OfflineKind.gallery, id: g.id),
@@ -72,8 +72,9 @@ class GalleryScreen extends StatelessWidget {
 }
 
 class _GalleryInfo extends StatelessWidget {
-  const _GalleryInfo({required this.gallery});
+  const _GalleryInfo({required this.gallery, required this.onRated});
   final Gallery gallery;
+  final VoidCallback onRated;
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +87,21 @@ class _GalleryInfo extends StatelessWidget {
         padding: withNavBar(context, const EdgeInsets.fromLTRB(16, 0, 16, 24)),
         children: [
           Text(g.displayTitle, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: LiveRating(
+              initial: g.rating100,
+              save: (r) async {
+                await context.read<AppState>().repo!.rate(
+                  EditKind.gallery,
+                  g.id,
+                  r,
+                );
+                onRated(); // the next opening shows it
+              },
+            ),
+          ),
           InfoTable([
             (tr.date, g.date),
             (tr.images, '${g.imageCount}'),

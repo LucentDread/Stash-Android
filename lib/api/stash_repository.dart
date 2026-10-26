@@ -376,10 +376,10 @@ String _capitalized(ScrapeKind k) =>
     k.name[0].toUpperCase() + k.name.substring(1);
 
 /// Kinds of entities that can be edited.
-enum EditKind { scene, performer, studio, tag, group, gallery, marker }
+enum EditKind { scene, performer, studio, tag, group, gallery, marker, image }
 
 const _imageFields = '''
-  id title
+  id title rating100
   paths { thumbnail preview image }
   visual_files {
     ... on ImageFile { width height }
@@ -609,6 +609,11 @@ class StashRepository {
     return (d['sceneDeleteO'] as Map)['count'] as int;
   }
 
+  /// Rates a scene, image, gallery, group, performer or studio;
+  /// [rating100] is 1-100, or null to clear the rating.
+  Future<void> rate(EditKind kind, String id, int? rating100) =>
+      update(kind, id, {'rating100': rating100});
+
   /// [rating100] is 1-100, or null to clear the rating.
   Future<void> rateScene(String id, int? rating100) async {
     await client.query(
@@ -787,6 +792,7 @@ class StashRepository {
       EditKind.group => ('groupUpdate', 'GroupUpdateInput'),
       EditKind.gallery => ('galleryUpdate', 'GalleryUpdateInput'),
       EditKind.marker => ('sceneMarkerUpdate', 'SceneMarkerUpdateInput'),
+      EditKind.image => ('imageUpdate', 'ImageUpdateInput'),
     };
     await client.query(
       '''
@@ -820,7 +826,9 @@ class StashRepository {
       EditKind.tag => ('tagCreate', 'TagCreateInput'),
       EditKind.group => ('groupCreate', 'GroupCreateInput'),
       EditKind.gallery => ('galleryCreate', 'GalleryCreateInput'),
-      EditKind.scene || EditKind.marker => throw ArgumentError(kind),
+      EditKind.scene ||
+      EditKind.marker ||
+      EditKind.image => throw ArgumentError(kind),
     };
     final d = await client.query(
       '''
@@ -852,7 +860,9 @@ class StashRepository {
           'delete_file': false,
         },
       ),
-      EditKind.scene || EditKind.marker => throw ArgumentError(kind),
+      EditKind.scene ||
+      EditKind.marker ||
+      EditKind.image => throw ArgumentError(kind),
     };
     await client.query(
       '''

@@ -156,6 +156,7 @@
   "password": "Contraseña",
   "wrongPassword": "Contraseña incorrecta",
   "unlock": "Desbloquear",
+  "clearRating": "Quitar la puntuación",
   "info": "Info",
   "information": "Información",
   "parentStudio": "Estudio principal",

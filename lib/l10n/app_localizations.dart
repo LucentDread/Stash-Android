@@ -1040,6 +1040,12 @@ abstract class AppLocalizations {
   /// **'Unlock'**
   String get unlock;
 
+  /// No description provided for @clearRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the rating'**
+  String get clearRating;
+
   /// No description provided for @info.
   ///
   /// In en, this message translates to:

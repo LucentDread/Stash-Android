@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
+import '../api/stash_repository.dart';
 import '../models/models.dart';
+import '../services/app_state.dart';
 import '../services/downloads.dart';
+import '../widgets/detail_widgets.dart';
 import '../widgets/download_button.dart';
 import '../widgets/net_image.dart';
 
@@ -18,7 +22,8 @@ class ImageViewerScreen extends StatefulWidget {
   final List<StashImage> images;
   final int initialIndex;
 
-  /// Offers to download the image shown (not for offline copies).
+  /// Offers to download and rate the image shown (not for offline
+  /// copies).
   final bool downloadable;
 
   @override
@@ -30,6 +35,9 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
   late int _index = widget.initialIndex;
   bool _chrome = true;
   bool _zoomed = false;
+
+  /// Ratings changed here, by image id (the images are not reloaded).
+  final _ratings = <String, int?>{};
 
   @override
   void initState() {
@@ -44,11 +52,45 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
     super.dispose();
   }
 
+  Widget _ratingBar(StashImage image) => ColoredBox(
+    color: Colors.black45,
+    child: SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        // A row, not a Center: the bar must keep its own height.
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            LiveRating(
+              key: ValueKey(image.id),
+              initial: _ratings.containsKey(image.id)
+                  ? _ratings[image.id]
+                  : image.rating100,
+              save: (r) async {
+                await context.read<AppState>().repo!.rate(
+                  EditKind.image,
+                  image.id,
+                  r,
+                );
+                _ratings[image.id] = r;
+              },
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
+      extendBody: true,
+      bottomNavigationBar: _chrome && widget.downloadable
+          ? _ratingBar(widget.images[_index])
+          : null,
       appBar: _chrome
           ? AppBar(
               backgroundColor: Colors.black45,

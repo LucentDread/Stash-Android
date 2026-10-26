@@ -123,10 +123,17 @@ class _PerformerInfo extends StatelessWidget {
             ),
           ),
         ),
-        if (p.rating100 != null) ...[
-          const SizedBox(height: 8),
-          Center(child: StarRating(rating100: p.rating100)),
-        ],
+        const SizedBox(height: 8),
+        Center(
+          child: LiveRating(
+            initial: p.rating100,
+            save: (r) => context.read<AppState>().repo!.rate(
+              EditKind.performer,
+              p.id,
+              r,
+            ),
+          ),
+        ),
         Section(
           title: tr.information,
           child: InfoTable([

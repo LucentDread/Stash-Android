@@ -504,10 +504,12 @@ class StashImage {
     this.image,
     this.width,
     this.height,
+    this.rating100,
   });
 
   final String id;
   final String? title;
+  final int? rating100;
   final String? thumbnail;
   final String? preview;
   final String? image;
@@ -523,6 +525,7 @@ class StashImage {
     return StashImage(
       id: j['id'] as String,
       title: j['title'] as String?,
+      rating100: _int(j['rating100']),
       thumbnail: paths['thumbnail'] as String?,
       preview: paths['preview'] as String?,
       image: paths['image'] as String?,

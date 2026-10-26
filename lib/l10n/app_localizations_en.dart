@@ -648,6 +648,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unlock => 'Unlock';
 
   @override
+  String get clearRating => 'Clear the rating';
+
+  @override
   String get info => 'Info';
 
   @override

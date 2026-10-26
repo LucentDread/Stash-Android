@@ -420,6 +420,7 @@
   "password": "Password",
   "wrongPassword": "Wrong password",
   "unlock": "Unlock",
+  "clearRating": "Clear the rating",
   "info": "Info",
   "information": "Information",
   "parentStudio": "Parent studio",

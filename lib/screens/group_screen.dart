@@ -91,10 +91,14 @@ class _GroupInfo extends StatelessWidget {
             ],
           ),
         ),
-        if (g.rating100 != null) ...[
-          const SizedBox(height: 8),
-          Center(child: StarRating(rating100: g.rating100)),
-        ],
+        const SizedBox(height: 8),
+        Center(
+          child: LiveRating(
+            initial: g.rating100,
+            save: (r) =>
+                context.read<AppState>().repo!.rate(EditKind.group, g.id, r),
+          ),
+        ),
         Section(
           title: tr.information,
           child: InfoTable([

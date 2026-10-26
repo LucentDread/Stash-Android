@@ -60,6 +60,17 @@ class StudioScreen extends StatelessWidget {
                         placeholderIcon: Icons.business,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: LiveRating(
+                        initial: s.rating100,
+                        save: (r) => context.read<AppState>().repo!.rate(
+                          EditKind.studio,
+                          s.id,
+                          r,
+                        ),
+                      ),
+                    ),
                     if (s.parent != null)
                       Section(
                         title: tr.parentStudio,

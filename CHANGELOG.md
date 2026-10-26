@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.16.0
+- Ratings: a "×" button next to the stars clears the rating (tapping the
+  current star still does too).
+- Every item Stash can rate shows its rating and changes it with a tap:
+  scenes, performers, studios and groups on their page, galleries in their
+  information panel, images at the bottom of the viewer (not for offline
+  copies). Tags and markers have no rating in Stash.
+
 ## 1.15.1
 - Edit forms: when a searched performer, tag, studio or group does not
   exist, "Create “name”" adds it to Stash and selects it (e.g. a new tag
