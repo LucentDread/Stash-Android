@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../l10n/l10n.dart';
+
 /// Error raised when the Stash server answers with GraphQL errors or a bad
 /// HTTP status.
 class StashException implements Exception {
@@ -81,26 +83,22 @@ class StashClient {
           .timeout(const Duration(seconds: 30));
     } catch (e) {
       onReachability?.call(false);
-      throw StashException('Impossible de joindre le serveur : $e');
+      throw StashException(tr.serverUnreachable('$e'));
     }
     onReachability?.call(true);
 
     if (res.statusCode == 401 || res.statusCode == 403) {
-      throw StashException(
-        'Accès refusé (HTTP ${res.statusCode}). Vérifiez la clé API.',
-      );
+      throw StashException(tr.accessDenied(res.statusCode));
     }
     if (res.statusCode != 200) {
-      throw StashException('Erreur HTTP ${res.statusCode}');
+      throw StashException(tr.httpError(res.statusCode));
     }
 
     final Map<String, dynamic> body;
     try {
       body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     } on FormatException {
-      throw StashException(
-        'Réponse invalide : le serveur ne semble pas être Stash.',
-      );
+      throw StashException(tr.invalidResponse);
     }
     final errors = body['errors'];
     if (errors is List && errors.isNotEmpty) {

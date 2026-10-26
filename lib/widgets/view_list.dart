@@ -17,7 +17,6 @@ class ViewStyle {
     this.aspectRatio = 1,
     this.tileHeight,
     required this.sortOptions,
-    required this.countLabel,
   });
 
   /// Max tile width in grids; the tile width in horizontal rows.
@@ -27,56 +26,44 @@ class ViewStyle {
   /// Exact tile height for a tile width, when not set by [aspectRatio].
   final double Function(BuildContext context, double width)? tileHeight;
   final List<SortOption> sortOptions;
-  final String countLabel;
 
   static ViewStyle of(BuildContext context, ViewKind kind) => switch (kind) {
     ViewKind.scenes => ViewStyle._(
       sceneExtentOf(context),
       tileHeight: SceneCard.heightFor,
       sortOptions: SortOptions.scenes,
-      countLabel: 'scènes',
     ),
     ViewKind.performers => const ViewStyle._(
       180,
       aspectRatio: PerformerCard.aspectRatio,
       sortOptions: SortOptions.performers,
-      countLabel: 'performeurs',
     ),
     ViewKind.studios => const ViewStyle._(
       220,
       aspectRatio: EntityCard.aspectRatio,
       sortOptions: SortOptions.studios,
-      countLabel: 'studios',
     ),
     ViewKind.groups => const ViewStyle._(
       180,
       aspectRatio: GroupCard.aspectRatio,
       sortOptions: SortOptions.groups,
-      countLabel: 'groupes',
     ),
     ViewKind.galleries => const ViewStyle._(
       220,
       aspectRatio: EntityCard.aspectRatio,
       sortOptions: SortOptions.galleries,
-      countLabel: 'galeries',
     ),
     ViewKind.tags => const ViewStyle._(
       220,
       aspectRatio: EntityCard.aspectRatio,
       sortOptions: SortOptions.tags,
-      countLabel: 'tags',
     ),
     ViewKind.markers => ViewStyle._(
       sceneExtentOf(context),
       tileHeight: MarkerCard.heightFor,
       sortOptions: SortOptions.markers,
-      countLabel: 'marqueurs',
     ),
-    ViewKind.images => const ViewStyle._(
-      160,
-      sortOptions: SortOptions.images,
-      countLabel: 'images',
-    ),
+    ViewKind.images => const ViewStyle._(160, sortOptions: SortOptions.images),
   };
 
   double heightFor(BuildContext context, double width) =>
@@ -168,7 +155,7 @@ class ImageTile extends StatelessWidget {
 }
 
 /// A saved view as a full grid. Its filter is locked (views are edited
-/// from Plus > Vues enregistrées); search and sort can change.
+/// from More > Saved views); search and sort can change.
 class ViewBrowser extends StatelessWidget {
   const ViewBrowser({super.key, required this.view});
   final SavedView view;
@@ -189,7 +176,7 @@ class ViewBrowser extends StatelessWidget {
       tileHeight: style.tileHeight == null
           ? null
           : (w) => style.heightFor(context, w),
-      countLabel: style.countLabel,
+      countLabel: view.kind.count,
       itemBuilder: (_, item, i, all) => viewCard(item, all, i),
     );
   }

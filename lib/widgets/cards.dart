@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../navigation.dart';
 import '../screens/edit/editors.dart';
@@ -235,7 +236,7 @@ class _SceneCardText extends StatelessWidget {
     final file = [
       if (f != null && f.size > 0) formatBytes(f.size),
       if (f != null && f.videoCodec.isNotEmpty) f.videoCodec.toUpperCase(),
-      if (f != null && f.frameRate > 0) '${f.frameRate.round()} i/s',
+      if (f != null && f.frameRate > 0) tr.framesPerSecond(f.frameRate.round()),
     ].join(' • ');
     final added = s.createdAt?.toLocal();
     final parts = [
@@ -248,12 +249,7 @@ class _SceneCardText extends StatelessWidget {
       if (s.details != null && s.details!.trim().isNotEmpty)
         TextSpan(text: s.details!.trim().replaceAll(RegExp(r'\s+'), ' ')),
       if (added != null)
-        TextSpan(
-          text:
-              'Ajoutée le ${added.day.toString().padLeft(2, '0')}/'
-              '${added.month.toString().padLeft(2, '0')}/${added.year}',
-          style: dim,
-        ),
+        TextSpan(text: tr.addedOn(formatDate(added)), style: dim),
       if (f != null && f.path.isNotEmpty) TextSpan(text: f.path, style: dim),
     ];
     return [
@@ -322,12 +318,22 @@ class _SceneCardText extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _Stat(Icons.play_arrow, s.playCount, 'lectures', dim),
-                        _Stat(Icons.water_drop_outlined, s.oCounter, 'O', dim),
+                        _Stat(
+                          Icons.play_arrow,
+                          s.playCount,
+                          tr.countPlays,
+                          dim,
+                        ),
+                        _Stat(
+                          Icons.water_drop_outlined,
+                          s.oCounter,
+                          tr.countO,
+                          dim,
+                        ),
                         _Stat(
                           Icons.person_outline,
                           s.performers.length,
-                          'performeurs',
+                          tr.countPerformers,
                           dim,
                         ),
                         if (s.organized)
@@ -412,7 +418,7 @@ class _Stars extends StatelessWidget {
     final empty = Theme.of(context).colorScheme.onSurfaceVariant
         .withValues(alpha: 0.45);
     return Tooltip(
-      message: rating100 == null ? 'Pas de note' : '$stars / 5',
+      message: rating100 == null ? tr.noRating : tr.starsOutOfFive(stars),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -437,7 +443,7 @@ class _Stat extends StatelessWidget {
   const _Stat(this.icon, this.value, this.label, this.color);
   final IconData icon;
   final int value;
-  final String label;
+  final String Function(int value) label;
   final Color color;
 
   @override
@@ -447,7 +453,7 @@ class _Stat extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 10),
       child: Tooltip(
-        message: '$value $label',
+        message: label(value),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -474,13 +480,13 @@ class PerformerCard extends StatelessWidget {
 
   static String _subtitle(Performer p, int? age) {
     final parts = [
-      if (age != null) '$age ans',
+      if (age != null) tr.yearsOld(age),
       if (p.disambiguation != null && p.disambiguation!.isNotEmpty)
         p.disambiguation!,
     ];
     if (parts.isNotEmpty) return parts.join(' • ');
     final gender = genderLabel(p.gender);
-    return gender.isNotEmpty ? gender : '${p.sceneCount} scènes';
+    return gender.isNotEmpty ? gender : tr.countScenes(p.sceneCount);
   }
 
   @override
@@ -657,7 +663,7 @@ class StudioCard extends StatelessWidget {
   Widget build(BuildContext context) => EntityCard(
     title: studio.name,
     image: studio.imagePath,
-    subtitle: '${studio.sceneCount} scènes',
+    subtitle: tr.countScenes(studio.sceneCount),
     fit: BoxFit.contain,
     icon: Icons.business,
     favorite: studio.favorite,
@@ -674,7 +680,9 @@ class TagCard extends StatelessWidget {
   Widget build(BuildContext context) => EntityCard(
     title: tag.name,
     image: tag.imagePath,
-    subtitle: '${tag.sceneCount} scènes • ${tag.markerCount} marqueurs',
+    subtitle:
+        '${tr.countScenes(tag.sceneCount)} • '
+        '${tr.countMarkers(tag.markerCount)}',
     icon: Icons.label_outline,
     favorite: tag.favorite,
     onTap: () => openTag(context, tag.id),
@@ -690,7 +698,7 @@ class GalleryCard extends StatelessWidget {
     title: gallery.displayTitle,
     image: gallery.cover,
     subtitle: [
-      '${gallery.imageCount} images',
+      tr.countImages(gallery.imageCount),
       if (gallery.date != null) gallery.date!,
     ].join(' • '),
     icon: Icons.photo_library_outlined,
@@ -714,12 +722,12 @@ class MarkerCard extends StatelessWidget {
             if (m.sceneId != null)
               ListTile(
                 leading: const Icon(Icons.movie_outlined),
-                title: const Text('Ouvrir la scène'),
+                title: Text(tr.openScene),
                 onTap: () => Navigator.pop(context, 'scene'),
               ),
             ListTile(
               leading: const Icon(Icons.edit_outlined),
-              title: const Text('Modifier le marqueur'),
+              title: Text(tr.editMarker),
               onTap: () => Navigator.pop(context, 'edit'),
             ),
           ],

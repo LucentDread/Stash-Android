@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import 'async_view.dart';
 import 'data_refresh.dart';
@@ -37,8 +38,8 @@ class PagedGrid<T> extends StatefulWidget {
     this.childAspectRatio = 1,
     this.tileHeight,
     this.showToolbar = true,
-    this.emptyText = 'Aucun résultat',
-    this.countLabel = 'éléments',
+    this.emptyText,
+    this.countLabel,
     this.initialQuery = '',
     this.actions = const [],
     this.header,
@@ -59,8 +60,10 @@ class PagedGrid<T> extends StatefulWidget {
   /// Exact tile height for a given tile width; overrides [childAspectRatio].
   final double Function(double tileWidth)? tileHeight;
   final bool showToolbar;
-  final String emptyText;
-  final String countLabel;
+  final String? emptyText;
+
+  /// Item count as shown above the grid, e.g. "12 scenes".
+  final String Function(int count)? countLabel;
   final String initialQuery;
 
   /// Extra buttons shown next to the sort selector.
@@ -220,7 +223,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
             onChanged: _onSearchChanged,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
-              hintText: 'Rechercher…',
+              hintText: tr.searchHint,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: _search.text.isEmpty
                   ? null
@@ -243,7 +246,9 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
             children: [
               Expanded(
                 child: Text(
-                  _page == 0 ? '' : '$_count ${widget.countLabel}',
+                  _page == 0
+                      ? ''
+                      : (widget.countLabel ?? tr.countItems)(_count),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -266,13 +271,13 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
                       children: [
                         const Icon(Icons.sort, size: 18),
                         const SizedBox(width: 4),
-                        Text(current?.label ?? 'Trier'),
+                        Text(current?.label ?? tr.sort),
                       ],
                     ),
                   ),
                 ),
                 IconButton(
-                  tooltip: _descending ? 'Décroissant' : 'Croissant',
+                  tooltip: _descending ? tr.descending : tr.ascending,
                   icon: Icon(
                     _descending ? Icons.arrow_downward : Icons.arrow_upward,
                     size: 18,
@@ -309,7 +314,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
       return ListView(
         children: [
           const SizedBox(height: 80),
-          Center(child: Text(widget.emptyText)),
+          Center(child: Text(widget.emptyText ?? tr.noResults)),
         ],
       );
     }

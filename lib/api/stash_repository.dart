@@ -1,3 +1,4 @@
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../models/scene_filter.dart';
 import 'saved_filter.dart';
@@ -5,81 +6,101 @@ import 'stash_client.dart';
 
 /// Sort options offered in list screens. `value` is the Stash sort key.
 class SortOption {
-  const SortOption(this.value, this.label);
+  const SortOption(this.value, {this.releaseDate = false});
   final String value;
-  final String label;
+
+  /// Whether `date` is labelled as a release date.
+  final bool releaseDate;
+
+  String get label => switch (value) {
+    'created_at' => tr.sortCreatedAt,
+    'date' => releaseDate ? tr.sortReleaseDate : tr.sortDate,
+    'title' => tr.sortTitle,
+    'name' => tr.sortName,
+    'rating' => tr.sortRating,
+    'last_played_at' => tr.sortLastPlayed,
+    'play_count' => tr.sortPlayCount,
+    'o_counter' => tr.sortOCounter,
+    'duration' => tr.sortDuration,
+    'filesize' => tr.sortFileSize,
+    'random' => tr.sortRandom,
+    'scenes_count' => tr.sortSceneCount,
+    'images_count' => tr.sortImageCount,
+    'birthdate' => tr.sortBirthdate,
+    'group_scene_number' => tr.sortGroupOrder,
+    'path' => tr.sortPath,
+    'seconds' => tr.sortPosition,
+    _ => value,
+  };
 }
 
 class SortOptions {
   static const scenes = [
-    SortOption('created_at', 'Date d\'ajout'),
-    SortOption('date', 'Date de sortie'),
-    SortOption('title', 'Titre'),
-    SortOption('rating', 'Note'),
-    SortOption('last_played_at', 'Dernière lecture'),
-    SortOption('play_count', 'Nombre de lectures'),
-    SortOption('o_counter', 'Compteur O'),
-    SortOption('duration', 'Durée'),
-    SortOption('filesize', 'Taille'),
-    SortOption('random', 'Aléatoire'),
+    SortOption('created_at'),
+    SortOption('date', releaseDate: true),
+    SortOption('title'),
+    SortOption('rating'),
+    SortOption('last_played_at'),
+    SortOption('play_count'),
+    SortOption('o_counter'),
+    SortOption('duration'),
+    SortOption('filesize'),
+    SortOption('random'),
   ];
   static const performers = [
-    SortOption('name', 'Nom'),
-    SortOption('created_at', 'Date d\'ajout'),
-    SortOption('scenes_count', 'Nombre de scènes'),
-    SortOption('rating', 'Note'),
-    SortOption('birthdate', 'Date de naissance'),
-    SortOption('random', 'Aléatoire'),
+    SortOption('name'),
+    SortOption('created_at'),
+    SortOption('scenes_count'),
+    SortOption('rating'),
+    SortOption('birthdate'),
+    SortOption('random'),
   ];
   static const studios = [
-    SortOption('name', 'Nom'),
-    SortOption('created_at', 'Date d\'ajout'),
-    SortOption('scenes_count', 'Nombre de scènes'),
-    SortOption('rating', 'Note'),
-    SortOption('random', 'Aléatoire'),
+    SortOption('name'),
+    SortOption('created_at'),
+    SortOption('scenes_count'),
+    SortOption('rating'),
+    SortOption('random'),
   ];
   static const tags = [
-    SortOption('name', 'Nom'),
-    SortOption('scenes_count', 'Nombre de scènes'),
-    SortOption('created_at', 'Date d\'ajout'),
-    SortOption('random', 'Aléatoire'),
+    SortOption('name'),
+    SortOption('scenes_count'),
+    SortOption('created_at'),
+    SortOption('random'),
   ];
   static const galleries = [
-    SortOption('created_at', 'Date d\'ajout'),
-    SortOption('date', 'Date'),
-    SortOption('title', 'Titre'),
-    SortOption('images_count', 'Nombre d\'images'),
-    SortOption('rating', 'Note'),
-    SortOption('random', 'Aléatoire'),
+    SortOption('created_at'),
+    SortOption('date'),
+    SortOption('title'),
+    SortOption('images_count'),
+    SortOption('rating'),
+    SortOption('random'),
   ];
   static const groups = [
-    SortOption('name', 'Nom'),
-    SortOption('created_at', 'Date d\'ajout'),
-    SortOption('date', 'Date'),
-    SortOption('scenes_count', 'Nombre de scènes'),
-    SortOption('rating', 'Note'),
-    SortOption('duration', 'Durée'),
-    SortOption('random', 'Aléatoire'),
+    SortOption('name'),
+    SortOption('created_at'),
+    SortOption('date'),
+    SortOption('scenes_count'),
+    SortOption('rating'),
+    SortOption('duration'),
+    SortOption('random'),
   ];
-  static const groupScenes = [
-    SortOption('group_scene_number', 'Ordre dans le groupe'),
-    ...scenes,
-  ];
+  static const groupScenes = [SortOption('group_scene_number'), ...scenes];
   static const images = [
-    SortOption('created_at', 'Date d\'ajout'),
-    SortOption('date', 'Date'),
-    SortOption('title', 'Titre'),
-    SortOption('rating', 'Note'),
-    SortOption('o_counter', 'Compteur O'),
-    SortOption('filesize', 'Taille'),
-    SortOption('path', 'Chemin'),
-    SortOption('random', 'Aléatoire'),
+    SortOption('created_at'),
+    SortOption('date'),
+    SortOption('title'),
+    SortOption('rating'),
+    SortOption('o_counter'),
+    SortOption('filesize'),
+    SortOption('path'),
+    SortOption('random'),
   ];
   static const markers = [
-    SortOption('created_at', 'Date d\'ajout'),
-    SortOption('title', 'Titre'),
-    SortOption('seconds', 'Position'),
-    SortOption('random', 'Aléatoire'),
+    SortOption('created_at'),
+    SortOption('title'),
+    SortOption('seconds'),
+    SortOption('random'),
   ];
 }
 
@@ -516,7 +537,7 @@ class StashRepository {
       variables: {'id': id},
     );
     final s = d['findScene'];
-    if (s == null) throw StashException('Scène introuvable');
+    if (s == null) throw StashException(tr.sceneNotFound);
     return s as Map<String, dynamic>;
   }
 
@@ -635,7 +656,7 @@ class StashRepository {
       variables: {'id': id},
     );
     final p = d['findPerformer'];
-    if (p == null) throw StashException('Performeur introuvable');
+    if (p == null) throw StashException(tr.performerNotFound);
     return Performer.fromJson(p as Map<String, dynamic>);
   }
 
@@ -678,7 +699,7 @@ class StashRepository {
       variables: {'id': id},
     );
     final s = d['findStudio'];
-    if (s == null) throw StashException('Studio introuvable');
+    if (s == null) throw StashException(tr.studioNotFound);
     return Studio.fromJson(s as Map<String, dynamic>);
   }
 
@@ -709,7 +730,7 @@ class StashRepository {
       variables: {'id': id},
     );
     final t = d['findTag'];
-    if (t == null) throw StashException('Tag introuvable');
+    if (t == null) throw StashException(tr.tagNotFound);
     return Tag.fromJson(t as Map<String, dynamic>);
   }
 
@@ -747,7 +768,7 @@ class StashRepository {
       variables: {'id': id},
     );
     final g = d['findGroup'];
-    if (g == null) throw StashException('Groupe introuvable');
+    if (g == null) throw StashException(tr.groupNotFound);
     return g as Map<String, dynamic>;
   }
 
@@ -1051,7 +1072,7 @@ class StashRepository {
       variables: {'id': id},
     );
     final g = d['findGallery'];
-    if (g == null) throw StashException('Galerie introuvable');
+    if (g == null) throw StashException(tr.galleryNotFound);
     return g as Map<String, dynamic>;
   }
 
@@ -1089,7 +1110,7 @@ class StashRepository {
       variables: {'id': id},
     );
     final image = d['findImage'];
-    if (image == null) throw StashException('Image introuvable');
+    if (image == null) throw StashException(tr.imageNotFound);
     return StashImage.fromJson((image as Map).cast<String, dynamic>());
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/l10n.dart';
+
 /// Android features without a Flutter plugin, implemented in MainActivity:
 /// black preview in recent apps, picture in picture, APK installation.
 class SystemBridge {
@@ -55,6 +57,9 @@ class SystemBridge {
     'playing': playing,
     'width': width,
     'height': height,
+    // The window's play/pause button, in the app's language.
+    'playLabel': tr.play,
+    'pauseLabel': tr.pause,
   });
 
   /// Opens the system installer for the APK at [path].

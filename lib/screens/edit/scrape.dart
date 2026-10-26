@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../api/stash_repository.dart';
+import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../services/app_state.dart';
 import 'edit_form.dart';
@@ -39,7 +40,7 @@ class Scraped {
   final Map<String, Object?> values;
 
   String get title =>
-      (values['title'] ?? values['name']) as String? ?? 'Sans titre';
+      (values['title'] ?? values['name']) as String? ?? tr.untitled;
 
   String? get preview =>
       (values['cover_image'] ?? values['image'] ?? values['front_image'])
@@ -289,7 +290,7 @@ List<String> _aliases(Object? v) => [
           MergeItem(
             label: f.label,
             current: null,
-            proposed: 'Nouvelle image',
+            proposed: tr.newImage,
             image: v,
             // Replacing the current image is opt-in.
             checked: false,
@@ -484,7 +485,7 @@ Future<bool> scrapeIntoFields(
   }
   if (!context.mounted) return false;
   if (results.isEmpty) {
-    messenger.showSnackBar(const SnackBar(content: Text('Aucun résultat')));
+    messenger.showSnackBar(SnackBar(content: Text(tr.noResults)));
     return false;
   }
 
@@ -519,9 +520,7 @@ Future<bool> scrapeIntoFields(
     stashBoxEndpoint: choice is ScrapeSource ? choice.stashBoxEndpoint : null,
   );
   if (items.isEmpty && missing.isEmpty) {
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Rien de nouveau dans ce résultat')),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(tr.nothingNewInResult)));
     return false;
   }
   final applied = await navigator.push<bool>(
@@ -556,21 +555,21 @@ Future<String?> _askQuery(
   final query = await showDialog<String>(
     context: context,
     builder: (context) => AlertDialog(
-      title: Text('Rechercher sur ${source.label}'),
+      title: Text(tr.searchOn(source.label)),
       content: TextField(
         controller: controller,
         autofocus: true,
-        decoration: const InputDecoration(hintText: 'Titre, code…'),
+        decoration: InputDecoration(hintText: tr.titleCodeHint),
         onSubmitted: (v) => Navigator.pop(context, v.trim()),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
+          child: Text(tr.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, controller.text.trim()),
-          child: const Text('Rechercher'),
+          child: Text(tr.search),
         ),
       ],
     ),
@@ -593,7 +592,7 @@ class _SourceSheet extends StatelessWidget {
     final url = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Scraper une URL'),
+        title: Text(tr.scrapeUrl),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -603,11 +602,11 @@ class _SourceSheet extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Scraper'),
+            child: Text(tr.scrape),
           ),
         ],
       ),
@@ -636,11 +635,11 @@ class _SourceSheet extends StatelessWidget {
       builder: (context, scroll) => ListView(
         controller: scroll,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Text(
-              'Scraper avec…',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              tr.scrapeWith,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
           if (boxes.isNotEmpty) header('Stash-box'),
@@ -649,27 +648,25 @@ class _SourceSheet extends StatelessWidget {
               leading: const Icon(Icons.inventory_2_outlined),
               title: Text(s.label),
               subtitle: Text(
-                s.byFragment
-                    ? 'Par empreinte, sinon par recherche'
-                    : 'Par recherche',
+                s.byFragment ? tr.byFingerprintThenSearch : tr.bySearch,
               ),
               onTap: () => Navigator.pop(context, s),
             ),
-          if (scrapers.isNotEmpty) header('Scrapers'),
+          if (scrapers.isNotEmpty) header(tr.scrapersHeader),
           for (final s in scrapers)
             ListTile(
               leading: const Icon(Icons.travel_explore),
               title: Text(s.label),
               subtitle: Text(
                 [
-                  if (s.byFragment) 'par la scène',
-                  if (s.byName) 'par recherche',
+                  if (s.byFragment) tr.byScene,
+                  if (s.byName) tr.bySearchLower,
                 ].join(', '),
               ),
               onTap: () => Navigator.pop(context, s),
             ),
           if (urls != null) ...[
-            header('Depuis une URL'),
+            header(tr.fromUrl),
             for (final u in urls!)
               ListTile(
                 leading: const Icon(Icons.link),
@@ -678,17 +675,14 @@ class _SourceSheet extends StatelessWidget {
               ),
             ListTile(
               leading: const Icon(Icons.add_link),
-              title: const Text('Autre URL…'),
+              title: Text(tr.otherUrl),
               onTap: () => _otherUrl(context),
             ),
           ],
           if (sources.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Aucun scraper ni stash-box n\'est configuré pour ce type sur '
-                'le serveur (Paramètres > Métadonnées).',
-              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(tr.noScraperConfigured),
             ),
         ],
       ),
@@ -702,7 +696,7 @@ class _ResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text('${results.length} résultats')),
+    appBar: AppBar(title: Text(tr.countResults(results.length))),
     body: ListView(
       children: [
         for (final r in results)
@@ -761,9 +755,8 @@ class _MergeScreenState extends State<_MergeScreen> {
           duration: Duration(seconds: failed.isEmpty ? 4 : 10),
           content: Text(
             [
-              if (created > 0)
-                '$created élément${created > 1 ? 's' : ''} créé${created > 1 ? 's' : ''} dans Stash',
-              if (failed.isNotEmpty) 'Échec : ${failed.join(', ')}',
+              if (created > 0) tr.createdInStash(created),
+              if (failed.isNotEmpty) tr.failedWith(failed.join(', ')),
             ].join('\n'),
           ),
         ),
@@ -780,7 +773,7 @@ class _MergeScreenState extends State<_MergeScreen> {
     );
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Résultat du scraping'),
+        title: Text(tr.scrapeResult),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -794,7 +787,7 @@ class _MergeScreenState extends State<_MergeScreen> {
                       dimension: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Appliquer'),
+                  : Text(tr.apply),
             ),
           ),
         ],
@@ -802,13 +795,9 @@ class _MergeScreenState extends State<_MergeScreen> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text(
-              'Cochez les valeurs à reprendre. Elles remplissent le formulaire '
-              'de modification et ne sont enregistrées qu\'avec « Enregistrer » '
-              '(sauf les éléments à créer, plus bas).',
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(tr.scrapeResultIntro),
           ),
           for (final i in widget.items)
             CheckboxListTile(
@@ -820,7 +809,7 @@ class _MergeScreenState extends State<_MergeScreen> {
                 children: [
                   if (i.current != null)
                     Text(
-                      'Actuel : ${i.current}',
+                      tr.currentValue('${i.current}'),
                       style: dim,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
@@ -844,17 +833,13 @@ class _MergeScreenState extends State<_MergeScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Text(
-                'Absents de Stash',
+                tr.missingFromStash,
                 style: theme.textTheme.titleSmall,
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-              child: Text(
-                'Les éléments cochés sont créés dans Stash (avec les '
-                'informations du scraper) dès « Appliquer », puis liés.',
-                style: dim,
-              ),
+              child: Text(tr.missingFromStashHint, style: dim),
             ),
             for (final m in widget.missing)
               CheckboxListTile(
@@ -864,7 +849,7 @@ class _MergeScreenState extends State<_MergeScreen> {
                     : (v) => setState(() => m.checked = v ?? false),
                 secondary: const Icon(Icons.add_circle_outline),
                 title: Text(m.proposed),
-                subtitle: Text('Créer et lier · ${m.label}'),
+                subtitle: Text(tr.createAndLink(m.label)),
               ),
           ],
         ],

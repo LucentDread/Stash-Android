@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
@@ -89,7 +90,7 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
     app.saveView(view);
     if (asHome) app.setHomeView(view.id, true);
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Vue « $name » enregistrée')));
+        .showSnackBar(SnackBar(content: Text(tr.viewSaved(name))));
   }
 
   Widget? _chips() {
@@ -111,7 +112,7 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
             ),
           ActionChip(
             avatar: const Icon(Icons.clear, size: 16),
-            label: const Text('Effacer'),
+            label: Text(tr.clear),
             visualDensity: VisualDensity.compact,
             onPressed: () => _setFilter(SceneFilter()),
           ),
@@ -143,11 +144,11 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
       reloadKey: _filterVersion,
       maxCrossAxisExtent: sceneExtentOf(context),
       tileHeight: (w) => SceneCard.heightFor(context, w),
-      countLabel: 'scènes',
+      countLabel: tr.countScenes,
       header: _chips(),
       actions: [
         IconButton(
-          tooltip: 'Filtres',
+          tooltip: tr.filters,
           icon: Badge(
             isLabelVisible: count > 0,
             label: Text('$count'),
@@ -156,7 +157,7 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
           onPressed: _editFilter,
         ),
         IconButton(
-          tooltip: 'Enregistrer comme nouvelle vue',
+          tooltip: tr.saveAsNewView,
           icon: const Icon(Icons.bookmark_add_outlined),
           onPressed: _saveAsNew,
         ),
@@ -191,19 +192,19 @@ class _SaveViewDialogState extends State<_SaveViewDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Enregistrer la vue'),
+      title: Text(tr.saveView),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _name,
             autofocus: true,
-            decoration: const InputDecoration(labelText: 'Nom'),
+            decoration: InputDecoration(labelText: tr.sortName),
             onSubmitted: (_) => _submit(),
           ),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Afficher sur la page d\'accueil'),
+            title: Text(tr.showOnHome),
             value: _asHome,
             onChanged: (v) => setState(() => _asHome = v ?? false),
           ),
@@ -212,9 +213,9 @@ class _SaveViewDialogState extends State<_SaveViewDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
+          child: Text(tr.cancel),
         ),
-        FilledButton(onPressed: _submit, child: const Text('Enregistrer')),
+        FilledButton(onPressed: _submit, child: Text(tr.save)),
       ],
     );
   }
@@ -230,7 +231,7 @@ Widget performerGrid(BuildContext context, {EntityFilter? entity}) {
     initialDescending: entity != null,
     maxCrossAxisExtent: 180,
     childAspectRatio: PerformerCard.aspectRatio,
-    countLabel: 'performeurs',
+    countLabel: tr.countPerformers,
     itemBuilder: (_, p, _, _) => PerformerCard(performer: p),
   );
 }
@@ -243,7 +244,7 @@ Widget galleryGrid(BuildContext context, {EntityFilter? entity}) {
     sortOptions: SortOptions.galleries,
     maxCrossAxisExtent: 220,
     childAspectRatio: EntityCard.aspectRatio,
-    countLabel: 'galeries',
+    countLabel: tr.countGalleries,
     itemBuilder: (_, g, _, _) => GalleryCard(gallery: g),
   );
 }
@@ -256,8 +257,8 @@ Widget markerGrid(BuildContext context, {EntityFilter? entity}) {
     sortOptions: SortOptions.markers,
     maxCrossAxisExtent: sceneExtentOf(context),
     tileHeight: (w) => MarkerCard.heightFor(context, w),
-    countLabel: 'marqueurs',
-    emptyText: 'Aucun marqueur',
+    countLabel: tr.countMarkers,
+    emptyText: tr.noMarkers,
     itemBuilder: (_, m, _, _) => MarkerCard(marker: m),
   );
 }
@@ -279,7 +280,7 @@ class ScenesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      _BrowseScaffold(title: 'Scènes', child: sceneGrid(context));
+      _BrowseScaffold(title: tr.scenes, child: sceneGrid(context));
 }
 
 class PerformersScreen extends StatelessWidget {
@@ -287,7 +288,7 @@ class PerformersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      _BrowseScaffold(title: 'Performeurs', child: performerGrid(context));
+      _BrowseScaffold(title: tr.performers, child: performerGrid(context));
 }
 
 class GalleriesScreen extends StatelessWidget {
@@ -295,7 +296,7 @@ class GalleriesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      _BrowseScaffold(title: 'Galeries', child: galleryGrid(context));
+      _BrowseScaffold(title: tr.galleries, child: galleryGrid(context));
 }
 
 /// Every image of the library, whatever its gallery.
@@ -306,14 +307,14 @@ class ImagesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final repo = context.read<AppState>().repo!;
     return _BrowseScaffold(
-      title: 'Images',
+      title: tr.images,
       child: PagedGrid<StashImage>(
         itemKey: (item) => item.id,
         fetch: repo.findImages,
         sortOptions: SortOptions.images,
         maxCrossAxisExtent: 160,
-        countLabel: 'images',
-        emptyText: 'Aucune image',
+        countLabel: tr.countImages,
+        emptyText: tr.noImages,
         itemBuilder: (_, img, i, all) =>
             ImageTile(image: img, all: all, index: i),
       ),
@@ -326,7 +327,7 @@ class MarkersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      _BrowseScaffold(title: 'Marqueurs', child: markerGrid(context));
+      _BrowseScaffold(title: tr.markers, child: markerGrid(context));
 }
 
 class GroupsScreen extends StatelessWidget {
@@ -336,7 +337,7 @@ class GroupsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final repo = context.read<AppState>().repo!;
     return _BrowseScaffold(
-      title: 'Groupes',
+      title: tr.groups,
       child: PagedGrid<Group>(
         itemKey: (item) => item.id,
         fetch: repo.findGroups,
@@ -344,7 +345,7 @@ class GroupsScreen extends StatelessWidget {
         initialDescending: false,
         maxCrossAxisExtent: 180,
         childAspectRatio: GroupCard.aspectRatio,
-        countLabel: 'groupes',
+        countLabel: tr.countGroups,
         itemBuilder: (_, g, _, _) => GroupCard(group: g),
       ),
     );
@@ -370,7 +371,7 @@ class StudiosScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final repo = context.read<AppState>().repo!;
     return _BrowseScaffold(
-      title: 'Studios',
+      title: tr.studios,
       child: PagedGrid<Studio>(
         itemKey: (item) => item.id,
         fetch: repo.findStudios,
@@ -378,7 +379,7 @@ class StudiosScreen extends StatelessWidget {
         initialDescending: false,
         maxCrossAxisExtent: 220,
         childAspectRatio: EntityCard.aspectRatio,
-        countLabel: 'studios',
+        countLabel: tr.countStudios,
         itemBuilder: (_, s, _, _) => StudioCard(studio: s),
       ),
     );
@@ -392,7 +393,7 @@ class TagsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final repo = context.read<AppState>().repo!;
     return _BrowseScaffold(
-      title: 'Tags',
+      title: tr.tags,
       child: PagedGrid<Tag>(
         itemKey: (item) => item.id,
         fetch: repo.findTags,
@@ -400,7 +401,7 @@ class TagsScreen extends StatelessWidget {
         initialDescending: false,
         maxCrossAxisExtent: 220,
         childAspectRatio: EntityCard.aspectRatio,
-        countLabel: 'tags',
+        countLabel: tr.countTags,
         itemBuilder: (_, t, _, _) => TagCard(tag: t),
       ),
     );

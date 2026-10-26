@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../services/app_state.dart';
 import 'app_screens.dart';
 
-/// Plus > Affichage > Onglets: which screens sit in the bottom bar, in
+/// More > Display > Tabs: which screens sit in the bottom bar, in
 /// which order. The others are listed in Plus.
 class TabsScreen extends StatefulWidget {
   const TabsScreen({super.key});
@@ -40,7 +41,7 @@ class _TabsScreenState extends State<TabsScreen> {
     final full = _chosen.length >= AppScreen.maxTabs;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Onglets'),
+        title: Text(tr.tabsTitle),
         actions: [
           TextButton(
             onPressed: () {
@@ -59,7 +60,7 @@ class _TabsScreenState extends State<TabsScreen> {
               });
               _app.tabNames = null;
             },
-            child: const Text('Par défaut'),
+            child: Text(tr.byDefault),
           ),
         ],
       ),
@@ -68,11 +69,8 @@ class _TabsScreenState extends State<TabsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Text(
-              'Cochez jusqu\'à ${AppScreen.maxTabs} écrans pour la barre du '
-              'bas (« Plus » y reste toujours, en dernier). Les autres sont '
-              'dans Plus. Faites glisser pour changer l\'ordre ; le premier '
-              'onglet s\'ouvre au lancement.\n'
-              '${_chosen.length} / ${AppScreen.maxTabs} onglets',
+              '${tr.tabsIntro(AppScreen.maxTabs)}\n'
+              '${tr.tabsCount(_chosen.length, AppScreen.maxTabs)}',
             ),
           ),
           ReorderableListView(
@@ -104,7 +102,7 @@ class _TabsScreenState extends State<TabsScreen> {
                     ],
                   ),
                   subtitle: Text(
-                    _chosen.contains(_order[i]) ? 'Onglet' : 'Dans Plus',
+                    _chosen.contains(_order[i]) ? tr.tab : tr.inMore,
                   ),
                   trailing: ReorderableDragStartListener(
                     index: i,

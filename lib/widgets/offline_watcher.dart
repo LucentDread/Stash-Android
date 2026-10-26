@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../screens/downloads_screen.dart';
 import '../services/app_state.dart';
 
@@ -55,7 +56,7 @@ class _OfflineWatcherState extends State<OfflineWatcher> {
         _showOfflineDialog();
       } else {
         widget.messengerKey.currentState?.showSnackBar(
-          const SnackBar(content: Text('Connexion au serveur rétablie')),
+          SnackBar(content: Text(tr.connectionRestored)),
         );
       }
     });
@@ -70,21 +71,17 @@ class _OfflineWatcherState extends State<OfflineWatcher> {
       context: navigator.overlay!.context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.cloud_off),
-        title: const Text('Hors ligne'),
-        content: Text(
-          'Le serveur Stash (${_app.serverUrl ?? ''}) est injoignable. '
-          'Les scènes, groupes, galeries et images téléchargés restent '
-          'disponibles.',
-        ),
+        title: Text(tr.offlineTitle),
+        content: Text(tr.offlineMessage(_app.serverUrl ?? '')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Fermer'),
+            child: Text(tr.close),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.download_for_offline_outlined),
-            label: const Text('Téléchargements'),
+            label: Text(tr.downloads),
           ),
         ],
       ),

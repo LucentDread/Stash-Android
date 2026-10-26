@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'l10n/l10n.dart';
 import 'screens/home_shell.dart';
 import 'screens/setup_screen.dart';
 import 'services/app_state.dart';
@@ -37,18 +38,27 @@ class StashApp extends StatelessWidget {
     final tabs = context.select<AppState, String>(
       (s) => s.tabNames?.join(',') ?? '',
     );
+    final language = context.select<AppState, String>(
+      (s) => s.effectiveLanguage,
+    );
     return MaterialApp(
       title: 'Stash',
+      locale: Locale(language),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: messengerKey,
       // Scan progress and the offline popup work above every page.
-      builder: (context, child) => AppGate(
-        navigatorKey: navigatorKey,
-        child: OfflineWatcher(
+      builder: (context, child) => _Relabel(
+        language: language,
+        child: AppGate(
           navigatorKey: navigatorKey,
-          messengerKey: messengerKey,
-          child: ScanBannerHost(child: child!),
+          child: OfflineWatcher(
+            navigatorKey: navigatorKey,
+            messengerKey: messengerKey,
+            child: ScanBannerHost(child: child!),
+          ),
         ),
       ),
       theme: ThemeData(
@@ -69,4 +79,35 @@ class StashApp extends StatelessWidget {
           : const SetupScreen(),
     );
   }
+}
+
+/// Redraws every page, open ones included, when the language changes:
+/// they read their texts from [tr], not from an inherited widget.
+class _Relabel extends StatefulWidget {
+  const _Relabel({required this.language, required this.child});
+  final String language;
+  final Widget child;
+
+  @override
+  State<_Relabel> createState() => _RelabelState();
+}
+
+class _RelabelState extends State<_Relabel> {
+  @override
+  void didUpdateWidget(_Relabel old) {
+    super.didUpdateWidget(old);
+    if (old.language == widget.language) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      void mark(Element e) {
+        e.markNeedsBuild();
+        e.visitChildren(mark);
+      }
+
+      (context as Element).visitChildren(mark);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

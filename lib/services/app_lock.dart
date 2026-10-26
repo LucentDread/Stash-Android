@@ -6,6 +6,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/l10n.dart';
+
 /// Optional password asked when the app starts, and when it comes back
 /// after some time in the background.
 ///
@@ -46,10 +48,9 @@ class AppLock extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   static String describeDelay(int? minutes) => switch (minutes) {
-    null => 'Au lancement uniquement',
-    0 => 'Dès que l\'app passe en arrière-plan',
-    1 => 'Après 1 minute en arrière-plan',
-    _ => 'Après $minutes minutes en arrière-plan',
+    null => tr.lockAtLaunchOnly,
+    0 => tr.lockImmediately,
+    _ => tr.lockAfterMinutes(minutes),
   };
 
   DateTime? _leftAt;

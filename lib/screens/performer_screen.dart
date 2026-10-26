@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../navigation.dart';
 import '../services/app_state.dart';
@@ -39,10 +40,10 @@ class PerformerScreen extends StatelessWidget {
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
                 tabs: [
-                  const Tab(text: 'Infos'),
-                  Tab(text: 'Scènes (${p.sceneCount})'),
-                  Tab(text: 'Galeries (${p.galleryCount})'),
-                  const Tab(text: 'Marqueurs'),
+                  Tab(text: tr.info),
+                  Tab(text: '${tr.scenes} (${p.sceneCount})'),
+                  Tab(text: '${tr.galleries} (${p.galleryCount})'),
+                  Tab(text: tr.markers),
                 ],
               ),
             ),
@@ -87,7 +88,7 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: 'Favori',
+    tooltip: tr.favorite,
     icon: Icon(
       _favorite ? Icons.favorite : Icons.favorite_border,
       color: _favorite ? Colors.redAccent : null,
@@ -126,32 +127,34 @@ class _PerformerInfo extends StatelessWidget {
           Center(child: StarRating(rating100: p.rating100)),
         ],
         Section(
-          title: 'Informations',
+          title: tr.information,
           child: InfoTable([
-            ('Désambiguïsation', p.disambiguation),
-            ('Alias', p.aliases.join(', ')),
-            ('Genre', genderLabel(p.gender)),
+            (tr.disambiguation, p.disambiguation),
+            (tr.aliases, p.aliases.join(', ')),
+            (tr.gender, genderLabel(p.gender)),
             (
-              'Naissance',
-              p.birthdate == null ? null : '${p.birthdate} ($age ans)',
+              tr.birth,
+              p.birthdate == null
+                  ? null
+                  : '${p.birthdate} (${tr.yearsOld(age ?? 0)})',
             ),
-            ('Pays', p.country),
-            ('Origine', p.ethnicity),
-            ('Taille', p.heightCm == null ? null : '${p.heightCm} cm'),
-            ('Mensurations', p.measurements),
-            ('Cheveux', p.hairColor),
-            ('Yeux', p.eyeColor),
-            ('Images', '${p.imageCount}'),
+            (tr.country, p.country),
+            (tr.ethnicity, p.ethnicity),
+            (tr.height, p.heightCm == null ? null : '${p.heightCm} cm'),
+            (tr.measurements, p.measurements),
+            (tr.hairColor, p.hairColor),
+            (tr.eyeColor, p.eyeColor),
+            (tr.images, '${p.imageCount}'),
           ]),
         ),
         if (p.details != null && p.details!.isNotEmpty)
-          Section(title: 'Description', child: SelectableText(p.details!)),
+          Section(title: tr.description, child: SelectableText(p.details!)),
         if (p.tags.isNotEmpty)
           Section(
-            title: 'Tags',
+            title: tr.tags,
             child: RefChips(refs: p.tags, onTap: (r) => openTag(context, r.id)),
           ),
-        if (p.urls.isNotEmpty) Section(title: 'Liens', child: UrlList(p.urls)),
+        if (p.urls.isNotEmpty) Section(title: tr.links, child: UrlList(p.urls)),
       ],
     );
   }

@@ -1,4 +1,4 @@
-name: Publier les versions
+name: Publish releases
 
 # Creates the missing tags and releases (see scripts/publish-releases.sh)
 # whenever main changes, or on demand from the Actions tab.
@@ -22,7 +22,7 @@ jobs:
 
       # Signed APKs can be handed over on a temporary "release-apks" branch
       # (one Stash-X.Y.Z-arm64-v8a.apk per version); it is removed once used.
-      - name: Récupérer les APK
+      - name: Fetch the APKs
         id: apks
         run: |
           if git ls-remote --exit-code --heads origin release-apks > /dev/null; then
@@ -33,7 +33,7 @@ jobs:
             echo "dir=$RUNNER_TEMP/apks" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Créer les tags et releases
+      - name: Create the tags and releases
         env:
           GH_TOKEN: ${{ github.token }}
           APKS: ${{ steps.apks.outputs.dir }}
@@ -42,6 +42,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           bash scripts/publish-releases.sh ${APKS:+--apks "$APKS"}
 
-      - name: Supprimer la branche temporaire des APK
+      - name: Delete the temporary APK branch
         if: steps.apks.outputs.dir != ''
         run: git push origin --delete release-apks

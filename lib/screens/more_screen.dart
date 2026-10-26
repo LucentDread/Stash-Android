@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../services/app_state.dart';
 import '../widgets/brand_title.dart';
 import 'app_screens.dart';
@@ -19,20 +20,16 @@ class MoreScreen extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Scanner la bibliothèque ?'),
-        content: const Text(
-          'Stash va parcourir vos dossiers avec ses options de scan par '
-          'défaut (Paramètres > Tâches). Le suivi s\'affiche en bas de '
-          'l\'écran ; les pages se rechargeront à la fin.',
-        ),
+        title: Text(tr.scanLibraryQuestion),
+        content: Text(tr.scanConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Scanner'),
+            child: Text(tr.scan),
           ),
         ],
       ),
@@ -49,28 +46,27 @@ class MoreScreen extends StatelessWidget {
     final home = app.homeLayout;
     final tabs = AppScreen.tabsOf(app);
     return Scaffold(
-      appBar: AppBar(title: const BrandTitle(page: 'Plus')),
+      appBar: AppBar(title: BrandTitle(page: tr.more)),
       body: ListView(
         children: [
           ListTile(
             leading: const Icon(Icons.home_outlined),
-            title: const Text('Page d\'accueil'),
+            title: Text(tr.homePage),
             subtitle: Text(switch (home.length) {
-              0 => 'Accueil par défaut',
+              0 => tr.defaultHome,
               1 when app.homeViews.length == 1 => app.homeViews.single.name,
-              1 => 'Personnalisé : 1 élément',
-              final n => 'Personnalisé : $n éléments',
+              final n => tr.customHomeItems(n),
             }),
             onTap: () => _push(context, const HomeLayoutScreen()),
           ),
           ListTile(
             leading: const Icon(Icons.bookmarks),
-            title: const Text('Vues enregistrées'),
-            subtitle: Text(switch (app.allViews.length) {
-              0 => 'Aucune',
-              1 => '1 vue',
-              final n => '$n vues',
-            }),
+            title: Text(tr.savedViews),
+            subtitle: Text(
+              app.allViews.isEmpty
+                  ? tr.noViews
+                  : tr.countViews(app.allViews.length),
+            ),
             onTap: () => _push(context, const ViewsScreen()),
           ),
           const Divider(),
@@ -84,19 +80,17 @@ class MoreScreen extends StatelessWidget {
               ),
           ListTile(
             leading: const Icon(Icons.download_for_offline_outlined),
-            title: const Text('Téléchargements'),
-            subtitle: const Text(
-              'Scènes, groupes, galeries et images hors ligne',
-            ),
+            title: Text(tr.downloads),
+            subtitle: Text(tr.downloadsSubtitle),
             onTap: () => _push(context, const DownloadsScreen()),
           ),
           const Divider(),
-          const _Header('Affichage'),
+          _Header(tr.displayHeader),
           ListTile(
             leading: const Icon(Icons.tab_outlined),
-            title: const Text('Onglets'),
+            title: Text(tr.tabsTitle),
             subtitle: Text(
-              '${tabs.map((t) => t.label).join(', ')}, Plus',
+              [...tabs.map((t) => t.label), tr.more].join(', '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -104,7 +98,7 @@ class MoreScreen extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.grid_view),
-            title: const Text('Colonnes de scènes (portrait)'),
+            title: Text(tr.sceneColumns),
             trailing: SegmentedButton<int>(
               showSelectedIcon: false,
               segments: const [
@@ -118,16 +112,16 @@ class MoreScreen extends StatelessWidget {
           ),
           SwitchListTile(
             secondary: const Icon(Icons.slideshow_outlined),
-            title: const Text('Aperçu vidéo par appui long'),
-            subtitle: const Text('Lit l\'aperçu d\'une scène en la maintenant'),
+            title: Text(tr.longPressPreview),
+            subtitle: Text(tr.longPressPreviewSubtitle),
             value: app.playPreviews,
             onChanged: (v) => app.playPreviews = v,
           ),
           const Divider(),
-          const _Header('Serveur'),
+          _Header(tr.serverHeader),
           ListTile(
             leading: const Icon(Icons.dns_outlined),
-            title: const Text('Serveur Stash'),
+            title: Text(tr.stashServer),
             subtitle: Text(app.serverUrl ?? ''),
             onTap: () => _push(context, const SetupScreen(popOnSuccess: true)),
           ),
@@ -135,7 +129,7 @@ class MoreScreen extends StatelessWidget {
             future: app.serverVersion,
             builder: (context, snap) => ListTile(
               leading: const Icon(Icons.info_outline),
-              title: const Text('Version du serveur'),
+              title: Text(tr.serverVersion),
               subtitle: Text(snap.data ?? (snap.hasError ? '—' : '…')),
             ),
           ),
@@ -143,11 +137,9 @@ class MoreScreen extends StatelessWidget {
             listenable: app.scan,
             builder: (context, _) => ListTile(
               leading: const Icon(Icons.sync),
-              title: const Text('Scanner la bibliothèque'),
+              title: Text(tr.scanLibrary),
               subtitle: Text(
-                app.scan.running
-                    ? 'Scan en cours (suivi en bas de l\'écran)'
-                    : 'Détecte les fichiers ajoutés, modifiés ou supprimés',
+                app.scan.running ? tr.scanInProgressSubtitle : tr.scanSubtitle,
               ),
               enabled: !app.scan.running,
               onTap: () => _confirmScan(context, app),
@@ -155,23 +147,21 @@ class MoreScreen extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.logout),
-            title: const Text('Se déconnecter'),
+            title: Text(tr.logout),
             onTap: () async {
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Se déconnecter ?'),
-                  content: const Text(
-                    'L\'adresse du serveur et la clé API seront oubliées.',
-                  ),
+                  title: Text(tr.logoutQuestion),
+                  content: Text(tr.logoutMessage),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Annuler'),
+                      child: Text(tr.cancel),
                     ),
                     FilledButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Se déconnecter'),
+                      child: Text(tr.logout),
                     ),
                   ],
                 ),
@@ -180,12 +170,12 @@ class MoreScreen extends StatelessWidget {
             },
           ),
           const Divider(),
-          const _Header('Application'),
+          _Header(tr.applicationHeader),
           FutureBuilder<PackageInfo>(
             future: PackageInfo.fromPlatform(),
             builder: (context, snap) => ListTile(
               leading: const Icon(Icons.phone_android),
-              title: const Text('Version de l\'application'),
+              title: Text(tr.appVersion),
               subtitle: Text(
                 snap.hasData
                     ? '${snap.data!.version} (build ${snap.data!.buildNumber})'
@@ -195,8 +185,8 @@ class MoreScreen extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.settings_outlined),
-            title: const Text('Paramètres'),
-            subtitle: const Text('Lecteur popup, mot de passe, mises à jour'),
+            title: Text(tr.settings),
+            subtitle: Text(tr.settingsSubtitle),
             onTap: () => _push(context, const SettingsScreen()),
           ),
         ],

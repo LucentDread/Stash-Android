@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
+import '../utils/format.dart';
 import '../widgets/async_view.dart';
 
 /// Edits a [SceneFilter]; pops with the new filter when applied.
@@ -34,7 +36,7 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
     final kind = widget.kind;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Filtrer : ${kind.label.toLowerCase()}'),
+        title: Text(tr.filterKind(inSentence(kind.label))),
         actions: [
           TextButton(
             onPressed: () => setState(() {
@@ -53,7 +55,7 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
                 ..performerFavorite = null
                 ..favorite = null;
             }),
-            child: const Text('Tout effacer'),
+            child: Text(tr.clearAll),
           ),
         ],
       ),
@@ -62,13 +64,13 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
         children: [
           if (has(FilterField.favorite))
             _TriState(
-              title: 'Favoris',
+              title: tr.favorites,
               value: _f.favorite,
               onChanged: (v) => setState(() => _f.favorite = v),
             ),
           if (has(FilterField.performers))
             _EntitySection(
-              title: 'Performeurs',
+              title: tr.performers,
               kind: RefKind.performers,
               criterion: _f.performers,
               modes: EntityMode.values,
@@ -76,16 +78,16 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
             ),
           if (has(FilterField.tags))
             _EntitySection(
-              title: 'Tags',
+              title: tr.tags,
               kind: RefKind.tags,
               criterion: _f.tags,
               modes: EntityMode.values,
-              subLevelsLabel: 'Inclure les sous-tags',
+              subLevelsLabel: tr.includeSubTags,
               onChanged: (c) => setState(() => _f.tags = c),
             ),
           if (has(FilterField.studios))
             _EntitySection(
-              title: kind == ViewKind.performers ? 'Studios' : 'Studio',
+              title: kind == ViewKind.performers ? tr.studios : tr.studio,
               kind: RefKind.studios,
               criterion: _f.studios,
               // A scene has a single studio: "all" makes no sense (a
@@ -95,26 +97,26 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
                   : EntityMode.values
                         .where((m) => m != EntityMode.all)
                         .toList(),
-              subLevelsLabel: 'Inclure les sous-studios',
+              subLevelsLabel: tr.includeSubStudios,
               onChanged: (c) => setState(() => _f.studios = c),
             ),
           if (has(FilterField.groups))
             _EntitySection(
-              title: 'Groupes',
+              title: tr.groups,
               kind: RefKind.groups,
               criterion: _f.groups,
               modes: EntityMode.values,
-              subLevelsLabel: 'Inclure les sous-groupes',
+              subLevelsLabel: tr.includeSubGroups,
               onChanged: (c) => setState(() => _f.groups = c),
             ),
           const Divider(),
           if (has(FilterField.rating))
             ListTile(
-              title: const Text('Note minimale'),
+              title: Text(tr.minRating),
               trailing: DropdownButton<int?>(
                 value: _f.minStars,
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('Toutes')),
+                  DropdownMenuItem(value: null, child: Text(tr.allRatings)),
                   for (var i = 1; i <= 5; i++)
                     DropdownMenuItem(value: i, child: Text('≥ $i ★')),
                 ],
@@ -123,11 +125,11 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
             ),
           if (has(FilterField.resolution))
             ListTile(
-              title: const Text('Résolution minimale'),
+              title: Text(tr.minResolution),
               trailing: DropdownButton<String?>(
                 value: _f.minResolution,
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('Toutes')),
+                  DropdownMenuItem(value: null, child: Text(tr.allResolutions)),
                   for (final r in ResolutionChoice.all)
                     DropdownMenuItem(
                       value: r.aboveEnum,
@@ -139,12 +141,12 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
             ),
           if (has(FilterField.duration))
             ListTile(
-              title: const Text('Durée (minutes)'),
+              title: Text(tr.durationMinutes),
               subtitle: Row(
                 children: [
                   Expanded(
                     child: _NumberField(
-                      label: 'Min',
+                      label: tr.min,
                       value: _f.minDurationMin,
                       onChanged: (v) => _f.minDurationMin = v,
                     ),
@@ -152,7 +154,7 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _NumberField(
-                      label: 'Max',
+                      label: tr.max,
                       value: _f.maxDurationMin,
                       onChanged: (v) => _f.maxDurationMin = v,
                     ),
@@ -163,29 +165,29 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
           const Divider(),
           if (has(FilterField.played))
             _TriState(
-              title: 'Lecture',
+              title: tr.watchStatus,
               value: _f.played,
-              yes: kind == ViewKind.scenes ? 'Déjà vues' : 'Déjà vu',
-              no: kind == ViewKind.scenes ? 'Jamais vues' : 'Jamais vu',
+              yes: tr.playedState(kind.name),
+              no: tr.notPlayedState(kind.name),
               onChanged: (v) => setState(() => _f.played = v),
             ),
           if (has(FilterField.organized))
             _TriState(
-              title: kind == ViewKind.scenes ? 'Organisées' : 'Organisé',
+              title: tr.organizedState(kind.name),
               value: _f.organized,
               onChanged: (v) => setState(() => _f.organized = v),
             ),
           if (has(FilterField.hasMarkers))
             _TriState(
-              title: 'Marqueurs',
+              title: tr.markers,
               value: _f.hasMarkers,
-              yes: 'Avec',
-              no: 'Sans',
+              yes: tr.withLabel,
+              no: tr.withoutLabel,
               onChanged: (v) => setState(() => _f.hasMarkers = v),
             ),
           if (has(FilterField.performerFavorite))
             _TriState(
-              title: 'Performeur favori',
+              title: tr.favoritePerformer,
               value: _f.performerFavorite,
               onChanged: (v) => setState(() => _f.performerFavorite = v),
             ),
@@ -194,7 +196,7 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pop(context, _f),
         icon: const Icon(Icons.check),
-        label: const Text('Appliquer'),
+        label: Text(tr.apply),
       ),
     );
   }
@@ -227,15 +229,15 @@ class _TriState extends StatelessWidget {
     required this.title,
     required this.value,
     required this.onChanged,
-    this.yes = 'Oui',
-    this.no = 'Non',
+    this.yes,
+    this.no,
   });
 
   final String title;
   final bool? value;
   final ValueChanged<bool?> onChanged;
-  final String yes;
-  final String no;
+  final String? yes;
+  final String? no;
 
   @override
   Widget build(BuildContext context) {
@@ -245,9 +247,9 @@ class _TriState extends StatelessWidget {
         showSelectedIcon: false,
         style: const ButtonStyle(visualDensity: VisualDensity.compact),
         segments: [
-          const ButtonSegment(value: 0, label: Text('Tous')),
-          ButtonSegment(value: 1, label: Text(yes)),
-          ButtonSegment(value: 2, label: Text(no)),
+          ButtonSegment(value: 0, label: Text(tr.anyValue)),
+          ButtonSegment(value: 1, label: Text(yes ?? tr.yes)),
+          ButtonSegment(value: 2, label: Text(no ?? tr.no)),
         ],
         selected: {value == null ? 0 : (value! ? 1 : 2)},
         onSelectionChanged: (s) => onChanged(switch (s.first) {
@@ -345,7 +347,7 @@ class _EntitySection extends StatelessWidget {
                   ),
                 ActionChip(
                   avatar: const Icon(Icons.add, size: 18),
-                  label: const Text('Choisir'),
+                  label: Text(tr.choose),
                   onPressed: () => _pick(context, c),
                 ),
               ],
@@ -432,7 +434,7 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
           if (!widget.single)
             TextButton(
               onPressed: () => Navigator.pop(context, _selected),
-              child: Text('Valider (${_selected.length})'),
+              child: Text(tr.confirmCount(_selected.length)),
             ),
         ],
       ),
@@ -443,9 +445,9 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
             child: TextField(
               autofocus: true,
               onChanged: _search,
-              decoration: const InputDecoration(
-                hintText: 'Rechercher…',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: tr.searchHint,
+                prefixIcon: const Icon(Icons.search),
                 isDense: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(28)),
@@ -481,7 +483,7 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (items.isEmpty) {
-                  return const Center(child: Text('Aucun résultat'));
+                  return Center(child: Text(tr.noResults));
                 }
                 return ListView.builder(
                   itemCount: items.length,

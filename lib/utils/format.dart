@@ -1,3 +1,7 @@
+import 'package:intl/intl.dart';
+
+import '../l10n/l10n.dart';
+
 String formatDuration(double seconds) {
   if (seconds.isNaN || seconds <= 0) return '0:00';
   final d = Duration(milliseconds: (seconds * 1000).round());
@@ -7,8 +11,23 @@ String formatDuration(double seconds) {
   return h > 0 ? '$h:${m.toString().padLeft(2, '0')}:$s' : '$m:$s';
 }
 
+/// [d] as a short date in the app's language, e.g. 26/10/2026.
+String formatDate(DateTime d) {
+  try {
+    return DateFormat.yMd(tr.localeName).format(d);
+  } catch (_) {
+    // Locale data not loaded (see initializeDateFormatting in main).
+    return DateFormat('yyyy-MM-dd').format(d);
+  }
+}
+
+/// [noun] inside a sentence: lower case, except in German where nouns
+/// keep their capital.
+String inSentence(String noun) =>
+    tr.localeName == 'de' ? noun : noun.toLowerCase();
+
 String formatBytes(num bytes) {
-  const units = ['o', 'Ko', 'Mo', 'Go', 'To'];
+  final units = tr.bytesUnits.split(',');
   var v = bytes.toDouble();
   var i = 0;
   while (v >= 1024 && i < units.length - 1) {
@@ -37,12 +56,12 @@ double starsFromRating(int? rating100) =>
     rating100 == null ? 0 : (rating100 / 20).clamp(0, 5).toDouble();
 
 String genderLabel(String? g) => switch (g) {
-  'MALE' => 'Homme',
-  'FEMALE' => 'Femme',
-  'TRANSGENDER_MALE' => 'Homme trans',
-  'TRANSGENDER_FEMALE' => 'Femme trans',
-  'INTERSEX' => 'Intersexe',
-  'NON_BINARY' => 'Non-binaire',
+  'MALE' => tr.genderMale,
+  'FEMALE' => tr.genderFemale,
+  'TRANSGENDER_MALE' => tr.genderTransMale,
+  'TRANSGENDER_FEMALE' => tr.genderTransFemale,
+  'INTERSEX' => tr.genderIntersex,
+  'NON_BINARY' => tr.genderNonBinary,
   _ => '',
 };
 

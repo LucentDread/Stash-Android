@@ -28,6 +28,8 @@ class MainActivity : FlutterActivity() {
     private var pipEnabled = false
     private var pipPlaying = false
     private var pipAspect = Rational(16, 9)
+    private var pipPlayLabel = "Play"
+    private var pipPauseLabel = "Pause"
 
     private val pipReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -68,6 +70,8 @@ class MainActivity : FlutterActivity() {
                         pipPlaying = call.argument<Boolean>("playing") ?: false
                         val w = call.argument<Int>("width") ?: 16
                         val h = call.argument<Int>("height") ?: 9
+                        pipPlayLabel = call.argument<String>("playLabel") ?: pipPlayLabel
+                        pipPauseLabel = call.argument<String>("pauseLabel") ?: pipPauseLabel
                         pipAspect = clampAspect(w, h)
                         updatePipParams()
                         result.success(null)
@@ -118,8 +122,8 @@ class MainActivity : FlutterActivity() {
                 this,
                 if (pipPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
             ),
-            if (pipPlaying) "Pause" else "Lecture",
-            if (pipPlaying) "Pause" else "Lecture",
+            if (pipPlaying) pipPauseLabel else pipPlayLabel,
+            if (pipPlaying) pipPauseLabel else pipPlayLabel,
             intent,
         )
         val builder = PictureInPictureParams.Builder()

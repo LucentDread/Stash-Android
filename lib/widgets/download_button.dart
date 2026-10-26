@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../screens/downloads_screen.dart';
 import '../services/app_state.dart';
 import '../services/downloads.dart';
@@ -24,11 +25,11 @@ class DownloadButton extends StatelessWidget {
   /// Expected size in bytes, shown in the confirmation (scenes).
   final int? sizeHint;
 
-  String get _what => switch (kind) {
-    OfflineKind.scene => 'cette scène',
-    OfflineKind.group => 'toutes les scènes de ce groupe',
-    OfflineKind.gallery => 'toutes les images de cette galerie',
-    OfflineKind.image => 'cette image',
+  String _question(String size) => switch (kind) {
+    OfflineKind.scene => tr.downloadSceneQuestion(size),
+    OfflineKind.group => tr.downloadGroupQuestion(size),
+    OfflineKind.gallery => tr.downloadGalleryQuestion(size),
+    OfflineKind.image => tr.downloadImageQuestion(size),
   };
 
   Future<void> _start(BuildContext context, DownloadManager downloads) async {
@@ -36,28 +37,25 @@ class DownloadButton extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Télécharger ?'),
+        title: Text(tr.downloadTitle),
         content: Text(
-          'Télécharger $_what pour la regarder hors ligne'
-          '${sizeHint == null ? '' : ' (${formatBytes(sizeHint!)})'} ? '
-          'Le téléchargement continue en arrière-plan.',
+          '${_question(sizeHint == null ? '' : ' (${formatBytes(sizeHint!)})')}'
+          ' ${tr.downloadInBackground}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Télécharger'),
+            child: Text(tr.download),
           ),
         ],
       ),
     );
     if (ok != true) return;
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Préparation du téléchargement…')),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(tr.preparingDownload)));
     try {
       switch (kind) {
         case OfflineKind.scene:
@@ -69,11 +67,7 @@ class DownloadButton extends StatelessWidget {
         case OfflineKind.image:
           await downloads.downloadImage(id);
       }
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Téléchargement lancé (Plus > Téléchargements)'),
-        ),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(tr.downloadStarted)));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
@@ -88,7 +82,7 @@ class DownloadButton extends StatelessWidget {
         final entry = downloads.entry(kind, id);
         if (entry == null) {
           return IconButton(
-            tooltip: 'Télécharger',
+            tooltip: tr.download,
             icon: const Icon(Icons.download_outlined),
             onPressed: () => _start(context, downloads),
           );
@@ -98,9 +92,9 @@ class DownloadButton extends StatelessWidget {
             .push(MaterialPageRoute(builder: (_) => const DownloadsScreen()));
         return IconButton(
           tooltip: switch (state) {
-            FileState.done => 'Téléchargé',
-            FileState.failed => 'Échec du téléchargement',
-            _ => 'Téléchargement en cours',
+            FileState.done => tr.notifDownloaded,
+            FileState.failed => tr.notifDownloadFailed,
+            _ => tr.downloadInProgress,
           },
           onPressed: open,
           icon: switch (state) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import 'data_refresh.dart';
 
 class ErrorView extends StatelessWidget {
@@ -24,10 +25,7 @@ class ErrorView extends StatelessWidget {
             Text(error.toString(), textAlign: TextAlign.center),
             if (onRetry != null) ...[
               const SizedBox(height: 12),
-              FilledButton.tonal(
-                onPressed: onRetry,
-                child: const Text('Réessayer'),
-              ),
+              FilledButton.tonal(onPressed: onRetry, child: Text(tr.retry)),
             ],
           ],
         ),

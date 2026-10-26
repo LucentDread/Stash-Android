@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../navigation.dart';
 import '../services/app_state.dart';
@@ -150,7 +151,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                     if (s.duration > 0) Text(formatDuration(s.duration)),
                     if (f != null && resolutionLabel(f.width, f.height) != null)
                       Text(resolutionLabel(f.width, f.height)!),
-                    if (s.playCount > 0) Text('${s.playCount} lectures'),
+                    if (s.playCount > 0) Text(tr.countPlays(s.playCount)),
                   ],
                 ),
                 if (s.studio != null) ...[
@@ -174,8 +175,8 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                         icon: const Icon(Icons.play_arrow),
                         label: Text(
                           canResume
-                              ? 'Reprendre à ${formatDuration(resume)}'
-                              : 'Lire',
+                              ? tr.resumeAt(formatDuration(resume))
+                              : tr.play,
                         ),
                       ),
                     ),
@@ -183,21 +184,19 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                       const SizedBox(width: 8),
                       OutlinedButton(
                         onPressed: () => _play(start: 0),
-                        child: const Text('Depuis le début'),
+                        child: Text(tr.fromStart),
                       ),
                     ],
                     if (resume > 0)
                       IconButton(
-                        tooltip: 'Oublier la position de reprise',
+                        tooltip: tr.forgetResumePosition,
                         icon: const Icon(Icons.history_toggle_off),
                         onPressed: () => _run(() async {
                           final messenger = ScaffoldMessenger.of(context);
                           await _repo.resetResume(s.id);
                           await _load();
                           messenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('Position de reprise effacée'),
-                            ),
+                            SnackBar(content: Text(tr.resumePositionCleared)),
                           );
                         }),
                       ),
@@ -239,7 +238,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                 ),
                 if (s.performers.isNotEmpty)
                   Section(
-                    title: 'Performeurs',
+                    title: tr.performers,
                     child: RefChips(
                       refs: s.performers,
                       icon: Icons.person,
@@ -248,7 +247,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                   ),
                 if (s.markers.isNotEmpty)
                   Section(
-                    title: 'Marqueurs',
+                    title: tr.markers,
                     child: SizedBox(
                       height: 120,
                       child: ListView.separated(
@@ -294,12 +293,12 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                   ),
                 if (s.details != null && s.details!.isNotEmpty)
                   Section(
-                    title: 'Description',
+                    title: tr.description,
                     child: SelectableText(s.details!),
                   ),
                 if (s.tags.isNotEmpty)
                   Section(
-                    title: 'Tags',
+                    title: tr.tags,
                     child: RefChips(
                       refs: s.tags,
                       onTap: (r) => openTag(context, r.id),
@@ -307,7 +306,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                   ),
                 if (s.groups.isNotEmpty)
                   Section(
-                    title: 'Groupes',
+                    title: tr.groups,
                     child: RefChips(
                       refs: s.groups,
                       icon: Icons.video_library_outlined,
@@ -316,7 +315,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                   ),
                 if (s.galleries.isNotEmpty)
                   Section(
-                    title: 'Galeries',
+                    title: tr.galleries,
                     child: RefChips(
                       refs: s.galleries,
                       icon: Icons.photo_library_outlined,
@@ -324,28 +323,30 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                     ),
                   ),
                 Section(
-                  title: 'Informations',
+                  title: tr.information,
                   child: InfoTable([
-                    ('Code', s.code),
-                    ('Réalisateur', s.director),
+                    (tr.code, s.code),
+                    (tr.director, s.director),
                     if (f != null) ...[
-                      ('Fichier', f.path),
-                      ('Taille', formatBytes(f.size)),
-                      ('Dimensions', '${f.width} × ${f.height}'),
-                      ('Format', f.format),
-                      ('Vidéo', f.videoCodec),
-                      ('Audio', f.audioCodec),
-                      ('Images/s', f.frameRate.toStringAsFixed(2)),
+                      (tr.file, f.path),
+                      (tr.fileSize, formatBytes(f.size)),
+                      (tr.dimensions, '${f.width} × ${f.height}'),
+                      (tr.format, f.format),
+                      (tr.video, f.videoCodec),
+                      (tr.audio, f.audioCodec),
+                      (tr.framesPerSecondLabel, f.frameRate.toStringAsFixed(2)),
                       (
-                        'Débit',
-                        '${(f.bitRate / 1000000).toStringAsFixed(2)} Mb/s',
+                        tr.bitRate,
+                        tr.megabitsPerSecond(
+                          (f.bitRate / 1000000).toStringAsFixed(2),
+                        ),
                       ),
                     ],
-                    ('Dernière lecture', s.lastPlayedAt?.split('T').first),
+                    (tr.sortLastPlayed, s.lastPlayedAt?.split('T').first),
                   ]),
                 ),
                 if (s.urls.isNotEmpty)
-                  Section(title: 'Liens', child: UrlList(s.urls)),
+                  Section(title: tr.links, child: UrlList(s.urls)),
               ],
             ),
           ),

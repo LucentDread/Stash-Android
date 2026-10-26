@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/stash_client.dart';
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/home_section.dart';
 import '../models/scene_filter.dart';
 import 'app_lock.dart';
@@ -16,6 +18,7 @@ import 'scan_tracker.dart';
 /// Holds the server configuration and the API repository built from it.
 class AppState extends ChangeNotifier {
   AppState(this._prefs, {this._fetcher}) {
+    _applyLanguage();
     final url = _prefs.getString(_kUrl);
     if (url != null && url.isNotEmpty) {
       _connect(url, _prefs.getString(_kKey));
@@ -37,6 +40,7 @@ class AppState extends ChangeNotifier {
   static const _kHideRecents = 'hide_recents';
   static const _kAutoUpdate = 'auto_update';
   static const _kTabs = 'tabs';
+  static const _kLanguage = 'language';
 
   final SharedPreferences _prefs;
   StashRepository? _repo;
@@ -117,6 +121,23 @@ class AppState extends ChangeNotifier {
   bool get isConfigured => _repo != null;
   String? get serverUrl => _prefs.getString(_kUrl);
   String? get apiKey => _prefs.getString(_kKey);
+
+  /// Language chosen in the settings, or null to follow the device.
+  String? get language => _prefs.getString(_kLanguage);
+  set language(String? v) {
+    v == null ? _prefs.remove(_kLanguage) : _prefs.setString(_kLanguage, v);
+    _applyLanguage();
+    notifyListeners();
+  }
+
+  /// The language the app speaks.
+  String get effectiveLanguage {
+    final l = language;
+    return l != null && appLanguages.contains(l) ? l : systemLanguage();
+  }
+
+  void _applyLanguage() =>
+      tr = lookupAppLocalizations(Locale(effectiveLanguage));
 
   /// Number of columns used by scene grids in portrait mode.
   int get gridColumns => _prefs.getInt(_kColumns) ?? 2;

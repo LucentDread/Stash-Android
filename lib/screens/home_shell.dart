@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../services/app_state.dart';
 import 'app_screens.dart';
 import 'more_screen.dart';
@@ -35,9 +36,9 @@ class _HomeShellState extends State<HomeShell> {
         ),
       (
         const MoreScreen(),
-        const NavigationDestination(
-          icon: Icon(Icons.more_horiz),
-          label: 'Plus',
+        NavigationDestination(
+          icon: const Icon(Icons.more_horiz),
+          label: tr.more,
         ),
       ),
     ];

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../navigation.dart';
 import '../services/app_state.dart';
@@ -27,7 +28,7 @@ class GalleryScreen extends StatelessWidget {
           title: Text(g.displayTitle),
           actions: [
             IconButton(
-              tooltip: 'Informations',
+              tooltip: tr.information,
               icon: const Icon(Icons.info_outline),
               onPressed: () => showModalBottomSheet(
                 context: context,
@@ -55,7 +56,7 @@ class GalleryScreen extends StatelessWidget {
           ),
           maxCrossAxisExtent: 160,
           childAspectRatio: 1,
-          emptyText: 'Galerie vide',
+          emptyText: tr.emptyGallery,
           itemBuilder: (context, img, i, all) => InkWell(
             onTap: () => openImages(context, List.of(all), i),
             child: ClipRRect(
@@ -85,13 +86,13 @@ class _GalleryInfo extends StatelessWidget {
         children: [
           Text(g.displayTitle, style: Theme.of(context).textTheme.titleLarge),
           InfoTable([
-            ('Date', g.date),
-            ('Images', '${g.imageCount}'),
-            ('Chemin', g.folderPath),
+            (tr.date, g.date),
+            (tr.images, '${g.imageCount}'),
+            (tr.path, g.folderPath),
           ]),
           if (g.studio != null)
             Section(
-              title: 'Studio',
+              title: tr.studio,
               child: RefChips(
                 refs: [g.studio!],
                 icon: Icons.business,
@@ -100,7 +101,7 @@ class _GalleryInfo extends StatelessWidget {
             ),
           if (g.performers.isNotEmpty)
             Section(
-              title: 'Performeurs',
+              title: tr.performers,
               child: RefChips(
                 refs: g.performers,
                 icon: Icons.person,
@@ -109,14 +110,14 @@ class _GalleryInfo extends StatelessWidget {
             ),
           if (g.tags.isNotEmpty)
             Section(
-              title: 'Tags',
+              title: tr.tags,
               child: RefChips(
                 refs: g.tags,
                 onTap: (r) => openTag(context, r.id),
               ),
             ),
           if (g.details != null && g.details!.isNotEmpty)
-            Section(title: 'Description', child: Text(g.details!)),
+            Section(title: tr.description, child: Text(g.details!)),
         ],
       ),
     );

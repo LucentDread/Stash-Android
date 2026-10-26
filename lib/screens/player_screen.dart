@@ -9,6 +9,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../api/stash_client.dart';
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
 import '../services/system_bridge.dart';
@@ -139,9 +140,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       final Scene scene;
       if (widget.offline) {
         scene = Scene.fromJson(widget.offlineData!);
-        _sources = [
-          _Source('Copie hors ligne', widget.offlinePath!, local: true),
-        ];
+        _sources = [_Source(tr.offlineCopy, widget.offlinePath!, local: true)];
       } else {
         scene = await _repo.findScene(widget.sceneId);
         List<StreamEndpoint> streams = const [];
@@ -153,7 +152,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _sources = _buildSources(scene, streams);
       }
       _scene = scene;
-      if (_sources.isEmpty) throw StashException('Aucun flux disponible');
+      if (_sources.isEmpty) throw StashException(tr.noStream);
 
       final f = scene.file;
       if (f != null && f.width > 0 && f.height > 0) {
@@ -185,7 +184,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     String? url(String? u) => client.mediaUrl(u);
 
     final direct = url(scene.stream);
-    if (direct != null) sources.add(_Source('Direct (original)', direct));
+    if (direct != null) sources.add(_Source(tr.directStream, direct));
     for (final s in streams) {
       final u = url(s.url);
       final mime = s.mimeType ?? '';
@@ -241,15 +240,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'Lecture directe impossible, essai de « ${_sources[index + 1].label} »',
-              ),
+              content: Text(tr.directPlaybackFailed(_sources[index + 1].label)),
             ),
           );
         }
         return _open(index + 1, position, fallback: true);
       }
-      if (mounted) setState(() => _error = 'Lecture impossible : $e');
+      if (mounted) setState(() => _error = tr.playbackFailed('$e'));
       return;
     }
     if (!mounted) {
@@ -283,7 +280,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _lastPosition = pos;
     _updatePip();
     if (c.value.hasError && _error == null) {
-      setState(() => _error = c.value.errorDescription ?? 'Erreur de lecture');
+      setState(() => _error = c.value.errorDescription ?? tr.playbackError);
     }
     if (mounted) setState(() {});
   }
@@ -408,11 +405,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         widget.sceneId,
         c.value.position.inMilliseconds / 1000,
       );
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Couverture en cours de génération par Stash'),
-        ),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(tr.coverGenerating)));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     }
@@ -584,19 +577,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ),
                     if (markers.isNotEmpty)
                       IconButton(
-                        tooltip: 'Marqueurs',
+                        tooltip: tr.markers,
                         icon: const Icon(Icons.bookmarks_outlined),
                         onPressed: _pickMarker,
                       ),
                     if (!widget.offline)
                       IconButton(
-                        tooltip: 'Ajouter un marqueur ici',
+                        tooltip: tr.addMarkerHere,
                         icon: const Icon(Icons.bookmark_add_outlined),
                         onPressed: c == null ? null : _addMarker,
                       ),
                     if (_sources.length > 1)
                       IconButton(
-                        tooltip: 'Flux',
+                        tooltip: tr.streams,
                         icon: const Icon(Icons.high_quality_outlined),
                         onPressed: _pickSource,
                       ),
@@ -607,21 +600,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         _ => _pickSpeed(),
                       },
                       itemBuilder: (_) => [
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'speed',
                           child: ListTile(
-                            leading: Icon(Icons.speed),
-                            title: Text('Vitesse de lecture'),
+                            leading: const Icon(Icons.speed),
+                            title: Text(tr.playbackSpeed),
                           ),
                         ),
                         if (!widget.offline)
-                          const PopupMenuItem(
+                          PopupMenuItem(
                             value: 'cover',
                             child: ListTile(
-                              leading: Icon(Icons.wallpaper),
-                              title: Text(
-                                'Utiliser cette image comme couverture',
-                              ),
+                              leading: const Icon(Icons.wallpaper),
+                              title: Text(tr.useFrameAsCover),
                             ),
                           ),
                       ],

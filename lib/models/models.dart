@@ -1,6 +1,8 @@
 /// Plain data classes mapped from the Stash GraphQL schema.
 library;
 
+import '../l10n/l10n.dart';
+
 int? _int(dynamic v) => v is num ? v.toInt() : null;
 double? _double(dynamic v) => v is num ? v.toDouble() : null;
 List<T> _list<T>(dynamic v, T Function(Map<String, dynamic>) f) =>
@@ -190,7 +192,7 @@ class Scene {
   String get displayTitle {
     if (title != null && title!.isNotEmpty) return title!;
     final p = file?.path;
-    if (p == null || p.isEmpty) return 'Scène $id';
+    if (p == null || p.isEmpty) return tr.sceneNumber(id);
     return p.split(RegExp(r'[\\/]')).last;
   }
 
@@ -226,7 +228,7 @@ class Scene {
           id: g['id'] as String,
           name: (g['title'] as String?)?.isNotEmpty == true
               ? g['title'] as String
-              : 'Galerie ${g['id']}',
+              : tr.galleryNumber('${g['id']}'),
         ),
       ),
       groups: _list(
@@ -461,7 +463,7 @@ class Gallery {
     if (folderPath != null && folderPath!.isNotEmpty) {
       return folderPath!.split(RegExp(r'[\\/]')).last;
     }
-    return 'Galerie $id';
+    return tr.galleryNumber(id);
   }
 
   factory Gallery.fromJson(Map<String, dynamic> j) {

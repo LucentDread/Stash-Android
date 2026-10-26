@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
+import '../utils/format.dart';
 import '../widgets/view_list.dart';
 import 'scene_filter_screen.dart';
 
@@ -45,9 +47,8 @@ class _ViewEditScreenState extends State<ViewEditScreen> {
   void _save() {
     final name = _name.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Donnez un nom à la vue')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(tr.nameTheView)));
       return;
     }
     context.read<AppState>().saveView(
@@ -73,14 +74,11 @@ class _ViewEditScreenState extends State<ViewEditScreen> {
     final sorts = sortsFor(_kind);
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.view == null ? 'Nouvelle vue' : 'Modifier la vue'),
+        title: Text(widget.view == null ? tr.newView : tr.editView),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: FilledButton(
-              onPressed: _save,
-              child: const Text('Enregistrer'),
-            ),
+            child: FilledButton(onPressed: _save, child: Text(tr.save)),
           ),
         ],
       ),
@@ -89,9 +87,9 @@ class _ViewEditScreenState extends State<ViewEditScreen> {
         children: [
           DropdownButtonFormField<ViewKind>(
             initialValue: _kind,
-            decoration: const InputDecoration(
-              labelText: 'Contenu',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: tr.content,
+              border: const OutlineInputBorder(),
             ),
             items: [
               for (final k in ViewKind.values)
@@ -119,17 +117,17 @@ class _ViewEditScreenState extends State<ViewEditScreen> {
           TextField(
             controller: _name,
             autofocus: widget.view == null,
-            decoration: const InputDecoration(
-              labelText: 'Nom *',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: tr.nameRequired,
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _query,
-            decoration: const InputDecoration(
-              labelText: 'Recherche (optionnelle)',
-              prefixIcon: Icon(Icons.search),
+            decoration: InputDecoration(
+              labelText: tr.searchOptional,
+              prefixIcon: const Icon(Icons.search),
               border: OutlineInputBorder(),
             ),
           ),
@@ -143,9 +141,9 @@ class _ViewEditScreenState extends State<ViewEditScreen> {
                   initialValue: sorts.any((o) => o.value == _sort)
                       ? _sort
                       : sorts.first.value,
-                  decoration: const InputDecoration(
-                    labelText: 'Tri',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: tr.sortField,
+                    border: const OutlineInputBorder(),
                   ),
                   items: [
                     for (final o in sorts)
@@ -156,7 +154,7 @@ class _ViewEditScreenState extends State<ViewEditScreen> {
               ),
               const SizedBox(width: 8),
               IconButton.outlined(
-                tooltip: _descending ? 'Décroissant' : 'Croissant',
+                tooltip: _descending ? tr.descending : tr.ascending,
                 icon: Icon(
                   _descending ? Icons.arrow_downward : Icons.arrow_upward,
                 ),
@@ -166,16 +164,16 @@ class _ViewEditScreenState extends State<ViewEditScreen> {
           ),
           const SizedBox(height: 16),
           InputDecorator(
-            decoration: const InputDecoration(
-              labelText: 'Filtre',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: tr.filter,
+              border: const OutlineInputBorder(),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (criteria.isEmpty)
                   Text(
-                    'Sans filtre (${_kind.label.toLowerCase()} : tout)',
+                    tr.noFilterAll(inSentence(_kind.label)),
                     style: theme.textTheme.bodyMedium,
                   )
                 else
@@ -194,7 +192,7 @@ class _ViewEditScreenState extends State<ViewEditScreen> {
                 FilledButton.tonalIcon(
                   onPressed: _editFilter,
                   icon: const Icon(Icons.filter_list),
-                  label: const Text('Modifier le filtre'),
+                  label: Text(tr.editFilter),
                 ),
               ],
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../services/system_bridge.dart';
 import '../services/updater.dart';
 import '../utils/format.dart';
@@ -19,7 +20,7 @@ Future<void> checkForUpdates(
   } catch (e) {
     if (manual) {
       messenger?.showSnackBar(
-        SnackBar(content: Text('Recherche impossible : $e')),
+        SnackBar(content: Text(tr.updateCheckFailed('$e'))),
       );
     }
     return;
@@ -27,9 +28,7 @@ Future<void> checkForUpdates(
   if (!context.mounted) return;
   if (info == null) {
     if (manual) {
-      messenger?.showSnackBar(
-        const SnackBar(content: Text('L\'application est à jour')),
-      );
+      messenger?.showSnackBar(SnackBar(content: Text(tr.upToDate)));
     }
     return;
   }
@@ -59,9 +58,8 @@ Future<void> showUpdateDialog(
     await SystemBridge.instance.installApk(path);
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.maybeOf(
-        context,
-      )?.showSnackBar(SnackBar(content: Text('Installation impossible : $e')));
+      ScaffoldMessenger.maybeOf(context)
+          ?.showSnackBar(SnackBar(content: Text(tr.installFailed('$e'))));
     }
   }
 }
@@ -76,7 +74,7 @@ class _UpdateDialog extends StatelessWidget {
     final latest = info.latest;
     return AlertDialog(
       icon: const Icon(Icons.system_update),
-      title: Text('Version ${latest.version} disponible'),
+      title: Text(tr.versionAvailable(latest.version)),
       content: SizedBox(
         width: double.maxFinite,
         child: ListView(
@@ -86,7 +84,7 @@ class _UpdateDialog extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 4),
                 child: Text(
-                  'Nouveautés de la ${r.version}',
+                  tr.whatsNewIn(r.version),
                   style: theme.textTheme.titleSmall,
                 ),
               ),
@@ -108,14 +106,14 @@ class _UpdateDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Plus tard'),
+          child: Text(tr.later),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, true),
           child: Text(
             latest.apkSize > 0
-                ? 'Installer (${formatBytes(latest.apkSize)})'
-                : 'Installer',
+                ? tr.installWithSize(formatBytes(latest.apkSize))
+                : tr.install,
           ),
         ),
       ],
@@ -164,9 +162,9 @@ class _DownloadDialogState extends State<_DownloadDialog> {
   Widget build(BuildContext context) {
     final p = _progress;
     return AlertDialog(
-      title: Text('Téléchargement de la ${widget.release.version}'),
+      title: Text(tr.downloadingVersion(widget.release.version)),
       content: _error != null
-          ? Text('Échec : $_error')
+          ? Text(tr.failedWith('$_error'))
           : Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -175,20 +173,16 @@ class _DownloadDialogState extends State<_DownloadDialog> {
                 const SizedBox(height: 8),
                 Text(p == null ? '…' : '${(p * 100).round()} %'),
                 const SizedBox(height: 8),
-                const Text(
-                  'Android demandera ensuite de confirmer l\'installation '
-                  '(et, la première fois, d\'autoriser Stash à installer '
-                  'des applications).',
-                ),
+                Text(tr.installHint),
               ],
             ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
+          child: Text(tr.cancel),
         ),
         if (_error != null)
-          FilledButton(onPressed: _start, child: const Text('Réessayer')),
+          FilledButton(onPressed: _start, child: Text(tr.retry)),
       ],
     );
   }

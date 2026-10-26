@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../services/app_state.dart';
 
 /// Server connection form, shown on first launch and from the settings.
@@ -31,7 +32,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
   Future<void> _connect() async {
     if (_url.text.trim().isEmpty) {
-      setState(() => _error = 'Saisissez l\'adresse du serveur.');
+      setState(() => _error = tr.enterServerAddress);
       return;
     }
     setState(() {
@@ -42,7 +43,7 @@ class _SetupScreenState extends State<SetupScreen> {
       final version = await _state.configure(_url.text, _key.text);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Connecté à Stash $version')));
+          .showSnackBar(SnackBar(content: Text(tr.connectedTo(version))));
       if (widget.popOnSuccess) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -55,9 +56,7 @@ class _SetupScreenState extends State<SetupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: widget.popOnSuccess
-          ? AppBar(title: const Text('Serveur Stash'))
-          : null,
+      appBar: widget.popOnSuccess ? AppBar(title: Text(tr.stashServer)) : null,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -82,7 +81,7 @@ class _SetupScreenState extends State<SetupScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Connectez-vous à votre serveur Stash',
+                        tr.connectPrompt,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium,
                       ),
@@ -93,11 +92,11 @@ class _SetupScreenState extends State<SetupScreen> {
                       keyboardType: TextInputType.url,
                       autocorrect: false,
                       autofillHints: const [AutofillHints.url],
-                      decoration: const InputDecoration(
-                        labelText: 'Adresse du serveur',
+                      decoration: InputDecoration(
+                        labelText: tr.serverAddress,
                         hintText: 'http://192.168.1.10:9999',
-                        prefixIcon: Icon(Icons.dns_outlined),
-                        border: OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.dns_outlined),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -107,10 +106,8 @@ class _SetupScreenState extends State<SetupScreen> {
                       autocorrect: false,
                       enableSuggestions: false,
                       decoration: InputDecoration(
-                        labelText: 'Clé API (optionnelle)',
-                        helperText:
-                            'Stash > Paramètres > Sécurité > Clé API. '
-                            'Requise si l\'authentification est activée.',
+                        labelText: tr.apiKeyOptional,
+                        helperText: tr.apiKeyHelp,
                         helperMaxLines: 2,
                         prefixIcon: const Icon(Icons.key_outlined),
                         border: const OutlineInputBorder(),
@@ -139,7 +136,7 @@ class _SetupScreenState extends State<SetupScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.login),
-                      label: const Text('Se connecter'),
+                      label: Text(tr.connect),
                     ),
                   ],
                 ),

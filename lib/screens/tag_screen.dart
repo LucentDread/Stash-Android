@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
 import '../widgets/async_view.dart';
@@ -31,10 +32,10 @@ class TagScreen extends StatelessWidget {
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
                 tabs: [
-                  Tab(text: 'Scènes (${t.sceneCount})'),
-                  Tab(text: 'Marqueurs (${t.markerCount})'),
-                  Tab(text: 'Performeurs (${t.performerCount})'),
-                  Tab(text: 'Galeries (${t.galleryCount})'),
+                  Tab(text: '${tr.scenes} (${t.sceneCount})'),
+                  Tab(text: '${tr.markers} (${t.markerCount})'),
+                  Tab(text: '${tr.performers} (${t.performerCount})'),
+                  Tab(text: '${tr.galleries} (${t.galleryCount})'),
                 ],
               ),
             ),

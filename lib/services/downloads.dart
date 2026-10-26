@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import 'app_state.dart';
 
@@ -250,7 +251,7 @@ class DownloadManager extends ChangeNotifier {
 
   StashRepository get _repo {
     final repo = _app.repo;
-    if (repo == null) throw StateError('Aucun serveur configuré');
+    if (repo == null) throw StateError(tr.noServerConfigured);
     return repo;
   }
 
@@ -258,7 +259,7 @@ class DownloadManager extends ChangeNotifier {
 
   String _url(String? url) {
     final u = _app.client?.mediaUrl(url);
-    if (u == null) throw StateError('Fichier indisponible');
+    if (u == null) throw StateError(tr.fileUnavailable);
     return u;
   }
 
@@ -421,7 +422,7 @@ class DownloadManager extends ChangeNotifier {
     final image = await _repo.findImage(id);
     final title = (image.title?.isNotEmpty ?? false)
         ? image.title!
-        : 'Image $id';
+        : tr.imageNumber(id);
     final path = 'image_$id/image.img';
     await _add(
       OfflineEntry(

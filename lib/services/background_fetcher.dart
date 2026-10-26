@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../l10n/l10n.dart';
 import 'downloads.dart';
 
 /// [FileFetcher] backed by background_downloader: transfers continue when
@@ -39,10 +40,10 @@ class BackgroundFetcher implements FileFetcher {
     );
     _downloader.configureNotificationForGroup(
       _videos,
-      running: const TaskNotification('Téléchargement', '{displayName}'),
-      complete: const TaskNotification('Téléchargé', '{displayName}'),
-      error: const TaskNotification('Échec du téléchargement', '{displayName}'),
-      paused: const TaskNotification('En pause', '{displayName}'),
+      running: TaskNotification(tr.notifDownloading, '{displayName}'),
+      complete: TaskNotification(tr.notifDownloaded, '{displayName}'),
+      error: TaskNotification(tr.notifDownloadFailed, '{displayName}'),
+      paused: TaskNotification(tr.notifPaused, '{displayName}'),
       progressBar: true,
     );
     // Listens for the app's lifetime, like the downloader itself.

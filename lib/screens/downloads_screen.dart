@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
 import '../services/downloads.dart';
@@ -18,7 +19,7 @@ class DownloadsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final downloads = context.read<AppState>().downloads;
     return Scaffold(
-      appBar: AppBar(title: const Text('Téléchargements')),
+      appBar: AppBar(title: Text(tr.downloads)),
       body: FutureBuilder(
         future: downloads.init(),
         builder: (context, snap) {
@@ -29,26 +30,20 @@ class DownloadsScreen extends StatelessWidget {
             listenable: downloads,
             builder: (context, _) {
               if (downloads.isEmpty) {
-                return const Center(
+                return Center(
                   child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Text(
-                      'Aucun téléchargement.\n\nUtilisez le bouton de '
-                      'téléchargement d\'une scène, d\'un groupe, d\'une '
-                      'galerie ou d\'une image (dans la visionneuse) pour la '
-                      'garder sur le téléphone.',
-                      textAlign: TextAlign.center,
-                    ),
+                    padding: const EdgeInsets.all(32),
+                    child: Text(tr.noDownloads, textAlign: TextAlign.center),
                   ),
                 );
               }
               return ListView(
                 children: [
-                  for (final (kind, title) in const [
-                    (OfflineKind.scene, 'Scènes'),
-                    (OfflineKind.group, 'Groupes'),
-                    (OfflineKind.gallery, 'Galeries'),
-                    (OfflineKind.image, 'Images'),
+                  for (final (kind, title) in [
+                    (OfflineKind.scene, tr.scenes),
+                    (OfflineKind.group, tr.groups),
+                    (OfflineKind.gallery, tr.galleries),
+                    (OfflineKind.image, tr.images),
                   ])
                     if (downloads.entries(kind).isNotEmpty) ...[
                       _Header(title),
@@ -128,18 +123,18 @@ class DownloadTile extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Supprimer « ${entry.title} » du téléphone ?'),
+        title: Text(tr.deleteFromPhoneQuestion(entry.title)),
         content: entry.kind == OfflineKind.group
-            ? const Text('Les scènes de ce groupe seront aussi supprimées.')
+            ? Text(tr.groupScenesDeletedToo)
             : null,
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Supprimer'),
+            child: Text(tr.delete),
           ),
         ],
       ),
@@ -154,19 +149,19 @@ class DownloadTile extends StatelessWidget {
     final theme = Theme.of(context);
     final details = switch (entry.kind) {
       OfflineKind.scene => [if (entry.bytes != null) formatBytes(entry.bytes!)],
-      OfflineKind.group => ['${entry.sceneIds.length} scènes'],
-      OfflineKind.gallery => ['${entry.files.length} images'],
+      OfflineKind.group => [tr.countScenes(entry.sceneIds.length)],
+      OfflineKind.gallery => [tr.countImages(entry.files.length)],
       OfflineKind.image => <String>[],
     };
     final status = switch (state) {
-      FileState.done => 'Téléchargé',
-      FileState.failed => 'Échec : touchez ⋮ pour réessayer',
-      FileState.paused => 'En pause',
-      FileState.queued => 'En attente',
+      FileState.done => tr.notifDownloaded,
+      FileState.failed => tr.downloadFailedRetry,
+      FileState.paused => tr.notifPaused,
+      FileState.queued => tr.downloadQueued,
       FileState.running =>
         progress == null
-            ? 'Téléchargement…'
-            : 'Téléchargement · ${(progress * 100).floor()} %',
+            ? tr.downloadRunning
+            : tr.downloadProgress((progress * 100).floor()),
     };
     final done = state == FileState.done;
 
@@ -213,8 +208,8 @@ class DownloadTile extends StatelessWidget {
             v == 'retry' ? downloads.retry(entry) : _delete(context, downloads),
         itemBuilder: (_) => [
           if (state == FileState.failed)
-            const PopupMenuItem(value: 'retry', child: Text('Réessayer')),
-          const PopupMenuItem(value: 'delete', child: Text('Supprimer')),
+            PopupMenuItem(value: 'retry', child: Text(tr.retry)),
+          PopupMenuItem(value: 'delete', child: Text(tr.delete)),
         ],
       ),
     );

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../models/home_section.dart';
 import '../services/app_state.dart';
 import '../widgets/view_list.dart';
 
-/// Plus > Page d'accueil: what the custom home page and the default
+/// More > Home page: what the custom home page and the default
 /// dashboard show, in which order: dashboard sections and saved views.
 class HomeLayoutScreen extends StatelessWidget {
   const HomeLayoutScreen({super.key});
@@ -17,11 +18,11 @@ class HomeLayoutScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Page d\'accueil'),
-          bottom: const TabBar(
+          title: Text(tr.homePage),
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Accueil'),
-              Tab(text: 'Accueil par défaut'),
+              Tab(text: tr.home),
+              Tab(text: tr.defaultHome),
             ],
           ),
         ),
@@ -31,20 +32,14 @@ class HomeLayoutScreen extends StatelessWidget {
               key: const PageStorageKey('home'),
               ids: app.homeLayout,
               onChanged: (ids) => app.homeLayout = ids,
-              intro:
-                  'Éléments empilés sur la page d\'accueil, dans cet ordre. '
-                  'Sans rien de coché, l\'accueil par défaut est utilisé ; '
-                  'avec une seule vue, elle remplit la page et lui donne '
-                  'son nom.',
+              intro: tr.homeLayoutIntro,
             ),
             _LayoutEditor(
               key: const PageStorageKey('dashboard'),
               ids: app.dashboardLayout,
               onChanged: (ids) => app.dashboardLayout = ids,
               onReset: () => app.dashboardLayout = null,
-              intro:
-                  'Lignes de l\'accueil par défaut (ouvert par le bouton en '
-                  'haut à droite d\'un accueil personnalisé), dans cet ordre.',
+              intro: tr.dashboardLayoutIntro,
             ),
           ],
         ),
@@ -141,7 +136,7 @@ class _LayoutEditorState extends State<_LayoutEditor> {
                 });
               },
               icon: const Icon(Icons.restart_alt),
-              label: const Text('Lignes par défaut'),
+              label: Text(tr.defaultRows),
             ),
           ),
         ReorderableListView(
@@ -196,7 +191,7 @@ class _LayoutEditorState extends State<_LayoutEditor> {
   (IconData, String, String)? _item(AppState app, String id) {
     final section = HomeSection.fromId(id);
     if (section != null) {
-      return (_sectionIcon(section), section.label, 'Section de l\'accueil');
+      return (_sectionIcon(section), section.label, tr.homeSection);
     }
     final view = app.viewById(id);
     if (view == null) return null;
@@ -204,8 +199,8 @@ class _LayoutEditorState extends State<_LayoutEditor> {
       viewKindIcon(view.kind),
       view.name,
       view.remote
-          ? 'Filtre de Stash (web) · ${view.kind.label}'
-          : 'Vue · ${view.kind.label}',
+          ? tr.webFilterOf(view.kind.label)
+          : tr.viewOf(view.kind.label),
     );
   }
 

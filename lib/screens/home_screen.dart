@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/home_section.dart';
 import '../models/models.dart';
 import '../models/scene_filter.dart';
@@ -45,10 +46,10 @@ class _HomeTabState extends State<HomeTab> {
     );
     return Scaffold(
       appBar: AppBar(
-        title: BrandTitle(page: single?.name ?? 'Accueil'),
+        title: BrandTitle(page: single?.name ?? tr.home),
         actions: [
           IconButton(
-            tooltip: 'Accueil par défaut',
+            tooltip: tr.defaultHome,
             icon: const Icon(Icons.dashboard_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
@@ -202,7 +203,7 @@ class _ViewSectionState extends State<_ViewSection> {
       child: Row(
         children: [
           PopupMenuButton<String>(
-            tooltip: 'Trier',
+            tooltip: tr.sort,
             initialValue: view.sort,
             onSelected: (v) => widget.onSort(v, view.descending),
             itemBuilder: (_) => [
@@ -216,13 +217,13 @@ class _ViewSectionState extends State<_ViewSection> {
                 children: [
                   const Icon(Icons.sort, size: 18),
                   const SizedBox(width: 4),
-                  Text(current?.label ?? 'Trier', style: small),
+                  Text(current?.label ?? tr.sort, style: small),
                 ],
               ),
             ),
           ),
           IconButton(
-            tooltip: view.descending ? 'Décroissant' : 'Croissant',
+            tooltip: view.descending ? tr.descending : tr.ascending,
             visualDensity: VisualDensity.compact,
             icon: Icon(
               view.descending ? Icons.arrow_downward : Icons.arrow_upward,
@@ -276,7 +277,7 @@ class _ViewSectionState extends State<_ViewSection> {
                       builder: (_) => ViewScreen(view: widget.view),
                     ),
                   ),
-                  child: const Text('Voir tout'),
+                  child: Text(tr.seeAll),
                 ),
               ],
             ),
@@ -305,7 +306,7 @@ class _ViewSectionState extends State<_ViewSection> {
                   ? TextButton.icon(
                       onPressed: _loadMore,
                       icon: const Icon(Icons.refresh),
-                      label: Text('Erreur : $_error', maxLines: 2),
+                      label: Text(tr.errorWith('$_error'), maxLines: 2),
                     )
                   : _loading
                   ? const Padding(
@@ -313,15 +314,15 @@ class _ViewSectionState extends State<_ViewSection> {
                       child: CircularProgressIndicator(),
                     )
                   : _page > 0 && _items.isEmpty
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Text('Rien pour le moment'),
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(tr.nothingYet),
                     )
                   : more
                   ? OutlinedButton.icon(
                       onPressed: _loadMore,
                       icon: const Icon(Icons.expand_more),
-                      label: Text('Afficher plus (${_count - _items.length})'),
+                      label: Text(tr.showMore(_count - _items.length)),
                     )
                   : null,
             ),
@@ -392,9 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: widget.standalone
-            ? const Text('Accueil par défaut')
-            : const BrandTitle(),
+        title: widget.standalone ? Text(tr.defaultHome) : const BrandTitle(),
       ),
       body: RefreshIndicator(
         onRefresh: () async => setState(() => _refresh++),
@@ -503,7 +502,7 @@ class _StatsRowState extends State<_StatsRow> {
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              'Serveur injoignable : ${snap.error}',
+              tr.serverUnreachableShort('${snap.error}'),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           );
@@ -511,13 +510,13 @@ class _StatsRowState extends State<_StatsRow> {
         final s = snap.data;
         if (s == null) return const SizedBox(height: 8);
         final chips = [
-          ('${s.sceneCount}', 'scènes', Icons.movie),
-          ('${(s.scenesDuration / 3600).round()}', 'heures', Icons.schedule),
-          (formatBytes(s.scenesSize), '', Icons.storage),
-          ('${s.performerCount}', 'performeurs', Icons.people),
-          ('${s.studioCount}', 'studios', Icons.business),
-          ('${s.imageCount}', 'images', Icons.image),
-          ('${s.tagCount}', 'tags', Icons.label),
+          (tr.countScenes(s.sceneCount), Icons.movie),
+          (tr.countHours((s.scenesDuration / 3600).round()), Icons.schedule),
+          (formatBytes(s.scenesSize), Icons.storage),
+          (tr.countPerformers(s.performerCount), Icons.people),
+          (tr.countStudios(s.studioCount), Icons.business),
+          (tr.countImages(s.imageCount), Icons.image),
+          (tr.countTags(s.tagCount), Icons.label),
         ];
         return SizedBox(
           height: 44,
@@ -527,10 +526,10 @@ class _StatsRowState extends State<_StatsRow> {
             itemCount: chips.length,
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (_, i) {
-              final (value, label, icon) = chips[i];
+              final (label, icon) = chips[i];
               return Chip(
                 avatar: Icon(icon, size: 16),
-                label: Text('$value $label'.trim()),
+                label: Text(label),
                 visualDensity: VisualDensity.compact,
               );
             },
@@ -601,7 +600,7 @@ class _RowState<T> extends State<_Row<T>> {
                   if (widget.onSeeAll != null)
                     TextButton(
                       onPressed: widget.onSeeAll,
-                      child: const Text('Voir tout'),
+                      child: Text(tr.seeAll),
                     ),
                 ],
               ),
@@ -611,7 +610,7 @@ class _RowState<T> extends State<_Row<T>> {
               child: items == null
                   ? const Center(child: CircularProgressIndicator())
                   : items.isEmpty
-                  ? const Center(child: Text('Rien pour le moment'))
+                  ? Center(child: Text(tr.nothingYet))
                   : ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 12),

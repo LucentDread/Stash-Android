@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../l10n/l10n.dart';
+
 /// A published version of the app (GitHub release).
 class Release {
   const Release({
@@ -55,7 +57,7 @@ class Updater {
       headers: {'Accept': 'application/vnd.github+json'},
     );
     if (res.statusCode != 200) {
-      throw HttpException('GitHub a répondu ${res.statusCode}');
+      throw HttpException(tr.githubError(res.statusCode));
     }
     final current = parseVersion(await _currentVersion());
     final newer = <Release>[];
@@ -117,7 +119,7 @@ class Updater {
       http.Request('GET', Uri.parse(release.apkUrl!)),
     );
     if (res.statusCode != 200) {
-      throw HttpException('Téléchargement refusé (${res.statusCode})');
+      throw HttpException(tr.downloadRefused(res.statusCode));
     }
     final total = res.contentLength ?? release.apkSize;
     final sink = file.openWrite();
@@ -132,7 +134,7 @@ class Updater {
       await sink.close();
     }
     if (total > 0 && received != total) {
-      throw const HttpException('Téléchargement incomplet');
+      throw HttpException(tr.downloadIncomplete);
     }
     return file;
   }

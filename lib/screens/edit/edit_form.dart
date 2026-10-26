@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../api/stash_repository.dart';
+import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../utils/format.dart';
 import '../../widgets/detail_widgets.dart';
@@ -66,7 +67,7 @@ class TextEditField extends EditField {
 
   @override
   String? validate() => required && controller.text.trim().isEmpty
-      ? '$label est obligatoire'
+      ? tr.fieldRequired(label)
       : null;
 
   @override
@@ -91,7 +92,7 @@ class TextEditField extends EditField {
 /// Date as Stash stores it: `YYYY-MM-DD` (or `YYYY-MM` / `YYYY`).
 class DateEditField extends TextEditField {
   DateEditField(super.key, super.label, super.initial)
-    : super(hint: 'AAAA-MM-JJ');
+    : super(hint: tr.dateHint);
 
   static final _pattern = RegExp(r'^\d{4}(-\d{2}(-\d{2})?)?$');
 
@@ -100,7 +101,7 @@ class DateEditField extends TextEditField {
     final t = controller.text.trim();
     return t.isEmpty || _pattern.hasMatch(t)
         ? null
-        : '$label : format AAAA-MM-JJ attendu';
+        : tr.dateFormatExpected(label, tr.dateHint);
   }
 
   @override
@@ -167,7 +168,7 @@ class IntEditField extends EditField {
     final t = controller.text.trim();
     return t.isEmpty || int.tryParse(t) != null
         ? null
-        : '$label : nombre entier attendu';
+        : tr.integerExpected(label);
   }
 
   @override
@@ -249,7 +250,7 @@ class RatingEditField extends EditField {
   RatingEditField(int? initial)
     : _initial = initial,
       value = initial,
-      super('rating100', 'Note');
+      super('rating100', tr.sortRating);
 
   final int? _initial;
   int? value;
@@ -348,7 +349,7 @@ class RefEditField extends EditField {
 
   @override
   String? validate() =>
-      required && value == null ? '$label est obligatoire' : null;
+      required && value == null ? tr.fieldRequired(label) : null;
 
   @override
   bool get changed => value?.id != _initialId;
@@ -360,7 +361,7 @@ class RefEditField extends EditField {
   Widget build(BuildContext context, VoidCallback onChanged) => _RefsEditor(
     label: required ? '$label *' : label,
     items: [?value],
-    addLabel: value == null ? 'Choisir' : 'Changer',
+    addLabel: value == null ? tr.choose : tr.change,
     onAdd: () async {
       final picked = await Navigator.of(context).push<List<TagRef>>(
         MaterialPageRoute(
@@ -413,7 +414,7 @@ class _RefsEditor extends StatelessWidget {
             InputChip(label: Text(r.name), onDeleted: () => onRemove(r)),
           ActionChip(
             avatar: const Icon(Icons.edit_outlined, size: 18),
-            label: Text(addLabel ?? (items.isEmpty ? 'Ajouter' : 'Modifier')),
+            label: Text(addLabel ?? (items.isEmpty ? tr.add : tr.edit)),
             onPressed: onAdd,
           ),
         ],
@@ -489,7 +490,7 @@ class StringListEditField extends EditField {
             onChanged: (_) => onChanged(),
             onSubmitted: (_) => add(),
             decoration: InputDecoration(
-              hintText: hint ?? 'Ajouter…',
+              hintText: hint ?? tr.addHint,
               isDense: true,
               suffixIcon: IconButton(
                 icon: const Icon(Icons.add),
@@ -546,8 +547,8 @@ class TimeEditField extends EditField {
   @override
   String? validate() {
     final t = controller.text.trim();
-    if (t.isEmpty) return required ? '$label est obligatoire' : null;
-    return parse(t) == null ? '$label : format m:ss attendu' : null;
+    if (t.isEmpty) return required ? tr.fieldRequired(label) : null;
+    return parse(t) == null ? tr.timeFormatExpected(label) : null;
   }
 
   @override
@@ -624,11 +625,11 @@ class ImageEditField extends EditField {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Utiliser'),
+            child: Text(tr.use),
           ),
         ],
       ),
@@ -666,12 +667,12 @@ class ImageEditField extends EditField {
                 TextButton.icon(
                   onPressed: () => _pick(onChanged),
                   icon: const Icon(Icons.photo_library_outlined),
-                  label: const Text('Depuis le téléphone'),
+                  label: Text(tr.fromPhone),
                 ),
                 TextButton.icon(
                   onPressed: () => _fromUrl(context, onChanged),
                   icon: const Icon(Icons.link),
-                  label: const Text('Depuis une URL'),
+                  label: Text(tr.fromUrl),
                 ),
                 if (value != null)
                   TextButton.icon(
@@ -681,7 +682,7 @@ class ImageEditField extends EditField {
                       onChanged();
                     },
                     icon: const Icon(Icons.undo),
-                    label: const Text('Annuler'),
+                    label: Text(tr.cancel),
                   ),
               ],
             ),
@@ -701,7 +702,7 @@ class EditScreen extends StatefulWidget {
     required this.save,
     this.create = false,
     this.delete,
-    this.deleteLabel = 'Supprimer',
+    this.deleteLabel,
     this.extraActions,
   });
 
@@ -719,7 +720,7 @@ class EditScreen extends StatefulWidget {
 
   /// Shows a delete action (with confirmation) when set.
   final Future<void> Function()? delete;
-  final String deleteLabel;
+  final String? deleteLabel;
 
   @override
   State<EditScreen> createState() => _EditScreenState();
@@ -756,7 +757,7 @@ class _EditScreenState extends State<EditScreen> {
     try {
       await widget.save(input);
       if (!mounted) return;
-      messenger.showSnackBar(const SnackBar(content: Text('Enregistré')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.saved)));
       Navigator.of(context).pop(true);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -770,16 +771,16 @@ class _EditScreenState extends State<EditScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('${widget.deleteLabel} ?'),
-        content: const Text('Cette action est définitive.'),
+        title: Text(tr.questionOf(widget.deleteLabel ?? tr.delete)),
+        content: Text(tr.cannotBeUndone),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Supprimer'),
+            child: Text(tr.delete),
           ),
         ],
       ),
@@ -788,7 +789,7 @@ class _EditScreenState extends State<EditScreen> {
     setState(() => _saving = true);
     try {
       await widget.delete!();
-      messenger.showSnackBar(const SnackBar(content: Text('Supprimé')));
+      messenger.showSnackBar(SnackBar(content: Text(tr.deleted)));
       navigator.pop(true);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -800,15 +801,15 @@ class _EditScreenState extends State<EditScreen> {
     final discard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Abandonner les modifications ?'),
+        title: Text(tr.discardChangesQuestion),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Continuer'),
+            child: Text(tr.continueEditing),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Abandonner'),
+            child: Text(tr.discard),
           ),
         ],
       ),
@@ -833,7 +834,7 @@ class _EditScreenState extends State<EditScreen> {
             ...?widget.extraActions?.call(context, () => setState(() {})),
             if (widget.delete != null)
               IconButton(
-                tooltip: widget.deleteLabel,
+                tooltip: widget.deleteLabel ?? tr.delete,
                 icon: const Icon(Icons.delete_outline),
                 onPressed: _saving ? null : _delete,
               ),
@@ -848,7 +849,7 @@ class _EditScreenState extends State<EditScreen> {
                         dimension: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Enregistrer'),
+                    : Text(tr.save),
               ),
             ),
           ],

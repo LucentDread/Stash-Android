@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../api/stash_repository.dart';
+import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../services/app_state.dart';
+import '../../utils/format.dart';
 import 'edit_form.dart';
 import 'scrape.dart';
 
@@ -15,7 +17,7 @@ Future<bool> _open(
   required String id,
   required List<EditField> fields,
   Future<void> Function()? delete,
-  String deleteLabel = 'Supprimer',
+  String? deleteLabel,
   List<Widget> Function(BuildContext, VoidCallback)? extraActions,
 }) async {
   final repo = context.read<AppState>().repo!;
@@ -34,36 +36,39 @@ Future<bool> _open(
   return saved ?? false;
 }
 
-const _genders = <String?, String>{
+Map<String?, String> get _genders => {
   null: '—',
-  'FEMALE': 'Femme',
-  'MALE': 'Homme',
-  'TRANSGENDER_FEMALE': 'Femme trans',
-  'TRANSGENDER_MALE': 'Homme trans',
-  'INTERSEX': 'Intersexe',
-  'NON_BINARY': 'Non-binaire',
+  for (final g in const [
+    'FEMALE',
+    'MALE',
+    'TRANSGENDER_FEMALE',
+    'TRANSGENDER_MALE',
+    'INTERSEX',
+    'NON_BINARY',
+  ])
+    g: genderLabel(g),
 };
 
 /// Editable fields of a scene.
 List<EditField> sceneFields(Scene s) => [
-  ImageEditField('cover_image', 'Couverture', s.screenshot),
-  TextEditField('title', 'Titre', s.title),
-  TextEditField('code', 'Code', s.code),
-  DateEditField('date', 'Date', s.date),
-  TextEditField('director', 'Réalisateur', s.director),
+  ImageEditField('cover_image', tr.cover, s.screenshot),
+  TextEditField('title', tr.sortTitle, s.title),
+  TextEditField('code', tr.code, s.code),
+  DateEditField('date', tr.date, s.date),
+  TextEditField('director', tr.director, s.director),
   RatingEditField(s.rating100),
-  BoolEditField('organized', 'Organisée', s.organized),
-  RefEditField('studio_id', 'Studio', RefKind.studios, s.studio),
+  BoolEditField('organized', tr.organized, s.organized),
+  RefEditField('studio_id', tr.studio, RefKind.studios, s.studio),
   RefsEditField(
     'performer_ids',
-    'Performeurs',
+    tr.performers,
     RefKind.performers,
     s.performers,
   ),
-  RefsEditField('tag_ids', 'Tags', RefKind.tags, s.tags),
+  RefsEditField('tag_ids', tr.tags, RefKind.tags, s.tags),
   RefsEditField(
     'groups',
-    'Groupes',
+    tr.groups,
     RefKind.groups,
     s.groups,
     // Keep each group's scene number; new groups get none.
@@ -74,8 +79,8 @@ List<EditField> sceneFields(Scene s) => [
       ],
     },
   ),
-  StringListEditField('urls', 'Liens', s.urls, hint: 'https://…'),
-  TextEditField('details', 'Description', s.details, multiline: true),
+  StringListEditField('urls', tr.links, s.urls, hint: 'https://…'),
+  TextEditField('details', tr.description, s.details, multiline: true),
 ];
 
 /// Opens an edit form with a "Scraper" button filling its [fields].
@@ -94,7 +99,7 @@ Future<bool> _openScrapable(
   fields: fields,
   extraActions: (context, refresh) => [
     IconButton(
-      tooltip: 'Scraper',
+      tooltip: tr.scrape,
       icon: const Icon(Icons.travel_explore),
       onPressed: () async {
         if (await scrapeIntoFields(context, scrapeKind, id, fields)) {
@@ -107,7 +112,7 @@ Future<bool> _openScrapable(
 
 Future<bool> editScene(BuildContext context, Scene s) => _openScrapable(
   context,
-  title: 'Modifier la scène',
+  title: tr.editScene,
   kind: EditKind.scene,
   scrapeKind: ScrapeKind.scene,
   id: s.id,
@@ -116,33 +121,33 @@ Future<bool> editScene(BuildContext context, Scene s) => _openScrapable(
 
 /// Editable fields of a performer.
 List<EditField> performerFields(Performer p) => [
-  ImageEditField('image', 'Photo', p.imagePath),
-  TextEditField('name', 'Nom', p.name, required: true),
-  TextEditField('disambiguation', 'Désambiguïsation', p.disambiguation),
-  StringListEditField('alias_list', 'Alias', p.aliases),
-  ChoiceEditField('gender', 'Genre', p.gender, _genders),
-  DateEditField('birthdate', 'Date de naissance', p.birthdate),
-  DateEditField('death_date', 'Date de décès', p.deathDate),
-  TextEditField('country', 'Pays', p.country),
-  TextEditField('ethnicity', 'Origine', p.ethnicity),
-  TextEditField('hair_color', 'Cheveux', p.hairColor),
-  TextEditField('eye_color', 'Yeux', p.eyeColor),
-  IntEditField('height_cm', 'Taille', p.heightCm, suffix: 'cm'),
-  IntEditField('weight', 'Poids', p.weight, suffix: 'kg'),
-  TextEditField('measurements', 'Mensurations', p.measurements),
-  TextEditField('fake_tits', 'Implants', p.fakeTits),
-  TextEditField('tattoos', 'Tatouages', p.tattoos),
-  TextEditField('piercings', 'Piercings', p.piercings),
+  ImageEditField('image', tr.photo, p.imagePath),
+  TextEditField('name', tr.sortName, p.name, required: true),
+  TextEditField('disambiguation', tr.disambiguation, p.disambiguation),
+  StringListEditField('alias_list', tr.aliases, p.aliases),
+  ChoiceEditField('gender', tr.gender, p.gender, _genders),
+  DateEditField('birthdate', tr.sortBirthdate, p.birthdate),
+  DateEditField('death_date', tr.deathDate, p.deathDate),
+  TextEditField('country', tr.country, p.country),
+  TextEditField('ethnicity', tr.ethnicity, p.ethnicity),
+  TextEditField('hair_color', tr.hairColor, p.hairColor),
+  TextEditField('eye_color', tr.eyeColor, p.eyeColor),
+  IntEditField('height_cm', tr.height, p.heightCm, suffix: 'cm'),
+  IntEditField('weight', tr.weight, p.weight, suffix: 'kg'),
+  TextEditField('measurements', tr.measurements, p.measurements),
+  TextEditField('fake_tits', tr.fakeTits, p.fakeTits),
+  TextEditField('tattoos', tr.tattoos, p.tattoos),
+  TextEditField('piercings', tr.piercings, p.piercings),
   RatingEditField(p.rating100),
-  BoolEditField('favorite', 'Favori', p.favorite),
-  RefsEditField('tag_ids', 'Tags', RefKind.tags, p.tags),
-  StringListEditField('urls', 'Liens', p.urls, hint: 'https://…'),
-  TextEditField('details', 'Description', p.details, multiline: true),
+  BoolEditField('favorite', tr.favorite, p.favorite),
+  RefsEditField('tag_ids', tr.tags, RefKind.tags, p.tags),
+  StringListEditField('urls', tr.links, p.urls, hint: 'https://…'),
+  TextEditField('details', tr.description, p.details, multiline: true),
 ];
 
 Future<bool> editPerformer(BuildContext context, Performer p) => _openScrapable(
   context,
-  title: 'Modifier le performeur',
+  title: tr.editPerformer,
   kind: EditKind.performer,
   scrapeKind: ScrapeKind.performer,
   id: p.id,
@@ -151,18 +156,18 @@ Future<bool> editPerformer(BuildContext context, Performer p) => _openScrapable(
 
 /// Editable fields of a studio.
 List<EditField> studioFields(Studio s) => [
-  ImageEditField('image', 'Logo', s.imagePath),
-  TextEditField('name', 'Nom', s.name, required: true),
-  RefEditField('parent_id', 'Studio parent', RefKind.studios, s.parent),
+  ImageEditField('image', tr.logo, s.imagePath),
+  TextEditField('name', tr.sortName, s.name, required: true),
+  RefEditField('parent_id', tr.parentStudio, RefKind.studios, s.parent),
   RatingEditField(s.rating100),
-  BoolEditField('favorite', 'Favori', s.favorite),
-  StringListEditField('urls', 'Liens', s.urls, hint: 'https://…'),
-  TextEditField('details', 'Description', s.details, multiline: true),
+  BoolEditField('favorite', tr.favorite, s.favorite),
+  StringListEditField('urls', tr.links, s.urls, hint: 'https://…'),
+  TextEditField('details', tr.description, s.details, multiline: true),
 ];
 
 Future<bool> editStudio(BuildContext context, Studio s) => _openScrapable(
   context,
-  title: 'Modifier le studio',
+  title: tr.editStudio,
   kind: EditKind.studio,
   scrapeKind: ScrapeKind.studio,
   id: s.id,
@@ -171,17 +176,17 @@ Future<bool> editStudio(BuildContext context, Studio s) => _openScrapable(
 
 /// Editable fields of a tag.
 List<EditField> tagFields(Tag t) => [
-  ImageEditField('image', 'Image', t.imagePath),
-  TextEditField('name', 'Nom', t.name, required: true),
-  StringListEditField('aliases', 'Alias', t.aliases),
-  BoolEditField('favorite', 'Favori', t.favorite),
-  RefsEditField('parent_ids', 'Tags parents', RefKind.tags, t.parents),
-  TextEditField('description', 'Description', t.description, multiline: true),
+  ImageEditField('image', tr.image, t.imagePath),
+  TextEditField('name', tr.sortName, t.name, required: true),
+  StringListEditField('aliases', tr.aliases, t.aliases),
+  BoolEditField('favorite', tr.favorite, t.favorite),
+  RefsEditField('parent_ids', tr.parentTags, RefKind.tags, t.parents),
+  TextEditField('description', tr.description, t.description, multiline: true),
 ];
 
 Future<bool> editTag(BuildContext context, Tag t) => _open(
   context,
-  title: 'Modifier le tag',
+  title: tr.editTag,
   kind: EditKind.tag,
   id: t.id,
   fields: tagFields(t),
@@ -189,23 +194,23 @@ Future<bool> editTag(BuildContext context, Tag t) => _open(
 
 /// Editable fields of a group.
 List<EditField> groupFields(Group g) => [
-  ImageEditField('front_image', 'Jaquette (recto)', g.frontImage),
-  ImageEditField('back_image', 'Jaquette (verso)', g.backImage),
-  TextEditField('name', 'Nom', g.name, required: true),
-  TextEditField('aliases', 'Alias', g.aliases),
-  DateEditField('date', 'Date', g.date),
-  IntEditField('duration', 'Durée', g.duration, factor: 60, suffix: 'min'),
-  TextEditField('director', 'Réalisateur', g.director),
-  RefEditField('studio_id', 'Studio', RefKind.studios, g.studio),
+  ImageEditField('front_image', tr.frontCover, g.frontImage),
+  ImageEditField('back_image', tr.backCover, g.backImage),
+  TextEditField('name', tr.sortName, g.name, required: true),
+  TextEditField('aliases', tr.aliases, g.aliases),
+  DateEditField('date', tr.date, g.date),
+  IntEditField('duration', tr.duration, g.duration, factor: 60, suffix: 'min'),
+  TextEditField('director', tr.director, g.director),
+  RefEditField('studio_id', tr.studio, RefKind.studios, g.studio),
   RatingEditField(g.rating100),
-  RefsEditField('tag_ids', 'Tags', RefKind.tags, g.tags),
-  StringListEditField('urls', 'Liens', g.urls, hint: 'https://…'),
-  TextEditField('synopsis', 'Synopsis', g.synopsis, multiline: true),
+  RefsEditField('tag_ids', tr.tags, RefKind.tags, g.tags),
+  StringListEditField('urls', tr.links, g.urls, hint: 'https://…'),
+  TextEditField('synopsis', tr.synopsis, g.synopsis, multiline: true),
 ];
 
 Future<bool> editGroup(BuildContext context, Group g) => _openScrapable(
   context,
-  title: 'Modifier le groupe',
+  title: tr.editGroup,
   kind: EditKind.group,
   scrapeKind: ScrapeKind.group,
   id: g.id,
@@ -220,7 +225,7 @@ class EditButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: 'Modifier',
+    tooltip: tr.edit,
     icon: const Icon(Icons.edit_outlined),
     onPressed: () async {
       if (await onEdit()) onSaved();
@@ -230,27 +235,27 @@ class EditButton extends StatelessWidget {
 
 /// Editable fields of a gallery.
 List<EditField> galleryFields(Gallery g) => [
-  TextEditField('title', 'Titre', g.title),
-  TextEditField('code', 'Code', g.code),
-  DateEditField('date', 'Date', g.date),
-  TextEditField('photographer', 'Photographe', g.photographer),
+  TextEditField('title', tr.sortTitle, g.title),
+  TextEditField('code', tr.code, g.code),
+  DateEditField('date', tr.date, g.date),
+  TextEditField('photographer', tr.photographer, g.photographer),
   RatingEditField(g.rating100),
-  BoolEditField('organized', 'Organisée', g.organized),
-  RefEditField('studio_id', 'Studio', RefKind.studios, g.studio),
+  BoolEditField('organized', tr.organized, g.organized),
+  RefEditField('studio_id', tr.studio, RefKind.studios, g.studio),
   RefsEditField(
     'performer_ids',
-    'Performeurs',
+    tr.performers,
     RefKind.performers,
     g.performers,
   ),
-  RefsEditField('tag_ids', 'Tags', RefKind.tags, g.tags),
-  StringListEditField('urls', 'Liens', g.urls, hint: 'https://…'),
-  TextEditField('details', 'Description', g.details, multiline: true),
+  RefsEditField('tag_ids', tr.tags, RefKind.tags, g.tags),
+  StringListEditField('urls', tr.links, g.urls, hint: 'https://…'),
+  TextEditField('details', tr.description, g.details, multiline: true),
 ];
 
 Future<bool> editGallery(BuildContext context, Gallery g) => _openScrapable(
   context,
-  title: 'Modifier la galerie',
+  title: tr.editGallery,
   kind: EditKind.gallery,
   scrapeKind: ScrapeKind.gallery,
   id: g.id,
@@ -260,29 +265,29 @@ Future<bool> editGallery(BuildContext context, Gallery g) => _openScrapable(
 /// Fields of a marker; [m] is null when creating one at [at] seconds.
 List<EditField> markerFields(SceneMarker? m, {double at = 0}) => [
   // Stash requires a title (possibly empty) and a primary tag.
-  TextEditField('title', 'Titre', m?.title, emptyAsNull: false),
-  TimeEditField('seconds', 'Début', m?.seconds ?? at, required: true),
-  TimeEditField('end_seconds', 'Fin (optionnelle)', m?.endSeconds),
+  TextEditField('title', tr.sortTitle, m?.title, emptyAsNull: false),
+  TimeEditField('seconds', tr.start, m?.seconds ?? at, required: true),
+  TimeEditField('end_seconds', tr.endOptional, m?.endSeconds),
   RefEditField(
     'primary_tag_id',
-    'Tag principal',
+    tr.primaryTag,
     RefKind.tags,
     m?.primaryTag,
     required: true,
   ),
-  RefsEditField('tag_ids', 'Autres tags', RefKind.tags, m?.tags ?? const []),
+  RefsEditField('tag_ids', tr.otherTags, RefKind.tags, m?.tags ?? const []),
 ];
 
 Future<bool> editMarker(BuildContext context, SceneMarker m) {
   final repo = context.read<AppState>().repo!;
   return _open(
     context,
-    title: 'Modifier le marqueur',
+    title: tr.editMarker,
     kind: EditKind.marker,
     id: m.id,
     fields: markerFields(m),
     delete: () => repo.deleteMarker(m.id),
-    deleteLabel: 'Supprimer le marqueur',
+    deleteLabel: tr.deleteMarker,
   );
 }
 
@@ -296,7 +301,7 @@ Future<bool> createMarker(
   final saved = await Navigator.of(context).push<bool>(
     MaterialPageRoute(
       builder: (_) => EditScreen(
-        title: 'Nouveau marqueur',
+        title: tr.newMarker,
         fields: markerFields(null, at: at),
         create: true,
         save: (input) => repo.createMarker(sceneId, input),

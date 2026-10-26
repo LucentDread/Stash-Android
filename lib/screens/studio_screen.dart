@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../navigation.dart';
 import '../services/app_state.dart';
@@ -38,10 +39,10 @@ class StudioScreen extends StatelessWidget {
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
                 tabs: [
-                  const Tab(text: 'Infos'),
-                  Tab(text: 'Scènes (${s.sceneCount})'),
-                  Tab(text: 'Galeries (${s.galleryCount})'),
-                  const Tab(text: 'Performeurs'),
+                  Tab(text: tr.info),
+                  Tab(text: '${tr.scenes} (${s.sceneCount})'),
+                  Tab(text: '${tr.galleries} (${s.galleryCount})'),
+                  Tab(text: tr.performers),
                 ],
               ),
             ),
@@ -60,7 +61,7 @@ class StudioScreen extends StatelessWidget {
                     ),
                     if (s.parent != null)
                       Section(
-                        title: 'Studio parent',
+                        title: tr.parentStudio,
                         child: RefChips(
                           refs: [s.parent!],
                           icon: Icons.business,
@@ -69,11 +70,11 @@ class StudioScreen extends StatelessWidget {
                       ),
                     if (s.details != null && s.details!.isNotEmpty)
                       Section(
-                        title: 'Description',
+                        title: tr.description,
                         child: SelectableText(s.details!),
                       ),
                     if (s.urls.isNotEmpty)
-                      Section(title: 'Liens', child: UrlList(s.urls)),
+                      Section(title: tr.links, child: UrlList(s.urls)),
                   ],
                 ),
                 sceneGrid(context, entity: entity),

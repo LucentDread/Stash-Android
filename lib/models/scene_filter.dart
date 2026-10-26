@@ -1,3 +1,4 @@
+import '../l10n/l10n.dart';
 import 'models.dart';
 
 /// Criteria of [SceneFilter]; each [ViewKind] offers some of them.
@@ -18,7 +19,7 @@ enum FilterField {
 
 /// What a saved view lists.
 enum ViewKind {
-  scenes('Scènes', 'SCENES', 'created_at', {
+  scenes('SCENES', 'created_at', {
     FilterField.performers,
     FilterField.tags,
     FilterField.studios,
@@ -31,27 +32,27 @@ enum ViewKind {
     FilterField.hasMarkers,
     FilterField.performerFavorite,
   }),
-  performers('Performeurs', 'PERFORMERS', 'name', {
+  performers('PERFORMERS', 'name', {
     FilterField.tags,
     FilterField.studios,
     FilterField.rating,
     FilterField.played,
     FilterField.favorite,
   }),
-  studios('Studios', 'STUDIOS', 'name', {
+  studios('STUDIOS', 'name', {
     FilterField.tags,
     FilterField.rating,
     FilterField.organized,
     FilterField.favorite,
   }),
-  groups('Groupes', 'GROUPS', 'name', {
+  groups('GROUPS', 'name', {
     FilterField.performers,
     FilterField.tags,
     FilterField.studios,
     FilterField.rating,
     FilterField.duration,
   }),
-  galleries('Galeries', 'GALLERIES', 'created_at', {
+  galleries('GALLERIES', 'created_at', {
     FilterField.performers,
     FilterField.tags,
     FilterField.studios,
@@ -59,12 +60,12 @@ enum ViewKind {
     FilterField.organized,
     FilterField.performerFavorite,
   }),
-  tags('Tags', 'TAGS', 'name', {FilterField.favorite}),
-  markers('Marqueurs', 'SCENE_MARKERS', 'created_at', {
+  tags('TAGS', 'name', {FilterField.favorite}),
+  markers('SCENE_MARKERS', 'created_at', {
     FilterField.performers,
     FilterField.tags,
   }),
-  images('Images', 'IMAGES', 'created_at', {
+  images('IMAGES', 'created_at', {
     FilterField.performers,
     FilterField.tags,
     FilterField.studios,
@@ -74,13 +75,35 @@ enum ViewKind {
     FilterField.performerFavorite,
   });
 
-  const ViewKind(this.label, this.filterMode, this.defaultSort, this.fields);
-  final String label;
+  const ViewKind(this.filterMode, this.defaultSort, this.fields);
+
+  String get label => switch (this) {
+    scenes => tr.scenes,
+    performers => tr.performers,
+    studios => tr.studios,
+    groups => tr.groups,
+    galleries => tr.galleries,
+    tags => tr.tags,
+    markers => tr.markers,
+    images => tr.images,
+  };
 
   /// Stash's `FilterMode`, used by the saved filters of the web UI.
   final String filterMode;
   final String defaultSort;
   final Set<FilterField> fields;
+
+  /// [n] items of this kind, e.g. "12 scenes".
+  String count(int n) => switch (this) {
+    scenes => tr.countScenes(n),
+    performers => tr.countPerformers(n),
+    studios => tr.countStudios(n),
+    groups => tr.countGroups(n),
+    galleries => tr.countGalleries(n),
+    tags => tr.countTags(n),
+    markers => tr.countMarkers(n),
+    images => tr.countImages(n),
+  };
 
   /// Names sort A to Z, the rest newest first.
   bool get defaultDescending => defaultSort != 'name';
@@ -92,15 +115,22 @@ enum ViewKind {
 
 /// How a list of performers / tags / studios / groups is matched.
 enum EntityMode {
-  any('Au moins un', 'INCLUDES'),
-  all('Tous', 'INCLUDES_ALL'),
-  exclude('Aucun de', 'EXCLUDES'),
-  none('Vide', 'IS_NULL'),
-  notNone('Non vide', 'NOT_NULL');
+  any('INCLUDES'),
+  all('INCLUDES_ALL'),
+  exclude('EXCLUDES'),
+  none('IS_NULL'),
+  notNone('NOT_NULL');
 
-  const EntityMode(this.label, this.modifier);
-  final String label;
+  const EntityMode(this.modifier);
   final String modifier;
+
+  String get label => switch (this) {
+    any => tr.modeAny,
+    all => tr.modeAll,
+    exclude => tr.modeExclude,
+    none => tr.modeNone,
+    notNone => tr.modeNotNone,
+  };
 
   /// Modes that need a selection of items.
   bool get needsItems => this == any || this == all || this == exclude;
@@ -322,14 +352,19 @@ class SceneFilter {
   /// offers.
   List<String> describe([ViewKind kind = ViewKind.scenes]) {
     final has = kind.fields.contains;
-    String entity(EntityCriterion c, String label, String noun) {
+    String entity(
+      EntityCriterion c,
+      String label,
+      String without,
+      String withSome,
+    ) {
       final names = c.items.map((i) => i.name).join(', ');
       return switch (c.mode) {
-        EntityMode.any => '$label : $names',
-        EntityMode.all => '$label (tous) : $names',
-        EntityMode.exclude => '$label sauf : $names',
-        EntityMode.none => 'Sans $noun',
-        EntityMode.notNone => 'Avec $noun',
+        EntityMode.any => tr.criterionAny(label, names),
+        EntityMode.all => tr.criterionAll(label, names),
+        EntityMode.exclude => tr.criterionExclude(label, names),
+        EntityMode.none => without,
+        EntityMode.notNone => withSome,
       };
     }
 
@@ -337,35 +372,40 @@ class SceneFilter {
         .where((r) => r.aboveEnum == minResolution)
         .firstOrNull;
     final duration = has(FilterField.duration);
-    // "Scènes" is feminine plural.
-    final e = kind == ViewKind.scenes ? 'es' : '';
+    // Some languages agree the adjectives with the listed noun.
+    final noun = kind.name;
     return [
       if (has(FilterField.performers) && (performers?.isActive ?? false))
-        entity(performers!, 'Performeurs', 'performeur'),
+        entity(
+          performers!,
+          tr.performers,
+          tr.withoutPerformer,
+          tr.withPerformer,
+        ),
       if (has(FilterField.tags) && (tags?.isActive ?? false))
-        entity(tags!, 'Tags', 'tag'),
+        entity(tags!, tr.tags, tr.withoutTag, tr.withTag),
       if (has(FilterField.studios) && (studios?.isActive ?? false))
-        entity(studios!, 'Studio', 'studio'),
+        entity(studios!, tr.studio, tr.withoutStudio, tr.withStudio),
       if (has(FilterField.groups) && (groups?.isActive ?? false))
-        entity(groups!, 'Groupe', 'groupe'),
+        entity(groups!, tr.group, tr.withoutGroup, tr.withGroup),
       if (has(FilterField.rating) && minStars != null) '≥ $minStars ★',
       if (has(FilterField.resolution) && res != null) '≥ ${res.label}',
       if (duration && minDurationMin != null && maxDurationMin != null)
-        '$minDurationMin–$maxDurationMin min'
+        tr.minutesRange(minDurationMin!, maxDurationMin!)
       else if (duration && minDurationMin != null)
-        '≥ $minDurationMin min'
+        tr.atLeastMinutes(minDurationMin!)
       else if (duration && maxDurationMin != null)
-        '≤ $maxDurationMin min',
+        tr.atMostMinutes(maxDurationMin!),
       if (has(FilterField.organized) && organized != null)
-        organized! ? 'Organisé$e' : 'Non organisé$e',
+        organized! ? tr.organizedState(noun) : tr.notOrganizedState(noun),
       if (has(FilterField.played) && played != null)
-        played! ? 'Déjà vu$e' : 'Jamais vu$e',
+        played! ? tr.playedState(noun) : tr.notPlayedState(noun),
       if (has(FilterField.hasMarkers) && hasMarkers != null)
-        hasMarkers! ? 'Avec marqueurs' : 'Sans marqueurs',
+        hasMarkers! ? tr.withMarkers : tr.withoutMarkers,
       if (has(FilterField.performerFavorite) && performerFavorite != null)
-        performerFavorite! ? 'Performeur favori' : 'Sans performeur favori',
+        performerFavorite! ? tr.favoritePerformer : tr.noFavoritePerformer,
       if (has(FilterField.favorite) && favorite != null)
-        favorite! ? 'Favoris' : 'Hors favoris',
+        favorite! ? tr.favorites : tr.notFavorites,
     ];
   }
 }

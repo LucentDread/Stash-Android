@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../services/app_state.dart';
 
 import 'browse_screens.dart';
@@ -7,18 +8,29 @@ import 'home_screen.dart';
 
 /// Screens that can sit in the bottom bar, or else in the Plus tab.
 enum AppScreen {
-  home('Accueil', Icons.home_outlined, Icons.home),
-  scenes('Scènes', Icons.movie_outlined, Icons.movie),
-  groups('Groupes', Icons.video_library_outlined, Icons.video_library),
-  performers('Performeurs', Icons.people_outline, Icons.people),
-  galleries('Galeries', Icons.photo_library_outlined, Icons.photo_library),
-  images('Images', Icons.image_outlined, Icons.image),
-  studios('Studios', Icons.business_outlined, Icons.business),
-  tags('Tags', Icons.label_outline, Icons.label),
-  markers('Marqueurs', Icons.bookmarks_outlined, Icons.bookmarks);
+  home(Icons.home_outlined, Icons.home),
+  scenes(Icons.movie_outlined, Icons.movie),
+  groups(Icons.video_library_outlined, Icons.video_library),
+  performers(Icons.people_outline, Icons.people),
+  galleries(Icons.photo_library_outlined, Icons.photo_library),
+  images(Icons.image_outlined, Icons.image),
+  studios(Icons.business_outlined, Icons.business),
+  tags(Icons.label_outline, Icons.label),
+  markers(Icons.bookmarks_outlined, Icons.bookmarks);
 
-  const AppScreen(this.label, this.icon, this.selectedIcon);
-  final String label;
+  const AppScreen(this.icon, this.selectedIcon);
+
+  String get label => switch (this) {
+    home => tr.home,
+    scenes => tr.scenes,
+    groups => tr.groups,
+    performers => tr.performers,
+    galleries => tr.galleries,
+    images => tr.images,
+    studios => tr.studios,
+    tags => tr.tags,
+    markers => tr.markers,
+  };
   final IconData icon;
   final IconData selectedIcon;
 
@@ -28,7 +40,7 @@ enum AppScreen {
   /// Tabs besides Plus, which is always last.
   static const maxTabs = 4;
 
-  /// The tabs chosen in Plus > Onglets, in order.
+  /// The tabs chosen in More > Tabs, in order.
   static List<AppScreen> tabsOf(AppState app) {
     final names = app.tabNames;
     if (names == null) return defaultTabs;

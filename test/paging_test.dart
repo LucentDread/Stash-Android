@@ -44,7 +44,7 @@ Future<List<int>> _loadAll(
           body: PagedGrid<int>(
             key: key,
             fetch: server.fetch,
-            sortOptions: const [SortOption('random', 'Aléatoire')],
+            sortOptions: const [SortOption('random')],
             initialSort: 'random',
             itemKey: (i) => i,
             maxCrossAxisExtent: 1000,

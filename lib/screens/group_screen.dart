@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../api/stash_repository.dart';
+import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../navigation.dart';
 import '../services/app_state.dart';
@@ -35,8 +36,8 @@ class GroupScreen extends StatelessWidget {
             ],
             bottom: TabBar(
               tabs: [
-                const Tab(text: 'Infos'),
-                Tab(text: 'Scènes (${g.sceneCount})'),
+                Tab(text: tr.info),
+                Tab(text: '${tr.scenes} (${g.sceneCount})'),
               ],
             ),
           ),
@@ -94,22 +95,22 @@ class _GroupInfo extends StatelessWidget {
           Center(child: StarRating(rating100: g.rating100)),
         ],
         Section(
-          title: 'Informations',
+          title: tr.information,
           child: InfoTable([
-            ('Alias', g.aliases),
-            ('Date', g.date),
+            (tr.aliases, g.aliases),
+            (tr.date, g.date),
             (
-              'Durée',
+              tr.duration,
               g.duration == null
                   ? null
                   : formatDuration(g.duration!.toDouble()),
             ),
-            ('Réalisateur', g.director),
+            (tr.director, g.director),
           ]),
         ),
         if (g.studio != null)
           Section(
-            title: 'Studio',
+            title: tr.studio,
             child: RefChips(
               refs: [g.studio!],
               icon: Icons.business,
@@ -117,13 +118,13 @@ class _GroupInfo extends StatelessWidget {
             ),
           ),
         if (g.synopsis != null && g.synopsis!.isNotEmpty)
-          Section(title: 'Synopsis', child: SelectableText(g.synopsis!)),
+          Section(title: tr.synopsis, child: SelectableText(g.synopsis!)),
         if (g.tags.isNotEmpty)
           Section(
-            title: 'Tags',
+            title: tr.tags,
             child: RefChips(refs: g.tags, onTap: (r) => openTag(context, r.id)),
           ),
-        if (g.urls.isNotEmpty) Section(title: 'Liens', child: UrlList(g.urls)),
+        if (g.urls.isNotEmpty) Section(title: tr.links, child: UrlList(g.urls)),
       ],
     );
   }

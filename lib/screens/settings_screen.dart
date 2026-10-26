@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../services/app_lock.dart';
 import '../services/app_state.dart';
 import '../services/system_bridge.dart';
 import 'update_dialog.dart';
 
-/// Plus > Application > Paramètres: popup player, privacy, password,
-/// updates.
+/// More > Application > Settings: language, popup player, privacy,
+/// password, updates.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -21,21 +22,46 @@ class SettingsScreen extends StatelessWidget {
     if (result == null) return;
     if (mode == _PasswordMode.remove) {
       await lock.removePassword();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Mot de passe supprimé')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(tr.passwordRemoved)));
     } else {
       await lock.setPassword(result);
       messenger.showSnackBar(
         SnackBar(
           content: Text(
             mode == _PasswordMode.create
-                ? 'Mot de passe créé'
-                : 'Mot de passe modifié',
+                ? tr.passwordCreated
+                : tr.passwordChanged,
           ),
         ),
       );
     }
+  }
+
+  Future<void> _pickLanguage(BuildContext context, AppState app) async {
+    final current = app.language;
+    final picked = await showDialog<(String?,)>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(tr.language),
+        children: [
+          for (final l in [null, ...appLanguages])
+            ListTile(
+              leading: Icon(
+                l == current
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_off,
+              ),
+              title: Text(
+                l == null
+                    ? tr.systemLanguage(languageNames[systemLanguage()]!)
+                    : languageNames[l]!,
+              ),
+              onTap: () => Navigator.pop(context, (l,)),
+            ),
+        ],
+      ),
+    );
+    if (picked != null) app.language = picked.$1;
   }
 
   Future<void> _pickDelay(BuildContext context, AppLock lock) async {
@@ -43,7 +69,7 @@ class SettingsScreen extends StatelessWidget {
     final picked = await showDialog<(int?,)>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Redemander le mot de passe'),
+        title: Text(tr.askPasswordAgain),
         children: [
           for (final d in AppLock.delays)
             ListTile(
@@ -66,31 +92,37 @@ class SettingsScreen extends StatelessWidget {
     final app = context.watch<AppState>();
     final lock = app.lock;
     return Scaffold(
-      appBar: AppBar(title: const Text('Paramètres')),
+      appBar: AppBar(title: Text(tr.settings)),
       body: ListenableBuilder(
         listenable: lock,
         builder: (context, _) => ListView(
           children: [
-            const _Header('Lecture'),
+            _Header(tr.language),
+            ListTile(
+              leading: const Icon(Icons.language),
+              title: Text(tr.appLanguage),
+              subtitle: Text(
+                app.language == null
+                    ? tr.systemLanguage(languageNames[systemLanguage()]!)
+                    : languageNames[app.effectiveLanguage]!,
+              ),
+              onTap: () => _pickLanguage(context, app),
+            ),
+            const Divider(),
+            _Header(tr.playbackHeader),
             SwitchListTile(
               secondary: const Icon(Icons.picture_in_picture_alt_outlined),
-              title: const Text('Lecteur popup'),
-              subtitle: const Text(
-                'La vidéo en cours continue dans une petite fenêtre quand '
-                'vous quittez l\'application',
-              ),
+              title: Text(tr.popupPlayer),
+              subtitle: Text(tr.popupPlayerSubtitle),
               value: app.popupPlayer,
               onChanged: (v) => app.popupPlayer = v,
             ),
             const Divider(),
-            const _Header('Confidentialité'),
+            _Header(tr.privacyHeader),
             SwitchListTile(
               secondary: const Icon(Icons.visibility_off_outlined),
-              title: const Text('Masquer dans les applications récentes'),
-              subtitle: const Text(
-                'Aperçu noir dans le sélecteur d\'applications (bloque '
-                'aussi les captures d\'écran)',
-              ),
+              title: Text(tr.hideInRecents),
+              subtitle: Text(tr.hideInRecentsSubtitle),
               value: app.hideInRecents,
               onChanged: (v) {
                 app.hideInRecents = v;
@@ -100,44 +132,40 @@ class SettingsScreen extends StatelessWidget {
             if (!lock.enabled)
               ListTile(
                 leading: const Icon(Icons.lock_outline),
-                title: const Text('Créer un mot de passe'),
-                subtitle: const Text(
-                  'Demandé à l\'ouverture de l\'application',
-                ),
+                title: Text(tr.createPassword),
+                subtitle: Text(tr.createPasswordSubtitle),
                 onTap: () => _password(context, _PasswordMode.create),
               )
             else ...[
               ListTile(
                 leading: const Icon(Icons.lock),
-                title: const Text('Modifier le mot de passe'),
+                title: Text(tr.changePassword),
                 onTap: () => _password(context, _PasswordMode.change),
               ),
               ListTile(
                 leading: const Icon(Icons.timer_outlined),
-                title: const Text('Redemander le mot de passe'),
+                title: Text(tr.askPasswordAgain),
                 subtitle: Text(AppLock.describeDelay(lock.delayMinutes)),
                 onTap: () => _pickDelay(context, lock),
               ),
               ListTile(
                 leading: const Icon(Icons.lock_open),
-                title: const Text('Supprimer le mot de passe'),
+                title: Text(tr.removePassword),
                 onTap: () => _password(context, _PasswordMode.remove),
               ),
             ],
             const Divider(),
-            const _Header('Mises à jour'),
+            _Header(tr.updatesHeader),
             SwitchListTile(
               secondary: const Icon(Icons.update),
-              title: const Text('Rechercher au démarrage'),
-              subtitle: const Text(
-                'Propose les nouvelles versions publiées sur GitHub',
-              ),
+              title: Text(tr.checkAtStartup),
+              subtitle: Text(tr.checkAtStartupSubtitle),
               value: app.autoUpdate,
               onChanged: (v) => app.autoUpdate = v,
             ),
             ListTile(
               leading: const Icon(Icons.system_update),
-              title: const Text('Rechercher une mise à jour'),
+              title: Text(tr.checkForUpdate),
               onTap: () => checkForUpdates(context, manual: true),
             ),
           ],
@@ -178,13 +206,11 @@ class _PasswordDialogState extends State<_PasswordDialog> {
   void _submit() {
     setState(() {
       _currentError = _askCurrent && !widget.lock.check(_current.text)
-          ? 'Mot de passe incorrect'
+          ? tr.wrongPassword
           : null;
-      _newError = _askNew && _new.text.length < 4
-          ? 'Au moins 4 caractères'
-          : null;
+      _newError = _askNew && _new.text.length < 4 ? tr.passwordTooShort : null;
       _confirmError = _askNew && _confirm.text != _new.text
-          ? 'Les mots de passe sont différents'
+          ? tr.passwordsDiffer
           : null;
     });
     if (_currentError == null && _newError == null && _confirmError == null) {
@@ -215,9 +241,9 @@ class _PasswordDialogState extends State<_PasswordDialog> {
   @override
   Widget build(BuildContext context) {
     final (title, action) = switch (widget.mode) {
-      _PasswordMode.create => ('Créer un mot de passe', 'Créer'),
-      _PasswordMode.change => ('Modifier le mot de passe', 'Modifier'),
-      _PasswordMode.remove => ('Supprimer le mot de passe', 'Supprimer'),
+      _PasswordMode.create => (tr.createPassword, tr.create),
+      _PasswordMode.change => (tr.changePassword, tr.edit),
+      _PasswordMode.remove => (tr.removePassword, tr.delete),
     };
     return AlertDialog(
       title: Text(title),
@@ -228,31 +254,23 @@ class _PasswordDialogState extends State<_PasswordDialog> {
             if (_askCurrent)
               _field(
                 _current,
-                'Mot de passe actuel',
+                tr.currentPassword,
                 _currentError,
                 autofocus: true,
               ),
             if (_askNew) ...[
-              _field(
-                _new,
-                'Nouveau mot de passe',
-                _newError,
-                autofocus: !_askCurrent,
-              ),
-              _field(_confirm, 'Confirmation', _confirmError),
+              _field(_new, tr.newPassword, _newError, autofocus: !_askCurrent),
+              _field(_confirm, tr.confirmation, _confirmError),
             ],
             if (widget.mode == _PasswordMode.create)
-              const Text(
-                'En cas d\'oubli, il faudra effacer les données de '
-                'l\'application (et la reconfigurer).',
-              ),
+              Text(tr.forgottenPasswordHint),
           ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
+          child: Text(tr.cancel),
         ),
         FilledButton(onPressed: _submit, child: Text(action)),
       ],

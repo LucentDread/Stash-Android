@@ -101,7 +101,7 @@ void main() {
     expect(app.tabNames, ['tags']);
     expect(box('Tags').onChanged, isNull, reason: 'the last tab stays');
 
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(_barLabels(tester), ['Tags', 'Plus']);
   });

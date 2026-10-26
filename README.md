@@ -76,7 +76,10 @@ aucun service tiers, aucune donnée n'est envoyée ailleurs.
   La position et le temps de visionnage sont renvoyés à Stash.
   En quittant l'application pendant la lecture, la vidéo continue dans une
   petite fenêtre (lecteur popup, désactivable).
-- **Paramètres** (**Plus > Application**) : lecteur popup, aperçu noir dans
+- **Langues** : anglais, français, allemand, italien et espagnol (vocabulaire
+  des traductions de Stash). L'application suit la langue du téléphone
+  (anglais par défaut) ou celle choisie dans les paramètres.
+- **Paramètres** (**Plus > Application**) : langue, lecteur popup, aperçu noir dans
   les applications récentes, mot de passe à l'ouverture (création,
   modification, suppression, délai avant de le redemander), mises à jour.
 - **Mises à jour** : au démarrage, l'application consulte les releases
@@ -144,8 +147,21 @@ lib/
   services/app_state.dart    Configuration du serveur et préférences
   screens/                   Écrans (accueil, listes, fiches, lecteur…)
   widgets/                   Cartes, grille paginée, images réseau…
+  l10n/                      Traductions (app_<langue>.arb ; le code
+                             app_localizations*.dart en est généré par
+                             `flutter gen-l10n`)
 test/                        Tests unitaires et de widgets
 ```
+
+## Traductions et versions
+
+Les textes de l'application sont dans `lib/l10n/app_<langue>.arb`
+(`app_en.arb` est la référence). Après une modification, `flutter gen-l10n`
+(ou `flutter pub get`) régénère `app_localizations*.dart`.
+
+Le journal des versions (`CHANGELOG.md`) et les notes des releases GitHub
+sont rédigés en anglais ; les notes des releases sont tirées du
+`CHANGELOG.md` et mises à jour s'il change.
 
 ## Licence
 

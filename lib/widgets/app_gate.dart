@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../screens/update_dialog.dart';
 import '../services/app_lock.dart';
 import '../services/app_state.dart';
@@ -150,7 +151,7 @@ class _LockScreenState extends State<LockScreen> {
                     Image.asset('assets/branding/logo.png', height: 72),
                     const SizedBox(height: 16),
                     Text(
-                      'Stash est verrouillé',
+                      tr.lockedTitle,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 24),
@@ -165,11 +166,11 @@ class _LockScreenState extends State<LockScreen> {
                         if (_wrong) setState(() => _wrong = false);
                       },
                       decoration: InputDecoration(
-                        labelText: 'Mot de passe',
+                        labelText: tr.password,
                         border: const OutlineInputBorder(),
-                        errorText: _wrong ? 'Mot de passe incorrect' : null,
+                        errorText: _wrong ? tr.wrongPassword : null,
                         suffixIcon: IconButton(
-                          tooltip: _obscure ? 'Afficher' : 'Masquer',
+                          tooltip: _obscure ? tr.show : tr.hide,
                           icon: Icon(
                             _obscure ? Icons.visibility : Icons.visibility_off,
                           ),
@@ -183,7 +184,7 @@ class _LockScreenState extends State<LockScreen> {
                       child: FilledButton.icon(
                         onPressed: _submit,
                         icon: const Icon(Icons.lock_open),
-                        label: const Text('Déverrouiller'),
+                        label: Text(tr.unlock),
                       ),
                     ),
                   ],

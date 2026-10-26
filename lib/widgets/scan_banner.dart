@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../services/app_state.dart';
 import '../services/scan_tracker.dart';
 import '../services/system_bridge.dart';
@@ -55,20 +56,16 @@ class ScanBanner extends StatelessWidget {
         Icons.sync,
         scheme.primary,
         progress == null
-            ? 'Scan de la bibliothèque…'
-            : 'Scan de la bibliothèque · ${(progress * 100).floor()} %',
+            ? tr.scanRunning
+            : tr.scanProgress((progress * 100).floor()),
       ),
-      ScanPhase.failed => (Icons.error_outline, scheme.error, 'Échec du scan'),
+      ScanPhase.failed => (Icons.error_outline, scheme.error, tr.scanFailed),
       _ when job?.status == 'CANCELLED' => (
         Icons.stop_circle_outlined,
         scheme.onSurfaceVariant,
-        'Scan arrêté · données actualisées',
+        tr.scanStopped,
       ),
-      _ => (
-        Icons.check_circle_outline,
-        Colors.green,
-        'Scan terminé · données actualisées',
-      ),
+      _ => (Icons.check_circle_outline, Colors.green, tr.scanFinished),
     };
 
     final item = scan.running ? scan.currentItem : null;
@@ -136,15 +133,15 @@ class ScanBanner extends StatelessWidget {
                   // where there is no Overlay to show them.
                   if (scan.running)
                     IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.stop_circle_outlined,
-                        semanticLabel: 'Arrêter le scan',
+                        semanticLabel: tr.stopScan,
                       ),
                       onPressed: scan.stop,
                     )
                   else
                     IconButton(
-                      icon: const Icon(Icons.close, semanticLabel: 'Fermer'),
+                      icon: Icon(Icons.close, semanticLabel: tr.close),
                       onPressed: scan.dismiss,
                     ),
                 ],

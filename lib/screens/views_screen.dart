@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/l10n.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
 import '../widgets/view_list.dart';
@@ -70,8 +71,8 @@ class _ViewsScreenState extends State<ViewsScreen> {
   }
 
   static String _criterionLabel(String key) => switch (key) {
-    'folder' => 'dossier',
-    'custom_fields' => 'champs personnalisés',
+    'folder' => tr.criterionFolder,
+    'custom_fields' => tr.criterionCustomFields,
     _ => key.replaceAll('_', ' '),
   };
 
@@ -84,15 +85,15 @@ class _ViewsScreenState extends State<ViewsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Supprimer « ${view.name} » ?'),
+        title: Text(tr.deleteNamedQuestion(view.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Supprimer'),
+            child: Text(tr.delete),
           ),
         ],
       ),
@@ -101,11 +102,11 @@ class _ViewsScreenState extends State<ViewsScreen> {
   }
 
   String _describe(SavedView v) {
-    if (v.remote) return 'Filtre de Stash (web) · ${v.kind.label}';
+    if (v.remote) return tr.webFilterOf(v.kind.label);
     final criteria = v.filter.describe(v.kind);
     return [
       v.kind.label,
-      if (criteria.isEmpty) 'sans filtre' else ...criteria,
+      if (criteria.isEmpty) tr.noFilter else ...criteria,
     ].join(' • ');
   }
 
@@ -118,10 +119,10 @@ class _ViewsScreenState extends State<ViewsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vues enregistrées'),
+        title: Text(tr.savedViews),
         actions: [
           IconButton(
-            tooltip: 'Relire les filtres de Stash',
+            tooltip: tr.reloadWebFilters,
             icon: const Icon(Icons.cloud_sync_outlined),
             onPressed: _loadingWeb ? null : _refreshWeb,
           ),
@@ -130,7 +131,7 @@ class _ViewsScreenState extends State<ViewsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _edit,
         icon: const Icon(Icons.add),
-        label: const Text('Nouvelle vue'),
+        label: Text(tr.newView),
       ),
       body: RefreshIndicator(
         onRefresh: _refreshWeb,
@@ -138,21 +139,15 @@ class _ViewsScreenState extends State<ViewsScreen> {
           // Room for the floating button.
           padding: const EdgeInsets.only(bottom: 88),
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Text(
-                'Créez une vue (scènes, performeurs, studios…) avec le bouton '
-                '« Nouvelle vue », ou depuis l\'onglet Scènes (icône signet). '
-                'Les filtres enregistrés dans l\'interface web de Stash '
-                'apparaissent aussi (icône nuage) ; ils se modifient depuis '
-                'le web.',
-              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(tr.viewsIntro),
             ),
             if (_loadingWeb) const LinearProgressIndicator(minHeight: 2),
             if (_webError != null)
               ListTile(
                 leading: Icon(Icons.cloud_off, color: theme.colorScheme.error),
-                title: const Text('Filtres de Stash indisponibles'),
+                title: Text(tr.webFiltersUnavailable),
                 subtitle: Text('$_webError', maxLines: 2),
                 onTap: _refreshWeb,
               ),
@@ -160,13 +155,7 @@ class _ViewsScreenState extends State<ViewsScreen> {
               ListTile(
                 dense: true,
                 leading: const Icon(Icons.info_outline),
-                title: Text(
-                  _unsupported == 1
-                      ? '1 filtre web d\'un type inconnu de l\'app n\'est pas '
-                            'repris'
-                      : '$_unsupported filtres web d\'un type inconnu de l\'app '
-                            'ne sont pas repris',
-                ),
+                title: Text(tr.unsupportedWebFilters(_unsupported)),
               ),
             if (_skipped.isNotEmpty)
               Container(
@@ -184,11 +173,7 @@ class _ViewsScreenState extends State<ViewsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '${_skipped.length == 1 ? 'Un filtre web utilise' : '${_skipped.length} filtres web utilisent'} '
-                        'des critères que l\'app ne sait pas reprendre '
-                        '(détail sous chaque filtre concerné). Ces critères '
-                        'sont ignorés : la vue affiche plus d\'éléments que '
-                        'sur le web.',
+                        tr.skippedCriteriaWarning(_skipped.length),
                         style: const TextStyle(color: _warning),
                       ),
                     ),
@@ -197,11 +182,11 @@ class _ViewsScreenState extends State<ViewsScreen> {
               ),
             ListTile(
               leading: const Icon(Icons.home_outlined),
-              title: const Text('Composer les pages d\'accueil'),
+              title: Text(tr.composeHomePages),
               subtitle: Text(
                 defaultHome
-                    ? 'Accueil : par défaut'
-                    : 'Accueil : ${app.homeLayout.length} élément(s)',
+                    ? tr.homeIsDefault
+                    : tr.homeItems(app.homeLayout.length),
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => Navigator.of(context).push(
@@ -209,19 +194,14 @@ class _ViewsScreenState extends State<ViewsScreen> {
               ),
             ),
             if (views.isEmpty)
-              const ListTile(
-                leading: Icon(Icons.info_outline),
-                title: Text('Aucune vue enregistrée'),
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: Text(tr.noSavedViews),
               ),
             if (views.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Text(
-                  'L\'icône maison ajoute une vue à la fin de la page '
-                  'd\'accueil, ou l\'en retire. L\'ordre, les sections et '
-                  'l\'accueil par défaut se règlent dans « Composer les '
-                  'pages d\'accueil ».',
-                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(tr.homeIconHint),
               ),
               ReorderableListView(
                 shrinkWrap: true,
@@ -246,9 +226,7 @@ class _ViewsScreenState extends State<ViewsScreen> {
     return ListTile(
       key: ValueKey(v.id),
       leading: IconButton(
-        tooltip: onHome
-            ? 'Retirer de la page d\'accueil'
-            : 'Ajouter à la page d\'accueil',
+        tooltip: onHome ? tr.removeFromHome : tr.addToHome,
         icon: Icon(onHome ? Icons.home : Icons.home_outlined),
         color: onHome ? primary : null,
         onPressed: () => app.setHomeView(v.id, !onHome),
@@ -282,7 +260,7 @@ class _ViewsScreenState extends State<ViewsScreen> {
                   ),
                   TextSpan(
                     text:
-                        ' Ignoré : ${skipped.map(_criterionLabel).join(', ')}',
+                        ' ${tr.ignored(skipped.map(_criterionLabel).join(', '))}',
                   ),
                 ],
               ),
@@ -299,9 +277,9 @@ class _ViewsScreenState extends State<ViewsScreen> {
           if (!v.remote)
             PopupMenuButton<String>(
               onSelected: (a) => a == 'edit' ? _edit(v) : _delete(v),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'edit', child: Text('Modifier')),
-                PopupMenuItem(value: 'delete', child: Text('Supprimer')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'edit', child: Text(tr.edit)),
+                PopupMenuItem(value: 'delete', child: Text(tr.delete)),
               ],
             ),
           ReorderableDragStartListener(

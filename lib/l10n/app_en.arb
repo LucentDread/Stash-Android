@@ -1,0 +1,1007 @@
+{
+  "@@locale": "en",
+  "cancel": "Cancel",
+  "close": "Close",
+  "download": "Download",
+  "downloads": "Downloads",
+  "retry": "Retry",
+  "show": "Show",
+  "hide": "Hide",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "ok": "OK",
+  "home": "Home",
+  "more": "More",
+  "settings": "Settings",
+  "scenes": "Scenes",
+  "performers": "Performers",
+  "studios": "Studios",
+  "groups": "Groups",
+  "galleries": "Galleries",
+  "tags": "Tags",
+  "markers": "Markers",
+  "images": "Images",
+  "studio": "Studio",
+  "group": "Group",
+  "modeAny": "At least one",
+  "modeAll": "All",
+  "modeExclude": "None of",
+  "modeNone": "Empty",
+  "modeNotNone": "Not empty",
+  "criterionAny": "{label}: {names}",
+  "@criterionAny": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      },
+      "names": {
+        "type": "Object"
+      }
+    }
+  },
+  "criterionAll": "{label} (all): {names}",
+  "@criterionAll": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      },
+      "names": {
+        "type": "Object"
+      }
+    }
+  },
+  "criterionExclude": "{label} except: {names}",
+  "@criterionExclude": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      },
+      "names": {
+        "type": "Object"
+      }
+    }
+  },
+  "withoutPerformer": "No performer",
+  "withPerformer": "With performers",
+  "withoutTag": "No tag",
+  "withTag": "With tags",
+  "withoutStudio": "No studio",
+  "withStudio": "With a studio",
+  "withoutGroup": "No group",
+  "withGroup": "In a group",
+  "minutesRange": "{min}–{max} min",
+  "@minutesRange": {
+    "placeholders": {
+      "min": {
+        "type": "Object"
+      },
+      "max": {
+        "type": "Object"
+      }
+    }
+  },
+  "atLeastMinutes": "≥ {min} min",
+  "@atLeastMinutes": {
+    "placeholders": {
+      "min": {
+        "type": "Object"
+      }
+    }
+  },
+  "atMostMinutes": "≤ {max} min",
+  "@atMostMinutes": {
+    "placeholders": {
+      "max": {
+        "type": "Object"
+      }
+    }
+  },
+  "organizedState": "{kind, select, scenes{Organized} other{Organized}}",
+  "@organizedState": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "notOrganizedState": "{kind, select, scenes{Not organized} other{Not organized}}",
+  "@notOrganizedState": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "playedState": "{kind, select, scenes{Watched} other{Watched}}",
+  "@playedState": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "notPlayedState": "{kind, select, scenes{Never watched} other{Never watched}}",
+  "@notPlayedState": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "withMarkers": "With markers",
+  "withoutMarkers": "No markers",
+  "favoritePerformer": "Favorite performer",
+  "noFavoritePerformer": "No favorite performer",
+  "favorites": "Favorites",
+  "notFavorites": "Not favorites",
+  "sectionStats": "Statistics",
+  "sectionResume": "Continue watching",
+  "sectionRecent": "Recently added",
+  "sectionReleases": "Recently released",
+  "sectionFavoritePerformers": "Favorite performers",
+  "sectionRandom": "Random",
+  "sectionGalleries": "Recent galleries",
+  "sceneNumber": "Scene {id}",
+  "@sceneNumber": {
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
+  },
+  "galleryNumber": "Gallery {id}",
+  "@galleryNumber": {
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
+  },
+  "genderMale": "Male",
+  "genderFemale": "Female",
+  "genderTransMale": "Transgender male",
+  "genderTransFemale": "Transgender female",
+  "genderIntersex": "Intersex",
+  "genderNonBinary": "Non-binary",
+  "bytesUnits": "B,KB,MB,GB,TB",
+  "sortCreatedAt": "Date added",
+  "sortReleaseDate": "Release date",
+  "sortDate": "Date",
+  "sortTitle": "Title",
+  "sortName": "Name",
+  "sortRating": "Rating",
+  "sortLastPlayed": "Last played",
+  "sortPlayCount": "Play count",
+  "sortOCounter": "O counter",
+  "sortDuration": "Duration",
+  "sortFileSize": "File size",
+  "sortRandom": "Random",
+  "sortSceneCount": "Scene count",
+  "sortImageCount": "Image count",
+  "sortBirthdate": "Birthdate",
+  "sortGroupOrder": "Group order",
+  "sortPath": "Path",
+  "sortPosition": "Position",
+  "sceneNotFound": "Scene not found",
+  "performerNotFound": "Performer not found",
+  "studioNotFound": "Studio not found",
+  "tagNotFound": "Tag not found",
+  "groupNotFound": "Group not found",
+  "galleryNotFound": "Gallery not found",
+  "imageNotFound": "Image not found",
+  "serverUnreachable": "Cannot reach the server: {error}",
+  "@serverUnreachable": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "accessDenied": "Access denied (HTTP {status}). Check the API key.",
+  "@accessDenied": {
+    "placeholders": {
+      "status": {
+        "type": "Object"
+      }
+    }
+  },
+  "httpError": "HTTP error {status}",
+  "@httpError": {
+    "placeholders": {
+      "status": {
+        "type": "Object"
+      }
+    }
+  },
+  "invalidResponse": "Invalid response: the server does not seem to be Stash.",
+  "lockAtLaunchOnly": "Only at launch",
+  "lockImmediately": "As soon as the app goes to the background",
+  "lockAfterMinutes": "{minutes, plural, =1{After 1 minute in the background} other{After {minutes} minutes in the background}}",
+  "@lockAfterMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "notifDownloading": "Downloading",
+  "notifDownloaded": "Downloaded",
+  "notifDownloadFailed": "Download failed",
+  "notifPaused": "Paused",
+  "githubError": "GitHub answered {status}",
+  "@githubError": {
+    "placeholders": {
+      "status": {
+        "type": "Object"
+      }
+    }
+  },
+  "downloadRefused": "Download refused ({status})",
+  "@downloadRefused": {
+    "placeholders": {
+      "status": {
+        "type": "Object"
+      }
+    }
+  },
+  "downloadIncomplete": "Incomplete download",
+  "noServerConfigured": "No server configured",
+  "fileUnavailable": "File unavailable",
+  "imageNumber": "Image {id}",
+  "@imageNumber": {
+    "placeholders": {
+      "id": {
+        "type": "Object"
+      }
+    }
+  },
+  "countItems": "{count, plural, one{{count} item} other{{count} items}}",
+  "@countItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countScenes": "{count, plural, one{{count} scene} other{{count} scenes}}",
+  "@countScenes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countPerformers": "{count, plural, one{{count} performer} other{{count} performers}}",
+  "@countPerformers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countStudios": "{count, plural, one{{count} studio} other{{count} studios}}",
+  "@countStudios": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countGroups": "{count, plural, one{{count} group} other{{count} groups}}",
+  "@countGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countGalleries": "{count, plural, one{{count} gallery} other{{count} galleries}}",
+  "@countGalleries": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countTags": "{count, plural, one{{count} tag} other{{count} tags}}",
+  "@countTags": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countMarkers": "{count, plural, one{{count} marker} other{{count} markers}}",
+  "@countMarkers": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countImages": "{count, plural, one{{count} image} other{{count} images}}",
+  "@countImages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countPlays": "{count, plural, one{{count} play} other{{count} plays}}",
+  "@countPlays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "countO": "{count} O",
+  "@countO": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "yearsOld": "{age, plural, one{{age} year old} other{{age} years old}}",
+  "@yearsOld": {
+    "placeholders": {
+      "age": {
+        "type": "int"
+      }
+    }
+  },
+  "searchHint": "Search…",
+  "sort": "Sort",
+  "descending": "Descending",
+  "ascending": "Ascending",
+  "noResults": "No results",
+  "framesPerSecond": "{fps} fps",
+  "@framesPerSecond": {
+    "placeholders": {
+      "fps": {
+        "type": "Object"
+      }
+    }
+  },
+  "addedOn": "Added {date}",
+  "@addedOn": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
+  "noRating": "No rating",
+  "starsOutOfFive": "{stars} / 5",
+  "@starsOutOfFive": {
+    "placeholders": {
+      "stars": {
+        "type": "Object"
+      }
+    }
+  },
+  "openScene": "Open the scene",
+  "editMarker": "Edit the marker",
+  "downloadTitle": "Download?",
+  "downloadSceneQuestion": "Download this scene to watch it offline{size}?",
+  "downloadGroupQuestion": "Download every scene of this group to watch them offline{size}?",
+  "downloadGalleryQuestion": "Download every image of this gallery to view them offline{size}?",
+  "downloadImageQuestion": "Download this image to view it offline{size}?",
+  "downloadInBackground": "The download continues in the background.",
+  "preparingDownload": "Preparing the download…",
+  "downloadStarted": "Download started (More > Downloads)",
+  "downloadInProgress": "Downloading",
+  "connectionRestored": "Connection to the server restored",
+  "offlineTitle": "Offline",
+  "offlineMessage": "The Stash server ({url}) cannot be reached. Downloaded scenes, groups, galleries and images are still available.",
+  "@offlineMessage": {
+    "placeholders": {
+      "url": {
+        "type": "Object"
+      }
+    }
+  },
+  "scanRunning": "Scanning the library…",
+  "scanProgress": "Scanning the library · {percent} %",
+  "@scanProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "scanFailed": "Scan failed",
+  "scanStopped": "Scan stopped · data refreshed",
+  "scanFinished": "Scan finished · data refreshed",
+  "stopScan": "Stop the scan",
+  "lockedTitle": "Stash is locked",
+  "password": "Password",
+  "wrongPassword": "Wrong password",
+  "unlock": "Unlock",
+  "info": "Info",
+  "information": "Information",
+  "parentStudio": "Parent studio",
+  "description": "Description",
+  "links": "Links",
+  "favorite": "Favorite",
+  "disambiguation": "Disambiguation",
+  "aliases": "Aliases",
+  "gender": "Gender",
+  "birth": "Birth",
+  "country": "Country",
+  "ethnicity": "Ethnicity",
+  "height": "Height",
+  "measurements": "Measurements",
+  "hairColor": "Hair",
+  "eyeColor": "Eyes",
+  "date": "Date",
+  "duration": "Duration",
+  "director": "Director",
+  "synopsis": "Synopsis",
+  "path": "Path",
+  "emptyGallery": "Empty gallery",
+  "enterServerAddress": "Enter the server's address.",
+  "connectedTo": "Connected to Stash {version}",
+  "@connectedTo": {
+    "placeholders": {
+      "version": {
+        "type": "Object"
+      }
+    }
+  },
+  "stashServer": "Stash server",
+  "connectPrompt": "Connect to your Stash server",
+  "serverAddress": "Server address",
+  "apiKeyOptional": "API key (optional)",
+  "apiKeyHelp": "Stash > Settings > Security > API key. Required when authentication is on.",
+  "connect": "Connect",
+  "scanLibraryQuestion": "Scan the library?",
+  "scanConfirmMessage": "Stash will go through your folders with its default scan options (Settings > Tasks). Progress shows at the bottom of the screen; pages reload when it is done.",
+  "scan": "Scan",
+  "homePage": "Home page",
+  "defaultHome": "Default home",
+  "customHomeItems": "{count, plural, one{Custom: {count} item} other{Custom: {count} items}}",
+  "@customHomeItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "savedViews": "Saved views",
+  "noViews": "None",
+  "countViews": "{count, plural, one{{count} view} other{{count} views}}",
+  "@countViews": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadsSubtitle": "Offline scenes, groups, galleries and images",
+  "displayHeader": "Display",
+  "serverHeader": "Server",
+  "applicationHeader": "Application",
+  "tabsTitle": "Tabs",
+  "sceneColumns": "Scene columns (portrait)",
+  "longPressPreview": "Video preview on long press",
+  "longPressPreviewSubtitle": "Plays a scene's preview while you hold it",
+  "serverVersion": "Server version",
+  "scanLibrary": "Scan the library",
+  "scanInProgressSubtitle": "Scan in progress (shown at the bottom of the screen)",
+  "scanSubtitle": "Finds added, changed or removed files",
+  "logout": "Log out",
+  "logoutQuestion": "Log out?",
+  "logoutMessage": "The server address and API key will be forgotten.",
+  "appVersion": "App version",
+  "settingsSubtitle": "Language, popup player, password, updates",
+  "language": "Language",
+  "appLanguage": "App language",
+  "systemLanguage": "System language ({name})",
+  "@systemLanguage": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "playbackHeader": "Playback",
+  "popupPlayer": "Popup player",
+  "popupPlayerSubtitle": "The playing video continues in a small window when you leave the app",
+  "privacyHeader": "Privacy",
+  "hideInRecents": "Hide in recent apps",
+  "hideInRecentsSubtitle": "Black preview in the app switcher (also blocks screenshots)",
+  "createPassword": "Create a password",
+  "createPasswordSubtitle": "Asked when the app opens",
+  "changePassword": "Change the password",
+  "removePassword": "Remove the password",
+  "askPasswordAgain": "Ask for the password again",
+  "passwordRemoved": "Password removed",
+  "passwordCreated": "Password created",
+  "passwordChanged": "Password changed",
+  "updatesHeader": "Updates",
+  "checkAtStartup": "Check at startup",
+  "checkAtStartupSubtitle": "Offers the new versions published on GitHub",
+  "checkForUpdate": "Check for an update",
+  "passwordTooShort": "At least 4 characters",
+  "passwordsDiffer": "The passwords differ",
+  "create": "Create",
+  "currentPassword": "Current password",
+  "newPassword": "New password",
+  "confirmation": "Confirmation",
+  "forgottenPasswordHint": "If you forget it, you will have to clear the app's data (and set it up again).",
+  "updateCheckFailed": "Could not check: {error}",
+  "@updateCheckFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "upToDate": "The app is up to date",
+  "installFailed": "Could not install: {error}",
+  "@installFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "versionAvailable": "Version {version} available",
+  "@versionAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "Object"
+      }
+    }
+  },
+  "whatsNewIn": "What's new in {version}",
+  "@whatsNewIn": {
+    "placeholders": {
+      "version": {
+        "type": "Object"
+      }
+    }
+  },
+  "later": "Later",
+  "install": "Install",
+  "installWithSize": "Install ({size})",
+  "@installWithSize": {
+    "placeholders": {
+      "size": {
+        "type": "Object"
+      }
+    }
+  },
+  "downloadingVersion": "Downloading {version}",
+  "@downloadingVersion": {
+    "placeholders": {
+      "version": {
+        "type": "Object"
+      }
+    }
+  },
+  "failedWith": "Failed: {error}",
+  "@failedWith": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "installHint": "Android will then ask you to confirm the installation (and, the first time, to allow Stash to install apps).",
+  "criterionFolder": "folder",
+  "criterionCustomFields": "custom fields",
+  "deleteNamedQuestion": "Delete “{name}”?",
+  "@deleteNamedQuestion": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "webFilterOf": "Stash filter (web) · {kind}",
+  "@webFilterOf": {
+    "placeholders": {
+      "kind": {
+        "type": "Object"
+      }
+    }
+  },
+  "noFilter": "no filter",
+  "viewsIntro": "Create a view (scenes, performers, studios…) with the “New view” button, or from the Scenes tab (bookmark icon). Filters saved in the Stash web UI show up too (cloud icon); they are edited from the web.",
+  "unsupportedWebFilters": "{count, plural, one{{count} web filter of a kind the app does not know is left out} other{{count} web filters of a kind the app does not know are left out}}",
+  "@unsupportedWebFilters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skippedCriteriaWarning": "{count, plural, one{A web filter uses criteria the app cannot apply (listed under that filter). They are ignored: the view shows more items than on the web.} other{{count} web filters use criteria the app cannot apply (listed under each of them). They are ignored: the view shows more items than on the web.}}",
+  "@skippedCriteriaWarning": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "composeHomePages": "Compose the home pages",
+  "homeIsDefault": "Home: default",
+  "homeItems": "{count, plural, one{Home: {count} item} other{Home: {count} items}}",
+  "@homeItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noSavedViews": "No saved views",
+  "homeIconHint": "The house icon adds a view at the end of the home page, or removes it. The order, the sections and the default home are set in “Compose the home pages”.",
+  "removeFromHome": "Remove from the home page",
+  "addToHome": "Add to the home page",
+  "ignored": "Ignored: {criteria}",
+  "@ignored": {
+    "placeholders": {
+      "criteria": {
+        "type": "Object"
+      }
+    }
+  },
+  "reloadWebFilters": "Reload Stash's filters",
+  "newView": "New view",
+  "webFiltersUnavailable": "Stash's filters unavailable",
+  "nameTheView": "Give the view a name",
+  "editView": "Edit the view",
+  "content": "Content",
+  "nameRequired": "Name *",
+  "searchOptional": "Search (optional)",
+  "sortField": "Sort",
+  "filter": "Filter",
+  "noFilterAll": "No filter (all {kind})",
+  "@noFilterAll": {
+    "placeholders": {
+      "kind": {
+        "type": "Object"
+      }
+    }
+  },
+  "editFilter": "Edit the filter",
+  "tabsIntro": "Check up to {max} screens for the bottom bar (“More” always stays there, last). The others are in More. Drag to change the order; the first tab opens at launch.",
+  "@tabsIntro": {
+    "placeholders": {
+      "max": {
+        "type": "Object"
+      }
+    }
+  },
+  "tabsCount": "{count} / {max} tabs",
+  "@tabsCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "max": {
+        "type": "Object"
+      }
+    }
+  },
+  "tab": "Tab",
+  "inMore": "In More",
+  "byDefault": "Default",
+  "homeLayoutIntro": "Items stacked on the home page, in this order. With nothing checked, the default home is used; with a single view, it fills the page and gives it its name.",
+  "dashboardLayoutIntro": "Rows of the default home (opened by the button at the top right of a custom home), in this order.",
+  "defaultRows": "Default rows",
+  "homeSection": "Home section",
+  "viewOf": "View · {kind}",
+  "@viewOf": {
+    "placeholders": {
+      "kind": {
+        "type": "Object"
+      }
+    }
+  },
+  "errorWith": "Error: {error}",
+  "@errorWith": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "nothingYet": "Nothing yet",
+  "showMore": "Show more ({count})",
+  "@showMore": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "serverUnreachableShort": "Server unreachable: {error}",
+  "@serverUnreachableShort": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "countHours": "{count, plural, one{{count} hour} other{{count} hours}}",
+  "@countHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seeAll": "See all",
+  "viewSaved": "View “{name}” saved",
+  "@viewSaved": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "showOnHome": "Show on the home page",
+  "clear": "Clear",
+  "filters": "Filters",
+  "saveAsNewView": "Save as a new view",
+  "saveView": "Save the view",
+  "noMarkers": "No markers",
+  "noImages": "No images",
+  "noDownloads": "No downloads.\n\nUse the download button of a scene, a group, a gallery or an image (in the viewer) to keep it on the phone.",
+  "deleteFromPhoneQuestion": "Delete “{title}” from the phone?",
+  "@deleteFromPhoneQuestion": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "groupScenesDeletedToo": "This group's scenes will be deleted too.",
+  "downloadFailedRetry": "Failed: tap ⋮ to retry",
+  "downloadQueued": "Waiting",
+  "downloadRunning": "Downloading…",
+  "downloadProgress": "Downloading · {percent} %",
+  "@downloadProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "resumeAt": "Resume at {time}",
+  "@resumeAt": {
+    "placeholders": {
+      "time": {
+        "type": "Object"
+      }
+    }
+  },
+  "play": "Play",
+  "fromStart": "From the start",
+  "forgetResumePosition": "Forget the resume position",
+  "resumePositionCleared": "Resume position cleared",
+  "code": "Code",
+  "file": "File",
+  "fileSize": "Size",
+  "dimensions": "Dimensions",
+  "format": "Format",
+  "video": "Video",
+  "audio": "Audio",
+  "framesPerSecondLabel": "Frames/s",
+  "bitRate": "Bit rate",
+  "megabitsPerSecond": "{value} Mb/s",
+  "@megabitsPerSecond": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "offlineCopy": "Offline copy",
+  "noStream": "No stream available",
+  "directStream": "Direct (original)",
+  "directPlaybackFailed": "Direct playback failed, trying “{source}”",
+  "@directPlaybackFailed": {
+    "placeholders": {
+      "source": {
+        "type": "Object"
+      }
+    }
+  },
+  "playbackFailed": "Cannot play: {error}",
+  "@playbackFailed": {
+    "placeholders": {
+      "error": {
+        "type": "Object"
+      }
+    }
+  },
+  "playbackError": "Playback error",
+  "coverGenerating": "Stash is generating the cover",
+  "playbackSpeed": "Playback speed",
+  "useFrameAsCover": "Use this frame as the cover",
+  "addMarkerHere": "Add a marker here",
+  "streams": "Streams",
+  "pause": "Pause",
+  "filterKind": "Filter: {kind}",
+  "@filterKind": {
+    "placeholders": {
+      "kind": {
+        "type": "Object"
+      }
+    }
+  },
+  "allRatings": "Any",
+  "allResolutions": "Any",
+  "withLabel": "With",
+  "withoutLabel": "Without",
+  "yes": "Yes",
+  "no": "No",
+  "anyValue": "All",
+  "confirmCount": "Confirm ({count})",
+  "@confirmCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "clearAll": "Clear all",
+  "includeSubTags": "Include sub-tags",
+  "includeSubStudios": "Include sub-studios",
+  "includeSubGroups": "Include sub-groups",
+  "minRating": "Minimum rating",
+  "minResolution": "Minimum resolution",
+  "durationMinutes": "Duration (minutes)",
+  "min": "Min",
+  "max": "Max",
+  "apply": "Apply",
+  "choose": "Choose",
+  "watchStatus": "Watched",
+  "cover": "Cover",
+  "organized": "Organized",
+  "scrape": "Scrape",
+  "editScene": "Edit the scene",
+  "photo": "Photo",
+  "deathDate": "Death date",
+  "weight": "Weight",
+  "fakeTits": "Fake tits",
+  "tattoos": "Tattoos",
+  "piercings": "Piercings",
+  "editPerformer": "Edit the performer",
+  "logo": "Logo",
+  "editStudio": "Edit the studio",
+  "image": "Image",
+  "parentTags": "Parent tags",
+  "editTag": "Edit the tag",
+  "frontCover": "Front cover",
+  "backCover": "Back cover",
+  "editGroup": "Edit the group",
+  "photographer": "Photographer",
+  "editGallery": "Edit the gallery",
+  "start": "Start",
+  "endOptional": "End (optional)",
+  "primaryTag": "Primary tag",
+  "otherTags": "Other tags",
+  "deleteMarker": "Delete the marker",
+  "newMarker": "New marker",
+  "fieldRequired": "{label} is required",
+  "@fieldRequired": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      }
+    }
+  },
+  "dateHint": "YYYY-MM-DD",
+  "dateFormatExpected": "{label}: {format} format expected",
+  "@dateFormatExpected": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      },
+      "format": {
+        "type": "Object"
+      }
+    }
+  },
+  "integerExpected": "{label}: whole number expected",
+  "@integerExpected": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      }
+    }
+  },
+  "timeFormatExpected": "{label}: m:ss format expected",
+  "@timeFormatExpected": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      }
+    }
+  },
+  "change": "Change",
+  "add": "Add",
+  "addHint": "Add…",
+  "questionOf": "{action}?",
+  "@questionOf": {
+    "placeholders": {
+      "action": {
+        "type": "Object"
+      }
+    }
+  },
+  "saved": "Saved",
+  "deleted": "Deleted",
+  "use": "Use",
+  "fromPhone": "From the phone",
+  "fromUrl": "From a URL",
+  "cannotBeUndone": "This cannot be undone.",
+  "discardChangesQuestion": "Discard the changes?",
+  "continueEditing": "Keep editing",
+  "discard": "Discard",
+  "untitled": "Untitled",
+  "newImage": "New image",
+  "nothingNewInResult": "Nothing new in this result",
+  "searchOn": "Search on {source}",
+  "@searchOn": {
+    "placeholders": {
+      "source": {
+        "type": "Object"
+      }
+    }
+  },
+  "titleCodeHint": "Title, code…",
+  "scrapeWith": "Scrape with…",
+  "byFingerprintThenSearch": "By fingerprint, else by search",
+  "bySearch": "By search",
+  "byScene": "by scene",
+  "bySearchLower": "by search",
+  "scrapersHeader": "Scrapers",
+  "noScraperConfigured": "No scraper or stash-box is set up for this type on the server (Settings > Metadata).",
+  "countResults": "{count, plural, one{{count} result} other{{count} results}}",
+  "@countResults": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "createdInStash": "{count, plural, one{{count} item created in Stash} other{{count} items created in Stash}}",
+  "@createdInStash": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scrapeResultIntro": "Check the values to take. They fill the edit form and are only saved with “Save” (except the items to create, below).",
+  "currentValue": "Current: {value}",
+  "@currentValue": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "missingFromStash": "Missing from Stash",
+  "missingFromStashHint": "Checked items are created in Stash (with the scraper's information) on “Apply”, then linked.",
+  "createAndLink": "Create and link · {label}",
+  "@createAndLink": {
+    "placeholders": {
+      "label": {
+        "type": "Object"
+      }
+    }
+  },
+  "search": "Search",
+  "scrapeUrl": "Scrape a URL",
+  "otherUrl": "Other URL…",
+  "scrapeResult": "Scrape result"
+}
