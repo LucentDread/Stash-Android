@@ -399,14 +399,16 @@ class DownloadManager extends ChangeNotifier {
         title: gallery.displayTitle,
         data: data,
         added: DateTime.now(),
-        cover: images.isEmpty ? null : '$dir/${_imageName(0)}',
+        cover: images.isEmpty || images.first.isClip
+            ? null
+            : '$dir/${_imageName(0, images.first)}',
         files: [
           for (var i = 0; i < images.length; i++)
             if (images[i].image != null)
               OfflineFile(
                 taskId: 'gallery-$id-$i-$stamp',
                 url: _url(images[i].image),
-                path: '$dir/${_imageName(i)}',
+                path: '$dir/${_imageName(i, images[i])}',
               ),
         ],
       ),
@@ -423,7 +425,9 @@ class DownloadManager extends ChangeNotifier {
     final title = (image.title?.isNotEmpty ?? false)
         ? image.title!
         : tr.imageNumber(id);
-    final path = 'image_$id/image.img';
+    final path = image.isClip
+        ? 'image_$id/image${StashImage.clipExtension}'
+        : 'image_$id/image.img';
     await _add(
       OfflineEntry(
         kind: OfflineKind.image,
@@ -431,7 +435,7 @@ class DownloadManager extends ChangeNotifier {
         title: title,
         data: {'id': id, 'title': image.title},
         added: DateTime.now(),
-        cover: path,
+        cover: image.isClip ? null : path,
         files: [
           if (image.image != null)
             OfflineFile(
@@ -445,8 +449,11 @@ class DownloadManager extends ChangeNotifier {
     );
   }
 
-  static String _imageName(int i) =>
-      '${(i + 1).toString().padLeft(5, '0')}.img';
+  /// File name of a gallery's [i]th image; clips are named so the viewer
+  /// plays them.
+  static String _imageName(int i, StashImage image) =>
+      '${(i + 1).toString().padLeft(5, '0')}'
+      '${image.isClip ? StashImage.clipExtension : '.img'}';
 
   /// Local image paths of a downloaded gallery (or single image), in
   /// order.

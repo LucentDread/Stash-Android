@@ -505,11 +505,28 @@ class StashImage {
     this.width,
     this.height,
     this.rating100,
+    this.isClip = false,
   });
+
+  /// Extension of downloaded image clips, which the viewer plays.
+  static const clipExtension = '.clip';
+
+  /// A local copy, a clip when its name says so.
+  factory StashImage.offline(String id, String path, {String? title}) =>
+      StashImage(
+        id: id,
+        title: title,
+        image: path,
+        isClip: path.endsWith(clipExtension),
+      );
 
   final String id;
   final String? title;
   final int? rating100;
+
+  /// An image clip: a video file shown among the images (libraries set to
+  /// treat videos as images). [image] is then the video.
+  final bool isClip;
   final String? thumbnail;
   final String? preview;
   final String? image;
@@ -531,6 +548,7 @@ class StashImage {
       image: paths['image'] as String?,
       width: _int(f['width']),
       height: _int(f['height']),
+      isClip: f['__typename'] == 'VideoFile',
     );
   }
 }

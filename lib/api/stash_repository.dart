@@ -382,6 +382,7 @@ const _imageFields = '''
   id title rating100
   paths { thumbnail preview image }
   visual_files {
+    __typename
     ... on ImageFile { width height }
     ... on VideoFile { width height }
   }

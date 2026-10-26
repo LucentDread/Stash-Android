@@ -829,6 +829,8 @@
   "addMarkerHere": "Add a marker here",
   "streams": "Streams",
   "pause": "Pause",
+  "soundOn": "Turn the sound on",
+  "soundOff": "Turn the sound off",
   "filterKind": "Filter: {kind}",
   "@filterKind": {
     "placeholders": {

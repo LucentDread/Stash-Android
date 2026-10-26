@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.16.2
+- Image clips (video files that a library shows among the images) now play
+  in the image viewer: looping, muted until the sound button is tapped.
+  Their thumbnails carry a play icon, and downloaded clips play offline.
+
 ## 1.16.1
 - Unrated items no longer show empty stars: nothing on cards, a "Not
   rated" button on pages and edit forms, which shows the stars to pick

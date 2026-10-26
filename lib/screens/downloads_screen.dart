@@ -88,7 +88,7 @@ void openOffline(BuildContext context, OfflineEntry e) {
     OfflineKind.gallery => ImageViewerScreen(
       images: [
         for (final (i, path) in downloads.galleryImages(e).indexed)
-          StashImage(id: '$i', image: path),
+          StashImage.offline('$i', path),
       ],
       initialIndex: 0,
       downloadable: false,
@@ -106,7 +106,7 @@ ImageViewerScreen _offlineImages(DownloadManager downloads, OfflineEntry e) {
     final path = downloads.galleryImages(other).firstOrNull;
     if (path == null) continue;
     if (other.id == e.id) index = images.length;
-    images.add(StashImage(id: other.id, title: other.title, image: path));
+    images.add(StashImage.offline(other.id, path, title: other.title));
   }
   return ImageViewerScreen(
     images: images,

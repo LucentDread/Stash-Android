@@ -338,6 +338,8 @@
   "addMarkerHere": "Añadir un marcador aquí",
   "streams": "Transmisiones",
   "pause": "Pausa",
+  "soundOn": "Activar el sonido",
+  "soundOff": "Silenciar",
   "filterKind": "Filtrar: {kind}",
   "allRatings": "Todas",
   "allResolutions": "Todas",

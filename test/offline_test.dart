@@ -100,6 +100,10 @@ http.Client _server() => MockClient((req) async {
         'id': v['id'],
         'title': 'Coucher de soleil',
         'paths': {'image': 'http://stash.test/image/${v['id']}/image'},
+        // Image 5 is a clip: a video shown among the images.
+        'visual_files': [
+          {'__typename': v['id'] == '5' ? 'VideoFile' : 'ImageFile'},
+        ],
       },
     };
   } else if (q.contains('findImages')) {
@@ -111,6 +115,9 @@ http.Client _server() => MockClient((req) async {
             {
               'id': '$i',
               'paths': {'image': 'http://stash.test/image/$i/image'},
+              'visual_files': [
+                {'__typename': i == 1 ? 'VideoFile' : 'ImageFile'},
+              ],
             },
         ],
       },
@@ -207,7 +214,7 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(d.galleryImages(g).map((p) => p.split('/').last).toList(), [
       '00001.img',
-      '00002.img',
+      '00002.clip',
       '00003.img',
     ]);
   });
@@ -334,5 +341,58 @@ void main() {
     expect(find.text('Connexion au serveur rétablie'), findsOneWidget);
     // Let the snack bar time out.
     await tester.pump(const Duration(seconds: 5));
+  });
+
+  test('image clips are kept under a name the viewer plays', () async {
+    final (app, fetcher, dir) = await _setup();
+    final d = app.downloads;
+    await d.downloadImage('5');
+    final e = d.entry(OfflineKind.image, '5')!;
+    expect(fetcher.enqueued.values.single.path, 'image_5/image.clip');
+    expect(e.cover, isNull, reason: 'a video is no picture');
+
+    fetcher.enqueued.clear();
+    await d.downloadGallery('8');
+    expect(
+      [for (final t in fetcher.enqueued.values) t.path],
+      ['gallery_8/00001.img', 'gallery_8/00002.clip', 'gallery_8/00003.img'],
+    );
+    expect(StashImage.offline('1', '/x/00002.clip').isClip, isTrue);
+    expect(StashImage.offline('1', '/x/00001.img').isClip, isFalse);
+    await dir.delete(recursive: true);
+  });
+
+  testWidgets('the viewer plays clips, muted until asked', (tester) async {
+    final (app, _, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: ImageViewerScreen(
+            images: [
+              StashImage(id: '4', image: 'http://stash.test/image/4/image'),
+              StashImage(
+                id: '5',
+                image: 'http://stash.test/image/5/image',
+                isClip: true,
+              ),
+            ],
+            initialIndex: 1,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(InteractiveViewer), findsNothing);
+    expect(find.byTooltip('Activer le son'), findsOneWidget);
+    await tester.tap(find.byTooltip('Activer le son'));
+    await tester.pump();
+    expect(find.byTooltip('Couper le son'), findsOneWidget);
+
+    tester.widget<PageView>(find.byType(PageView)).controller!.jumpToPage(0);
+    await tester.pumpAndSettle();
+    expect(find.byType(InteractiveViewer), findsOneWidget);
+    expect(find.byTooltip('Couper le son'), findsNothing);
   });
 }

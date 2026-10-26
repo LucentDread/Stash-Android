@@ -11,8 +11,8 @@ import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/download_button.dart';
 import '../widgets/insets.dart';
-import '../widgets/net_image.dart';
 import '../widgets/paged_grid.dart';
+import '../widgets/view_list.dart';
 import 'edit/editors.dart';
 
 class GalleryScreen extends StatelessWidget {
@@ -58,13 +58,8 @@ class GalleryScreen extends StatelessWidget {
           maxCrossAxisExtent: 160,
           childAspectRatio: 1,
           emptyText: tr.emptyGallery,
-          itemBuilder: (context, img, i, all) => InkWell(
-            onTap: () => openImages(context, List.of(all), i),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: NetImage(img.thumbnail),
-            ),
-          ),
+          itemBuilder: (context, img, i, all) =>
+              ImageTile(image: img, all: all, index: i),
         ),
       ),
     );

@@ -2132,6 +2132,18 @@ abstract class AppLocalizations {
   /// **'Pause'**
   String get pause;
 
+  /// No description provided for @soundOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the sound on'**
+  String get soundOn;
+
+  /// No description provided for @soundOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn the sound off'**
+  String get soundOff;
+
   /// No description provided for @filterKind.
   ///
   /// In en, this message translates to:

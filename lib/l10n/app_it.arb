@@ -338,6 +338,8 @@
   "addMarkerHere": "Aggiungi un marcatore qui",
   "streams": "Flussi",
   "pause": "Pausa",
+  "soundOn": "Attiva l'audio",
+  "soundOff": "Disattiva l'audio",
   "filterKind": "Filtra: {kind}",
   "allRatings": "Tutte",
   "allResolutions": "Tutte",

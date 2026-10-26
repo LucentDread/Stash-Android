@@ -149,7 +149,25 @@ class ImageTile extends StatelessWidget {
     onTap: () => openImages(context, List.of(all), index),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(4),
-      child: NetImage(image.thumbnail),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          NetImage(image.thumbnail),
+          if (image.isClip)
+            const Align(
+              alignment: Alignment.bottomRight,
+              child: Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(
+                  Icons.play_circle_outline,
+                  color: Colors.white,
+                  size: 20,
+                  shadows: [Shadow(blurRadius: 4)],
+                ),
+              ),
+            ),
+        ],
+      ),
     ),
   );
 }

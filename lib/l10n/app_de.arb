@@ -338,6 +338,8 @@
   "addMarkerHere": "Hier eine Markierung hinzufügen",
   "streams": "Streams",
   "pause": "Pause",
+  "soundOn": "Ton einschalten",
+  "soundOff": "Ton ausschalten",
   "filterKind": "Filtern: {kind}",
   "allRatings": "Alle",
   "allResolutions": "Alle",
