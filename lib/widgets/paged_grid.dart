@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import '../api/stash_repository.dart';
 import '../l10n/l10n.dart';
 import '../models/models.dart';
+import '../services/downloads.dart';
 import 'async_view.dart';
 import 'data_refresh.dart';
+import 'download_button.dart';
 import 'insets.dart';
 
 typedef PageFetcher<T> = Future<ResultPage<T>> Function(ListQuery query);
@@ -47,7 +49,8 @@ class PagedGrid<T> extends StatefulWidget {
     this.reloadKey,
     this.onQueryChanged,
     this.itemKey,
-  });
+    this.downloadKind,
+  }) : assert(downloadKind == null || itemKey != null);
 
   final PageFetcher<T> fetch;
   final Widget Function(BuildContext context, T item, int index, List<T> all)
@@ -83,6 +86,10 @@ class PagedGrid<T> extends StatefulWidget {
   /// the server data shifts between two pages.
   final Object Function(T item)? itemKey;
 
+  /// Items that can be downloaded: a button selects several of them (by
+  /// [itemKey], their id) to download at once.
+  final OfflineKind? downloadKind;
+
   @override
   State<PagedGrid<T>> createState() => _PagedGridState<T>();
 }
@@ -110,6 +117,110 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
       widget.initialSort ?? widget.sortOptions.firstOrNull?.value;
   late bool _descending = widget.initialDescending;
   int _generation = 0;
+
+  /// Ids of the selected items while selecting, else null.
+  Set<String>? _selected;
+
+  String _idOf(T item) => '${widget.itemKey!(item)}';
+
+  void _toggle(T item) => setState(() {
+    final id = _idOf(item);
+    _selected!.contains(id) ? _selected!.remove(id) : _selected!.add(id);
+  });
+
+  Future<void> _downloadSelected() async {
+    // In list order.
+    final ids = [
+      for (final item in _items)
+        if (_selected!.contains(_idOf(item))) _idOf(item),
+    ];
+    if (await downloadAll(context, widget.downloadKind!, ids) && mounted) {
+      setState(() => _selected = null);
+    }
+  }
+
+  /// Replaces the toolbar while selecting.
+  Widget _selectionBar(BuildContext context) {
+    final selected = _selected!;
+    final all = _items.isNotEmpty && selected.length >= _items.length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 12, 4),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: tr.cancel,
+            icon: const Icon(Icons.close),
+            onPressed: () => setState(() => _selected = null),
+          ),
+          Expanded(
+            child: Text(
+              tr.countSelected(selected.length),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          TextButton(
+            onPressed: () => setState(
+              () => all ? selected.clear() : selected.addAll(_items.map(_idOf)),
+            ),
+            child: Text(all ? tr.selectNone : tr.selectAll),
+          ),
+          IconButton.filledTonal(
+            tooltip: tr.download,
+            icon: const Icon(Icons.download_outlined),
+            onPressed: selected.isEmpty ? null : _downloadSelected,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget get _selectButton => IconButton(
+    tooltip: tr.select,
+    icon: const Icon(Icons.checklist),
+    onPressed: () => setState(() => _selected = {}),
+  );
+
+  /// [tile] covered, while selecting, by a layer that toggles it.
+  Widget _selectable(T item, Widget tile) {
+    final selected = _selected;
+    if (selected == null) return tile;
+    final on = selected.contains(_idOf(item));
+    final scheme = Theme.of(context).colorScheme;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        tile,
+        Positioned.fill(
+          child: Material(
+            color: on
+                ? scheme.primary.withValues(alpha: 0.25)
+                : Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: on
+                  ? BorderSide(color: scheme.primary, width: 3)
+                  : BorderSide.none,
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => _toggle(item),
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    on ? Icons.check_circle : Icons.radio_button_unchecked,
+                    color: on ? scheme.primary : Colors.white,
+                    shadows: const [Shadow(blurRadius: 4)],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   bool get _hasMore => _page == 0 || _items.length < _count;
 
@@ -291,6 +402,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
                 ),
               ],
               ...widget.actions,
+              if (widget.downloadKind != null) _selectButton,
             ],
           ),
         ],
@@ -347,7 +459,10 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
             }
             return const Center(child: CircularProgressIndicator());
           }
-          return widget.itemBuilder(context, _items[i], i, _items);
+          return _selectable(
+            _items[i],
+            widget.itemBuilder(context, _items[i], i, _items),
+          );
         },
       ),
     );
@@ -356,14 +471,26 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
   @override
   Widget build(BuildContext context) {
     watchServerData(_reset);
-    return Column(
-      children: [
-        if (widget.showToolbar) _toolbar(context),
-        ?widget.header,
-        Expanded(
-          child: RefreshIndicator(onRefresh: _reset, child: _body(context)),
-        ),
-      ],
+    return PopScope(
+      // Back leaves the selection first.
+      canPop: _selected == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _selected = null);
+      },
+      child: Column(
+        children: [
+          if (_selected != null)
+            _selectionBar(context)
+          else if (widget.showToolbar)
+            _toolbar(context)
+          else if (widget.downloadKind != null)
+            Align(alignment: Alignment.centerRight, child: _selectButton),
+          ?widget.header,
+          Expanded(
+            child: RefreshIndicator(onRefresh: _reset, child: _body(context)),
+          ),
+        ],
+      ),
     );
   }
 }

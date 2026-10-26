@@ -15,8 +15,67 @@ import 'package:stash_android/models/models.dart';
 import 'package:stash_android/screens/image_viewer_screen.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/services/downloads.dart';
+import 'package:stash_android/widgets/view_list.dart';
+import 'package:video_player/video_player.dart';
+import 'package:stash_android/screens/browse_screens.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 /// Records transfers; tests push their progress through [emit].
+/// Player that opens any clip at once: 12 s long, at 3 s.
+class _FakePlayer extends VideoPlayerPlatform {
+  final playing = <int, bool>{};
+  var _next = 0;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<int?> createWithOptions(VideoCreationOptions options) async => _next++;
+
+  @override
+  Stream<VideoEvent> videoEventsFor(int playerId) => Stream.value(
+    VideoEvent(
+      eventType: VideoEventType.initialized,
+      duration: const Duration(seconds: 12),
+      size: const Size(640, 360),
+    ),
+  );
+
+  @override
+  Future<void> play(int playerId) async => playing[playerId] = true;
+
+  @override
+  Future<void> pause(int playerId) async => playing[playerId] = false;
+
+  @override
+  Future<void> setLooping(int playerId, bool looping) async {}
+
+  @override
+  Future<void> setVolume(int playerId, double volume) async {}
+
+  @override
+  Future<void> seekTo(int playerId, Duration position) async {}
+
+  @override
+  Future<Duration> getPosition(int playerId) async =>
+      const Duration(seconds: 3);
+
+  @override
+  Future<void> setPlaybackSpeed(int playerId, double speed) async {}
+
+  @override
+  Future<void> setMixWithOthers(bool mixWithOthers) async {}
+
+  @override
+  Future<void> setAllowBackgroundPlayback(bool allow) async {}
+
+  @override
+  Future<void> dispose(int playerId) async {}
+
+  @override
+  Widget buildViewWithOptions(VideoViewOptions options) => const SizedBox();
+}
+
 class FakeFetcher implements FileFetcher {
   FakeFetcher(this.root);
   final String root;
@@ -394,5 +453,131 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(InteractiveViewer), findsOneWidget);
     expect(find.byTooltip('Couper le son'), findsNothing);
+  });
+
+  testWidgets('a clip shows its progress, play/pause and length', (
+    tester,
+  ) async {
+    final player = _FakePlayer();
+    VideoPlayerPlatform.instance = player;
+    final (app, _, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: ImageViewerScreen(
+            images: [
+              StashImage(
+                id: '5',
+                image: 'http://stash.test/image/5/image',
+                isClip: true,
+              ),
+            ],
+            initialIndex: 0,
+          ),
+        ),
+      ),
+    );
+    // The player opens with real asynchronous work.
+    for (
+      var i = 0;
+      i < 20 && find.byType(VideoPlayer).evaluate().isEmpty;
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    expect(find.byType(VideoProgressIndicator), findsOneWidget);
+    expect(find.text('0:12'), findsOneWidget);
+    expect(player.playing.values.single, isTrue);
+    await tester.tap(find.byTooltip('Pause'));
+    await tester.pump();
+    expect(player.playing.values.single, isFalse);
+    expect(find.byTooltip('Lire'), findsOneWidget);
+
+    // Hidden with the rest of the controls.
+    await tester.tapAt(const Offset(400, 300));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(VideoProgressIndicator), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('several images are selected and downloaded at once', (
+    tester,
+  ) async {
+    final (app, fetcher, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: const MaterialApp(home: ImagesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Sélectionner'));
+    await tester.pump();
+    expect(find.text('0 sélectionné'), findsOneWidget);
+
+    // A tap selects instead of opening the viewer.
+    await tester.tap(find.byType(ImageTile).first);
+    await tester.pump();
+    expect(find.byType(ImageViewerScreen), findsNothing);
+    expect(find.text('1 sélectionné'), findsOneWidget);
+    await tester.tap(find.text('Tout'));
+    await tester.pump();
+    expect(find.text('3 sélectionnés'), findsOneWidget);
+    await tester.tap(find.byType(ImageTile).first);
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Télécharger'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('les 2 éléments sélectionnés'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Télécharger'));
+    for (var i = 0; i < 40 && fetcher.enqueued.length < 2; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    expect(
+      [for (final t in fetcher.enqueued.values) t.path],
+      ['image_1/image.img', 'image_2/image.img'],
+    );
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Sélectionner'), findsOneWidget, reason: 'done');
+  });
+
+  testWidgets('back leaves the selection, not the page', (tester) async {
+    final (app, _, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ImagesScreen())),
+              child: const Text('ouvrir'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('ouvrir'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Sélectionner'));
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(ImagesScreen), findsOneWidget);
+    expect(find.byTooltip('Sélectionner'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(ImagesScreen), findsNothing);
   });
 }

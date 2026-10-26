@@ -421,6 +421,25 @@
   "unlock": "Unlock",
   "clearRating": "Clear the rating",
   "notRated": "Not rated",
+  "select": "Select",
+  "selectAll": "All",
+  "selectNone": "None",
+  "countSelected": "{count, plural, other{{count} selected}}",
+  "@countSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadSelectionQuestion": "{count, plural, one{Download the selected item to view it offline?} other{Download the {count} selected items to view them offline?}}",
+  "@downloadSelectionQuestion": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "info": "Info",
   "information": "Information",
   "parentStudio": "Parent studio",

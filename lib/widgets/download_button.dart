@@ -116,3 +116,63 @@ class DownloadButton extends StatelessWidget {
     );
   }
 }
+
+/// Downloads several items of one [kind] after a confirmation; items
+/// already downloaded are skipped. Returns true when the downloads started.
+Future<bool> downloadAll(
+  BuildContext context,
+  OfflineKind kind,
+  List<String> ids,
+) async {
+  final downloads = context.read<AppState>().downloads;
+  final messenger = ScaffoldMessenger.of(context);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(tr.downloadTitle),
+      content: Text(
+        '${tr.downloadSelectionQuestion(ids.length)} '
+        '${tr.downloadInBackground}',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(tr.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(tr.download),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return false;
+  messenger.showSnackBar(SnackBar(content: Text(tr.preparingDownload)));
+  final failed = <String>[];
+  for (final id in ids) {
+    try {
+      switch (kind) {
+        case OfflineKind.scene:
+          await downloads.downloadScene(id);
+        case OfflineKind.group:
+          await downloads.downloadGroup(id);
+        case OfflineKind.gallery:
+          await downloads.downloadGallery(id);
+        case OfflineKind.image:
+          await downloads.downloadImage(id);
+      }
+    } catch (e) {
+      failed.add('$e');
+    }
+  }
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        failed.isEmpty
+            ? tr.downloadStarted
+            : tr.failedWith(failed.toSet().join(', ')),
+      ),
+    ),
+  );
+  return true;
+}

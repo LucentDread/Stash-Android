@@ -1046,6 +1046,36 @@ abstract class AppLocalizations {
   /// **'Not rated'**
   String get notRated;
 
+  /// No description provided for @select.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get select;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get selectAll;
+
+  /// No description provided for @selectNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get selectNone;
+
+  /// No description provided for @countSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, other{{count} selected}}'**
+  String countSelected(int count);
+
+  /// No description provided for @downloadSelectionQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Download the selected item to view it offline?} other{Download the {count} selected items to view them offline?}}'**
+  String downloadSelectionQuestion(int count);
+
   /// No description provided for @info.
   ///
   /// In en, this message translates to:

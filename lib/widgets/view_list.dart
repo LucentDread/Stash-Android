@@ -6,6 +6,7 @@ import '../models/models.dart';
 import '../models/scene_filter.dart';
 import '../navigation.dart';
 import '../services/app_state.dart';
+import '../services/downloads.dart';
 import 'cards.dart';
 import 'net_image.dart';
 import 'paged_grid.dart';
@@ -184,6 +185,13 @@ class ViewBrowser extends StatelessWidget {
     final style = ViewStyle.of(context, view.kind);
     return PagedGrid<Object>(
       itemKey: viewItemKey,
+      downloadKind: switch (view.kind) {
+        ViewKind.scenes => OfflineKind.scene,
+        ViewKind.groups => OfflineKind.group,
+        ViewKind.galleries => OfflineKind.gallery,
+        ViewKind.images => OfflineKind.image,
+        _ => null,
+      },
       fetch: (q) => repo.findForView(view, q),
       sortOptions: style.sortOptions,
       initialSort: view.sort,

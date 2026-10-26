@@ -6,6 +6,7 @@ import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
+import '../services/downloads.dart';
 import '../widgets/cards.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/paged_grid.dart';
@@ -128,6 +129,7 @@ class _ScenesBrowserState extends State<ScenesBrowser> {
     final count = _filter.activeCount;
     return PagedGrid<Scene>(
       itemKey: (item) => item.id,
+      downloadKind: OfflineKind.scene,
       fetch: (q) => repo.findScenes(
         q,
         entity: widget.entity,
@@ -241,6 +243,7 @@ Widget galleryGrid(BuildContext context, {EntityFilter? entity}) {
   final repo = context.read<AppState>().repo!;
   return PagedGrid<Gallery>(
     itemKey: (item) => item.id,
+    downloadKind: OfflineKind.gallery,
     fetch: (q) => repo.findGalleries(q, entity: entity),
     sortOptions: SortOptions.galleries,
     maxCrossAxisExtent: 220,
@@ -337,6 +340,7 @@ class ImagesScreen extends StatelessWidget {
       title: tr.images,
       child: PagedGrid<StashImage>(
         itemKey: (item) => item.id,
+        downloadKind: OfflineKind.image,
         fetch: repo.findImages,
         sortOptions: SortOptions.images,
         maxCrossAxisExtent: 160,
@@ -374,6 +378,7 @@ class GroupsScreen extends StatelessWidget {
       ],
       child: PagedGrid<Group>(
         itemKey: (item) => item.id,
+        downloadKind: OfflineKind.group,
         fetch: repo.findGroups,
         sortOptions: SortOptions.groups,
         initialDescending: false,

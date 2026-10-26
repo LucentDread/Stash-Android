@@ -651,6 +651,38 @@ class AppLocalizationsFr extends AppLocalizations {
   String get notRated => 'Non noté';
 
   @override
+  String get select => 'Sélectionner';
+
+  @override
+  String get selectAll => 'Tout';
+
+  @override
+  String get selectNone => 'Aucun';
+
+  @override
+  String countSelected(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sélectionnés',
+      one: '$count sélectionné',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String downloadSelectionQuestion(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Télécharger les $count éléments sélectionnés pour les regarder hors ligne ?',
+      one: 'Télécharger l\'élément sélectionné pour le regarder hors ligne ?',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get info => 'Infos';
 
   @override

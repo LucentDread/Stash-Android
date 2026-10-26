@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.17.0
+- Image clips: a progress bar under the clip in the viewer, with
+  play/pause, the position and the length; drag it to seek. It shows and
+  hides with the other controls.
+- Select several items to download them at once: a select button next to
+  the sort in the lists of scenes, images, groups and galleries (tabs,
+  More, saved views of those kinds, the scenes and galleries of a
+  performer, studio, tag or group, the images of a gallery). Taps then
+  select; "All" selects what is loaded; back leaves the selection.
+
 ## 1.16.2
 - Image clips (video files that a library shows among the images) now play
   in the image viewer: looping, muted until the sound button is tapped.

@@ -10,6 +10,7 @@ import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
 import '../services/downloads.dart';
+import '../utils/format.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/download_button.dart';
 import '../widgets/net_image.dart';
@@ -59,35 +60,52 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
     super.dispose();
   }
 
-  Widget _ratingBar(StashImage image) => ColoredBox(
-    color: Colors.black45,
-    child: SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        // A row, not a Center: the bar must keep its own height.
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            LiveRating(
-              key: ValueKey(image.id),
-              initial: _ratings.containsKey(image.id)
-                  ? _ratings[image.id]
-                  : image.rating100,
-              save: (r) async {
-                await context.read<AppState>().repo!.rate(
-                  EditKind.image,
-                  image.id,
-                  r,
-                );
-                _ratings[image.id] = r;
-              },
-            ),
-          ],
+  /// Players of the clips built so far, by image id.
+  final _clips = <String, VideoPlayerController>{};
+
+  /// Bottom bar: the clip's progress and the image's rating, as they
+  /// apply.
+  Widget? _bottomBar(StashImage image) {
+    final clip = image.isClip ? _clips[image.id] : null;
+    final rate = widget.downloadable;
+    if (!_chrome || (clip == null && !rate)) return null;
+    return ColoredBox(
+      color: Colors.black45,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (clip != null) _ClipProgress(controller: clip),
+              if (rate)
+                // A row, not a Center: the bar must keep its own height.
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    LiveRating(
+                      key: ValueKey(image.id),
+                      initial: _ratings.containsKey(image.id)
+                          ? _ratings[image.id]
+                          : image.rating100,
+                      save: (r) async {
+                        await context.read<AppState>().repo!.rate(
+                          EditKind.image,
+                          image.id,
+                          r,
+                        );
+                        _ratings[image.id] = r;
+                      },
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,9 +113,7 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
       extendBody: true,
-      bottomNavigationBar: _chrome && widget.downloadable
-          ? _ratingBar(widget.images[_index])
-          : null,
+      bottomNavigationBar: _bottomBar(widget.images[_index]),
       appBar: _chrome
           ? AppBar(
               backgroundColor: Colors.black45,
@@ -136,6 +152,17 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
                   image: widget.images[i],
                   active: i == _index,
                   muted: _muted,
+                  onPlayer: (c, {required bool ready}) {
+                    if (!mounted) return;
+                    final id = widget.images[i].id;
+                    setState(() {
+                      if (ready) {
+                        _clips[id] = c;
+                      } else if (_clips[id] == c) {
+                        _clips.remove(id);
+                      }
+                    });
+                  },
                 )
               : _ZoomableImage(
                   image: widget.images[i],
@@ -209,10 +236,14 @@ class _ClipView extends StatefulWidget {
     required this.image,
     required this.active,
     required this.muted,
+    required this.onPlayer,
   });
   final StashImage image;
   final bool active;
   final bool muted;
+
+  /// Gets the player once ready, then again when it goes.
+  final void Function(VideoPlayerController c, {required bool ready}) onPlayer;
 
   @override
   State<_ClipView> createState() => _ClipViewState();
@@ -257,6 +288,7 @@ class _ClipViewState extends State<_ClipView> {
       return;
     }
     setState(() => _controller = c);
+    widget.onPlayer(c, ready: true);
   }
 
   @override
@@ -270,6 +302,13 @@ class _ClipViewState extends State<_ClipView> {
 
   @override
   void dispose() {
+    if (_controller case final c?) {
+      // The viewer may be rebuilding: tell it after this frame.
+      final onPlayer = widget.onPlayer;
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => onPlayer(c, ready: false),
+      );
+    }
     _controller?.dispose();
     super.dispose();
   }
@@ -299,6 +338,51 @@ class _ClipViewState extends State<_ClipView> {
       child: AspectRatio(
         aspectRatio: c.value.aspectRatio,
         child: VideoPlayer(c),
+      ),
+    );
+  }
+}
+
+/// Play/pause, position, seekable progress bar and length of a clip.
+class _ClipProgress extends StatelessWidget {
+  const _ClipProgress({required this.controller});
+  final VideoPlayerController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    const white = TextStyle(color: Colors.white);
+    return ValueListenableBuilder<VideoPlayerValue>(
+      valueListenable: controller,
+      builder: (context, v, _) => Row(
+        children: [
+          IconButton(
+            tooltip: v.isPlaying ? tr.pause : tr.play,
+            color: Colors.white,
+            icon: Icon(v.isPlaying ? Icons.pause : Icons.play_arrow),
+            onPressed: () =>
+                v.isPlaying ? controller.pause() : controller.play(),
+          ),
+          Text(formatDuration(v.position.inMilliseconds / 1000), style: white),
+          Expanded(
+            child: VideoProgressIndicator(
+              controller,
+              allowScrubbing: true,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              colors: VideoProgressColors(
+                playedColor: Theme.of(context).colorScheme.primary,
+                bufferedColor: Colors.white38,
+                backgroundColor: Colors.white24,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Text(
+              formatDuration(v.duration.inMilliseconds / 1000),
+              style: white,
+            ),
+          ),
+        ],
       ),
     );
   }
