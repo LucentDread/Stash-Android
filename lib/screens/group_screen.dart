@@ -11,6 +11,7 @@ import '../utils/format.dart';
 import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/download_button.dart';
+import '../widgets/insets.dart';
 import '../widgets/net_image.dart';
 import 'browse_screens.dart';
 import 'edit/editors.dart';
@@ -61,7 +62,7 @@ class _GroupInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     final g = group;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: withNavBar(context, const EdgeInsets.all(16)),
       children: [
         SizedBox(
           height: 300,

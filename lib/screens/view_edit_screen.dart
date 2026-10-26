@@ -5,6 +5,7 @@ import '../l10n/l10n.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
 import '../utils/format.dart';
+import '../widgets/insets.dart';
 import '../widgets/view_list.dart';
 import 'scene_filter_screen.dart';
 
@@ -83,7 +84,7 @@ class _ViewEditScreenState extends State<ViewEditScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: withNavBar(context, const EdgeInsets.all(16)),
         children: [
           DropdownButtonFormField<ViewKind>(
             initialValue: _kind,

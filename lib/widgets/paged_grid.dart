@@ -8,6 +8,7 @@ import '../l10n/l10n.dart';
 import '../models/models.dart';
 import 'async_view.dart';
 import 'data_refresh.dart';
+import 'insets.dart';
 
 typedef PageFetcher<T> = Future<ResultPage<T>> Function(ListQuery query);
 
@@ -322,7 +323,7 @@ class _PagedGridState<T> extends State<PagedGrid<T>> with DataRefresh {
       builder: (context, box) => GridView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(_padding),
+        padding: withNavBar(context, const EdgeInsets.all(_padding)),
         gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: widget.maxCrossAxisExtent,
           childAspectRatio: widget.childAspectRatio,

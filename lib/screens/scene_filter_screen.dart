@@ -10,6 +10,7 @@ import '../models/scene_filter.dart';
 import '../services/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/async_view.dart';
+import '../widgets/insets.dart';
 
 /// Edits a [SceneFilter]; pops with the new filter when applied.
 class SceneFilterScreen extends StatefulWidget {
@@ -60,7 +61,7 @@ class _SceneFilterScreenState extends State<SceneFilterScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 96),
+        padding: withNavBar(context, const EdgeInsets.only(bottom: 96)),
         children: [
           if (has(FilterField.favorite))
             _TriState(

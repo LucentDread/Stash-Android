@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../models/home_section.dart';
 import '../services/app_state.dart';
+import '../widgets/insets.dart';
 import '../widgets/view_list.dart';
 
 /// More > Home page: what the custom home page and the default
@@ -113,7 +114,7 @@ class _LayoutEditorState extends State<_LayoutEditor> {
     final app = context.read<AppState>();
     final theme = Theme.of(context);
     return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: withNavBar(context, const EdgeInsets.only(bottom: 24)),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),

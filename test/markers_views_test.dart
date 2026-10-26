@@ -190,4 +190,41 @@ void main() {
     await open('http://stash.test/studio/2/image?default=true');
     expect(find.byType(StudioWatermark), findsNothing);
   });
+
+  testWidgets('the end of the scene page clears the system navigation bar', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 2;
+    // Android's gesture/button bar, drawn over the app (edge to edge).
+    tester.view.padding = const FakeViewPadding(bottom: 96);
+    addTearDown(tester.view.reset);
+    final (app, _) = await _app(
+      jsonEncode({
+        'data': {
+          'findScene': {
+            'id': '1',
+            'title': 'Plage',
+            'paths': <String, dynamic>{},
+            'details': 'Une longue description.\n' * 30,
+            'urls': ['https://example.com/scene'],
+          },
+        },
+      }),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: const MaterialApp(home: SceneScreen(sceneId: '1')),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -5000));
+    await tester.pumpAndSettle();
+    final link = find.text('https://example.com/scene');
+    expect(link, findsOneWidget);
+    // 800 logical pixels tall, the bar covering the last 48.
+    expect(tester.getBottomLeft(link).dy, lessThanOrEqualTo(800 - 48));
+  });
 }

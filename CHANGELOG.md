@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.1
+- Fix: the end of the scene page (links…) could sit under Android's
+  navigation bar and not be tapped. Same fix for the other pages that
+  scroll to the bottom: performer, studio, group and gallery pages, grids
+  opened from More, saved views, filters, edit and scrape screens.
+
 ## 1.13.0
 - The app is available in English, French, German, Italian and Spanish,
   using the words of Stash's own translations. It follows the phone's

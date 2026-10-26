@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../models/scene_filter.dart';
 import '../services/app_state.dart';
+import '../widgets/insets.dart';
 import '../widgets/view_list.dart';
 import 'browse_screens.dart';
 import 'home_layout_screen.dart';
@@ -137,7 +138,7 @@ class _ViewsScreenState extends State<ViewsScreen> {
         onRefresh: _refreshWeb,
         child: ListView(
           // Room for the floating button.
-          padding: const EdgeInsets.only(bottom: 88),
+          padding: withNavBar(context, const EdgeInsets.only(bottom: 88)),
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),

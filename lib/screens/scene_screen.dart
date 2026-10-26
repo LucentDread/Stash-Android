@@ -12,6 +12,7 @@ import '../widgets/cards.dart';
 import '../widgets/data_refresh.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/download_button.dart';
+import '../widgets/insets.dart';
 import '../widgets/net_image.dart';
 import 'edit/editors.dart';
 
@@ -139,7 +140,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
             ),
           ),
           SliverPadding(
-            padding: const EdgeInsets.all(16),
+            padding: withNavBar(context, const EdgeInsets.all(16)),
             sliver: SliverList.list(
               children: [
                 Text(s.displayTitle, style: theme.textTheme.titleLarge),

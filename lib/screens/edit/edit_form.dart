@@ -9,6 +9,7 @@ import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../utils/format.dart';
 import '../../widgets/detail_widgets.dart';
+import '../../widgets/insets.dart';
 import '../../widgets/net_image.dart';
 import '../scene_filter_screen.dart';
 
@@ -855,7 +856,10 @@ class _EditScreenState extends State<EditScreen> {
           ],
         ),
         body: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          padding: withNavBar(
+            context,
+            const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          ),
           itemCount: widget.fields.length,
           separatorBuilder: (_, _) => const SizedBox(height: 16),
           itemBuilder: (context, i) =>

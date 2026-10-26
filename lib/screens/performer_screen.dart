@@ -9,6 +9,7 @@ import '../services/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
+import '../widgets/insets.dart';
 import '../widgets/net_image.dart';
 import 'browse_screens.dart';
 import 'edit/editors.dart';
@@ -106,7 +107,7 @@ class _PerformerInfo extends StatelessWidget {
     final p = performer;
     final age = ageFrom(p.birthdate);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: withNavBar(context, const EdgeInsets.all(16)),
       children: [
         Center(
           child: ClipRRect(

@@ -7,6 +7,7 @@ import '../../api/stash_repository.dart';
 import '../../l10n/l10n.dart';
 import '../../models/models.dart';
 import '../../services/app_state.dart';
+import '../../widgets/insets.dart';
 import 'edit_form.dart';
 
 /// One proposed change: shown with a checkbox, applied to the form fields.
@@ -793,7 +794,7 @@ class _MergeScreenState extends State<_MergeScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: withNavBar(context, const EdgeInsets.only(bottom: 24)),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),

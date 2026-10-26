@@ -10,6 +10,7 @@ import '../services/downloads.dart';
 import '../widgets/async_view.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/download_button.dart';
+import '../widgets/insets.dart';
 import '../widgets/net_image.dart';
 import '../widgets/paged_grid.dart';
 import 'edit/editors.dart';
@@ -82,7 +83,7 @@ class _GalleryInfo extends StatelessWidget {
       initialChildSize: 0.5,
       builder: (context, controller) => ListView(
         controller: controller,
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        padding: withNavBar(context, const EdgeInsets.fromLTRB(16, 0, 16, 24)),
         children: [
           Text(g.displayTitle, style: Theme.of(context).textTheme.titleLarge),
           InfoTable([
