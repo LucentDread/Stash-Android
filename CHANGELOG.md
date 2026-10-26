@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.1
+- Edit forms: when a searched performer, tag, studio or group does not
+  exist, "Create “name”" adds it to Stash and selects it (e.g. a new tag
+  straight from a scene's edit screen). Filters only offer existing items.
+
 ## 1.15.0
 - Create performers, studios and tags too: "+" button at the top of their
   screens, like groups and galleries.

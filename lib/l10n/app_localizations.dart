@@ -2582,6 +2582,18 @@ abstract class AppLocalizations {
   /// **'Delete the gallery'**
   String get deleteGallery;
 
+  /// No description provided for @createNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Create “{name}”'**
+  String createNamed(Object name);
+
+  /// No description provided for @createdNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}” created in Stash'**
+  String createdNamed(Object name);
+
   /// No description provided for @untitled.
   ///
   /// In en, this message translates to:

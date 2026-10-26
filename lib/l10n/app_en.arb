@@ -956,6 +956,22 @@
   "deleteTag": "Delete the tag",
   "deleteGroup": "Delete the group",
   "deleteGallery": "Delete the gallery",
+  "createNamed": "Create “{name}”",
+  "@createNamed": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "createdNamed": "“{name}” created in Stash",
+  "@createdNamed": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
   "untitled": "Untitled",
   "newImage": "New image",
   "nothingNewInResult": "Nothing new in this result",

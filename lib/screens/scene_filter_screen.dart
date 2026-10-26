@@ -383,6 +383,7 @@ class RefPickerScreen extends StatefulWidget {
     required this.kind,
     required this.initial,
     this.single = false,
+    this.canCreate = false,
   });
 
   final String title;
@@ -391,6 +392,9 @@ class RefPickerScreen extends StatefulWidget {
 
   /// Pick one item: tapping it returns immediately.
   final bool single;
+
+  /// Offers to create the searched name in Stash when nothing has it.
+  final bool canCreate;
 
   @override
   State<RefPickerScreen> createState() => _RefPickerScreenState();
@@ -401,6 +405,11 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
   late final List<TagRef> _selected = List.of(widget.initial);
   Timer? _debounce;
   late Future<List<TagRef>> _results = _repo.searchRefs(widget.kind, '');
+  String _query = '';
+
+  /// Search [_results] answer; the create entry waits for the current one.
+  String _resultsQuery = '';
+  bool _creating = false;
 
   @override
   void dispose() {
@@ -410,12 +419,43 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
 
   void _search(String q) {
     _debounce?.cancel();
+    setState(() => _query = q.trim());
     _debounce = Timer(const Duration(milliseconds: 300), () {
       final results = _repo.searchRefs(widget.kind, q.trim());
       setState(() {
         _results = results;
+        _resultsQuery = q.trim();
       });
     });
+  }
+
+  /// Creates [_query] in Stash and selects it.
+  Future<void> _create() async {
+    final name = _query;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _creating = true);
+    try {
+      final kind = switch (widget.kind) {
+        RefKind.performers => EditKind.performer,
+        RefKind.tags => EditKind.tag,
+        RefKind.studios => EditKind.studio,
+        RefKind.groups => EditKind.group,
+      };
+      final id = await _repo.create(kind, {'name': name});
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(tr.createdNamed(name))));
+      _toggle(TagRef(id: id, name: name));
+      // Searched again, it is now an existing item.
+      final results = _repo.searchRefs(widget.kind, name);
+      setState(() {
+        _results = results;
+        _resultsQuery = name;
+      });
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _creating = false);
+    }
   }
 
   void _toggle(TagRef r) {
@@ -486,13 +526,33 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
                 if (items == null) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (items.isEmpty) {
+                final lower = _query.toLowerCase();
+                final create =
+                    widget.canCreate &&
+                    _query.isNotEmpty &&
+                    _resultsQuery == _query &&
+                    !items.any((r) => r.name.toLowerCase() == lower);
+                if (items.isEmpty && !create) {
                   return Center(child: Text(tr.noResults));
                 }
                 return ListView.builder(
-                  itemCount: items.length,
+                  itemCount: items.length + (create ? 1 : 0),
                   itemBuilder: (_, i) {
-                    final r = items[i];
+                    if (create && i == 0) {
+                      return ListTile(
+                        leading: _creating
+                            ? const SizedBox.square(
+                                dimension: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.add_circle_outline),
+                        title: Text(tr.createNamed(_query)),
+                        onTap: _creating ? null : _create,
+                      );
+                    }
+                    final r = items[i - (create ? 1 : 0)];
                     return CheckboxListTile(
                       title: Text(r.name),
                       value: _selected.any((s) => s.id == r.id),

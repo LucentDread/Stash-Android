@@ -413,6 +413,8 @@
   "deleteTag": "Elimina il tag",
   "deleteGroup": "Elimina il gruppo",
   "deleteGallery": "Elimina la galleria",
+  "createNamed": "Crea «{name}»",
+  "createdNamed": "«{name}» creato in Stash",
   "untitled": "Senza titolo",
   "newImage": "Nuova immagine",
   "nothingNewInResult": "Niente di nuovo in questo risultato",

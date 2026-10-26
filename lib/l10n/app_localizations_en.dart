@@ -1551,6 +1551,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteGallery => 'Delete the gallery';
 
   @override
+  String createNamed(Object name) {
+    return 'Create “$name”';
+  }
+
+  @override
+  String createdNamed(Object name) {
+    return '“$name” created in Stash';
+  }
+
+  @override
   String get untitled => 'Untitled';
 
   @override

@@ -315,8 +315,12 @@ class RefsEditField extends EditField {
     onAdd: () async {
       final picked = await Navigator.of(context).push<List<TagRef>>(
         MaterialPageRoute(
-          builder: (_) =>
-              RefPickerScreen(title: label, kind: kind, initial: items),
+          builder: (_) => RefPickerScreen(
+            title: label,
+            kind: kind,
+            initial: items,
+            canCreate: true,
+          ),
         ),
       );
       if (picked == null) return;
@@ -371,6 +375,7 @@ class RefEditField extends EditField {
             kind: kind,
             initial: [?value],
             single: true,
+            canCreate: true,
           ),
         ),
       );

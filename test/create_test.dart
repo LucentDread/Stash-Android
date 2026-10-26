@@ -9,10 +9,12 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:stash_android/api/stash_client.dart';
 import 'package:stash_android/api/stash_repository.dart';
+import 'package:stash_android/models/models.dart';
 import 'package:stash_android/screens/browse_screens.dart';
 import 'package:stash_android/screens/gallery_screen.dart';
 import 'package:stash_android/screens/group_screen.dart';
 import 'package:stash_android/screens/performer_screen.dart';
+import 'package:stash_android/screens/scene_filter_screen.dart';
 import 'package:stash_android/screens/studio_screen.dart';
 import 'package:stash_android/screens/tag_screen.dart';
 import 'package:stash_android/services/app_state.dart';
@@ -258,5 +260,69 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Modifier la galerie'), findsOneWidget);
     expect(find.byTooltip('Supprimer la galerie'), findsNothing);
+  });
+
+  testWidgets('a missing tag is created from the picker and selected', (
+    tester,
+  ) async {
+    final (app, sent) = await _app();
+    List<TagRef>? picked;
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () async =>
+                  picked = await Navigator.of(context).push<List<TagRef>>(
+                    MaterialPageRoute(
+                      builder: (_) => const RefPickerScreen(
+                        title: 'Tags',
+                        kind: RefKind.tags,
+                        initial: [],
+                        canCreate: true,
+                      ),
+                    ),
+                  ),
+              child: const Text('ouvrir'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('ouvrir'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Créer'), findsNothing);
+
+    await tester.enterText(find.byType(TextField), 'Neige');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Créer « Neige »'));
+    await tester.pumpAndSettle();
+    final create = sent.singleWhere((s) => '${s['query']}'.contains('Create('));
+    expect('${create['query']}', contains('tagCreate'));
+    expect((create['variables'] as Map)['input'], {'name': 'Neige'});
+    _dump(sent, 'picker_create');
+
+    await tester.tap(find.text('Valider (1)'));
+    await tester.pumpAndSettle();
+    expect(picked!.single.id, '7');
+    expect(picked!.single.name, 'Neige');
+  });
+
+  testWidgets('filters only pick existing items', (tester) async {
+    final (app, _) = await _app();
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: const MaterialApp(
+          home: RefPickerScreen(title: 'Tags', kind: RefKind.tags, initial: []),
+        ),
+      ),
+    );
+    await tester.enterText(find.byType(TextField), 'Neige');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Créer'), findsNothing);
   });
 }
