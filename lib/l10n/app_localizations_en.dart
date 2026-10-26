@@ -1348,6 +1348,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundOff => 'Turn the sound off';
 
   @override
+  String get back10 => 'Back 10 s';
+
+  @override
+  String get forward10 => 'Forward 10 s';
+
+  @override
   String filterKind(Object kind) {
     return 'Filter: $kind';
   }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.17.1
+- Image clips: buttons to go back or forward 10 seconds around a larger
+  play/pause button, and a slider (easier to drag) to move through the
+  clip.
+
 ## 1.17.0
 - Image clips: a progress bar under the clip in the viewer, with
   play/pause, the position and the length; drag it to seek. It shows and

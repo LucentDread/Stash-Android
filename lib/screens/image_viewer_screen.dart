@@ -343,47 +343,91 @@ class _ClipViewState extends State<_ClipView> {
   }
 }
 
-/// Play/pause, position, seekable progress bar and length of a clip.
-class _ClipProgress extends StatelessWidget {
+/// Controls of a clip: back / forward 10 s, play/pause, and a progress
+/// bar to drag through it, with the position and the length.
+class _ClipProgress extends StatefulWidget {
   const _ClipProgress({required this.controller});
   final VideoPlayerController controller;
 
   @override
+  State<_ClipProgress> createState() => _ClipProgressState();
+}
+
+class _ClipProgressState extends State<_ClipProgress> {
+  /// Position under the finger while dragging, in ms.
+  double? _dragging;
+
+  void _skip(VideoPlayerValue v, int seconds) {
+    final to = v.position + Duration(seconds: seconds);
+    widget.controller.seekTo(
+      to < Duration.zero ? Duration.zero : (to > v.duration ? v.duration : to),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     const white = TextStyle(color: Colors.white);
+    final c = widget.controller;
     return ValueListenableBuilder<VideoPlayerValue>(
-      valueListenable: controller,
-      builder: (context, v, _) => Row(
-        children: [
-          IconButton(
-            tooltip: v.isPlaying ? tr.pause : tr.play,
-            color: Colors.white,
-            icon: Icon(v.isPlaying ? Icons.pause : Icons.play_arrow),
-            onPressed: () =>
-                v.isPlaying ? controller.pause() : controller.play(),
-          ),
-          Text(formatDuration(v.position.inMilliseconds / 1000), style: white),
-          Expanded(
-            child: VideoProgressIndicator(
-              controller,
-              allowScrubbing: true,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-              colors: VideoProgressColors(
-                playedColor: Theme.of(context).colorScheme.primary,
-                bufferedColor: Colors.white38,
-                backgroundColor: Colors.white24,
-              ),
+      valueListenable: c,
+      builder: (context, v, _) {
+        final length = v.duration.inMilliseconds.toDouble();
+        final at = (_dragging ?? v.position.inMilliseconds.toDouble()).clamp(
+          0.0,
+          length > 0 ? length : 0.0,
+        );
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const SizedBox(width: 16),
+                Text(formatDuration(at / 1000), style: white),
+                Expanded(
+                  child: Slider(
+                    value: at,
+                    max: length > 0 ? length : 1,
+                    onChanged: length > 0
+                        ? (ms) => setState(() => _dragging = ms)
+                        : null,
+                    onChangeEnd: (ms) async {
+                      await c.seekTo(Duration(milliseconds: ms.round()));
+                      if (mounted) setState(() => _dragging = null);
+                    },
+                  ),
+                ),
+                Text(formatDuration(length / 1000), style: white),
+                const SizedBox(width: 16),
+              ],
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Text(
-              formatDuration(v.duration.inMilliseconds / 1000),
-              style: white,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  tooltip: tr.back10,
+                  color: Colors.white,
+                  icon: const Icon(Icons.replay_10),
+                  onPressed: () => _skip(v, -10),
+                ),
+                const SizedBox(width: 16),
+                IconButton.filledTonal(
+                  tooltip: v.isPlaying ? tr.pause : tr.play,
+                  iconSize: 32,
+                  icon: Icon(v.isPlaying ? Icons.pause : Icons.play_arrow),
+                  onPressed: () => v.isPlaying ? c.pause() : c.play(),
+                ),
+                const SizedBox(width: 16),
+                IconButton(
+                  tooltip: tr.forward10,
+                  color: Colors.white,
+                  icon: const Icon(Icons.forward_10),
+                  onPressed: () => _skip(v, 10),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }

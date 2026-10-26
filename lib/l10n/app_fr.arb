@@ -345,6 +345,8 @@
   "pause": "Pause",
   "soundOn": "Activer le son",
   "soundOff": "Couper le son",
+  "back10": "Reculer de 10 s",
+  "forward10": "Avancer de 10 s",
   "filterKind": "Filtrer : {kind}",
   "allRatings": "Toutes",
   "allResolutions": "Toutes",

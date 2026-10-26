@@ -1354,6 +1354,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get soundOff => 'Couper le son';
 
   @override
+  String get back10 => 'Reculer de 10 s';
+
+  @override
+  String get forward10 => 'Avancer de 10 s';
+
+  @override
   String filterKind(Object kind) {
     return 'Filtrer : $kind';
   }

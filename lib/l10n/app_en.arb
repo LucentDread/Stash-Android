@@ -850,6 +850,8 @@
   "pause": "Pause",
   "soundOn": "Turn the sound on",
   "soundOff": "Turn the sound off",
+  "back10": "Back 10 s",
+  "forward10": "Forward 10 s",
   "filterKind": "Filter: {kind}",
   "@filterKind": {
     "placeholders": {

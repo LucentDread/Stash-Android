@@ -24,6 +24,7 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 /// Player that opens any clip at once: 12 s long, at 3 s.
 class _FakePlayer extends VideoPlayerPlatform {
   final playing = <int, bool>{};
+  final seeks = <Duration>[];
   var _next = 0;
 
   @override
@@ -54,7 +55,8 @@ class _FakePlayer extends VideoPlayerPlatform {
   Future<void> setVolume(int playerId, double volume) async {}
 
   @override
-  Future<void> seekTo(int playerId, Duration position) async {}
+  Future<void> seekTo(int playerId, Duration position) async =>
+      seeks.add(position);
 
   @override
   Future<Duration> getPosition(int playerId) async =>
@@ -455,9 +457,7 @@ void main() {
     expect(find.byTooltip('Couper le son'), findsNothing);
   });
 
-  testWidgets('a clip shows its progress, play/pause and length', (
-    tester,
-  ) async {
+  testWidgets('a clip has a bar to seek, ±10 s and play/pause', (tester) async {
     final player = _FakePlayer();
     VideoPlayerPlatform.instance = player;
     final (app, _, _) =
@@ -490,7 +490,7 @@ void main() {
       );
       await tester.pump();
     }
-    expect(find.byType(VideoProgressIndicator), findsOneWidget);
+    expect(find.byType(Slider), findsOneWidget);
     expect(find.text('0:12'), findsOneWidget);
     expect(player.playing.values.single, isTrue);
     await tester.tap(find.byTooltip('Pause'));
@@ -498,10 +498,30 @@ void main() {
     expect(player.playing.values.single, isFalse);
     expect(find.byTooltip('Lire'), findsOneWidget);
 
+    // ±10 s, within the clip (12 s long).
+    await tester.tap(find.byTooltip('Avancer de 10 s'));
+    await tester.pump();
+    expect(player.seeks.last, const Duration(seconds: 10));
+    await tester.tap(find.byTooltip('Avancer de 10 s'));
+    await tester.pump();
+    expect(player.seeks.last, const Duration(seconds: 12));
+    await tester.tap(find.byTooltip('Reculer de 10 s'));
+    await tester.pump();
+    expect(player.seeks.last, const Duration(seconds: 2));
+    await tester.tap(find.byTooltip('Reculer de 10 s'));
+    await tester.pump();
+    expect(player.seeks.last, Duration.zero);
+
+    // Dragging the bar seeks where it is let go.
+    final bar = find.byType(Slider);
+    await tester.tapAt(tester.getCenter(bar));
+    await tester.pump();
+    expect(player.seeks.last.inSeconds, inInclusiveRange(5, 7));
+
     // Hidden with the rest of the controls.
     await tester.tapAt(const Offset(400, 300));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(VideoProgressIndicator), findsNothing);
+    expect(find.byType(Slider), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 

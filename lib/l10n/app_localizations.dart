@@ -2174,6 +2174,18 @@ abstract class AppLocalizations {
   /// **'Turn the sound off'**
   String get soundOff;
 
+  /// No description provided for @back10.
+  ///
+  /// In en, this message translates to:
+  /// **'Back 10 s'**
+  String get back10;
+
+  /// No description provided for @forward10.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward 10 s'**
+  String get forward10;
+
   /// No description provided for @filterKind.
   ///
   /// In en, this message translates to:
