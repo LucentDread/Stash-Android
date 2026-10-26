@@ -82,6 +82,13 @@ class _FakePlayer extends VideoPlayerPlatform {
   Widget buildViewWithOptions(VideoViewOptions options) => const SizedBox();
 }
 
+/// Player that cannot open anything.
+class _BrokenPlayer extends _FakePlayer {
+  @override
+  Future<int?> createWithOptions(VideoCreationOptions options) async =>
+      throw PlatformException(code: 'VideoError', message: 'Source error');
+}
+
 class FakeFetcher implements FileFetcher {
   FakeFetcher(this.root);
   final String root;
@@ -942,5 +949,50 @@ void main() {
     expect(d.entries(OfflineKind.image), hasLength(1), reason: 'other tab');
     expect(find.text('Images (1)'), findsOneWidget);
     expect(find.byTooltip('Sélectionner'), findsOneWidget, reason: 'done');
+  });
+
+  test('animated GIFs are pictures, though Stash files them as videos', () {
+    StashImage image(Map<String, Object> file) => StashImage.fromJson({
+      'id': '1',
+      'paths': <String, dynamic>{},
+      'visual_files': [
+        {'__typename': 'VideoFile', ...file},
+      ],
+    });
+    expect(image({'format': 'gif', 'video_codec': 'gif'}).isClip, isFalse);
+    expect(image({'format': 'mov,mp4', 'video_codec': 'h264'}).isClip, isTrue);
+  });
+
+  testWidgets('a clip the player cannot open shows as a picture', (
+    tester,
+  ) async {
+    // Opening fails, as with a GIF kept as a clip.
+    VideoPlayerPlatform.instance = _BrokenPlayer();
+    final (app, _, dir) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    final path = '${dir.path}/image_7/image.clip';
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: ImageViewerScreen(
+            images: [StashImage.offline('7', path)],
+            initialIndex: 0,
+            downloadable: false,
+          ),
+        ),
+      ),
+    );
+    for (var i = 0; i < 10; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    expect(find.byIcon(Icons.error_outline), findsNothing);
+    expect(
+      tester.widgetList<NetImage>(find.byType(NetImage)).map((w) => w.url),
+      contains(path),
+    );
   });
 }

@@ -548,7 +548,11 @@ class StashImage {
       image: paths['image'] as String?,
       width: _int(f['width']),
       height: _int(f['height']),
-      isClip: f['__typename'] == 'VideoFile',
+      // Stash files animated GIFs as videos; they show as pictures.
+      isClip:
+          f['__typename'] == 'VideoFile' &&
+          f['format'] != 'gif' &&
+          f['video_codec'] != 'gif',
     );
   }
 }

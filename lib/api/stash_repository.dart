@@ -384,7 +384,7 @@ const _imageFields = '''
   visual_files {
     __typename
     ... on ImageFile { width height }
-    ... on VideoFile { width height }
+    ... on VideoFile { width height format video_codec }
   }
 ''';
 

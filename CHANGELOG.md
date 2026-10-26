@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.18.3
+- Animated GIFs open again in the image viewer (a red error icon showed
+  since 1.16.2): Stash files them as videos, so the app took them for
+  image clips the video player cannot play. They are pictures again, and
+  a clip the player cannot open shows as a picture, which also fixes GIFs
+  already downloaded.
+
 ## 1.18.2
 - Image clips without a thumbnail: their preview frame is now taken once,
   natively and without a video player, and kept as a small picture. A

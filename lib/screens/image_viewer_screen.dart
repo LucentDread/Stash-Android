@@ -287,7 +287,8 @@ class _ClipViewState extends State<_ClipView> {
       await c.setVolume(widget.muted ? 0 : 1);
       if (widget.active) await c.play();
     } catch (e) {
-      await c.dispose();
+      // Not awaited: it may never end when the player was not created.
+      c.dispose().ignore();
       if (mounted) setState(() => _error = e);
       return;
     }
@@ -324,8 +325,13 @@ class _ClipViewState extends State<_ClipView> {
   @override
   Widget build(BuildContext context) {
     final c = _controller;
+    if (_error != null) {
+      // Not a video the player knows (an animated GIF downloaded as a
+      // clip before they were told apart): shown as a picture.
+      return NetImage(widget.image.image, fit: BoxFit.contain);
+    }
     if (c == null) {
-      // The clip's thumbnail meanwhile, or an error.
+      // The clip's thumbnail while it loads.
       return Stack(
         fit: StackFit.expand,
         children: [
@@ -335,15 +341,7 @@ class _ClipViewState extends State<_ClipView> {
             video: null,
             fit: BoxFit.contain,
           ),
-          Center(
-            child: _error != null
-                ? Icon(
-                    Icons.error_outline,
-                    color: Theme.of(context).colorScheme.error,
-                    size: 48,
-                  )
-                : const CircularProgressIndicator(),
-          ),
+          const Center(child: CircularProgressIndicator()),
         ],
       );
     }
