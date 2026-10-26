@@ -100,6 +100,12 @@ class AppState extends ChangeNotifier {
 
   StashRepository? get repo => _repo;
 
+  @override
+  void dispose() {
+    _probe?.cancel();
+    super.dispose();
+  }
+
   /// Incremented when server data changed outside the current screens
   /// (e.g. after a library scan). Lists and detail pages watch it and
   /// reload in place, without changing the navigation.
@@ -379,6 +385,17 @@ class AppState extends ChangeNotifier {
     _repo?.client.close();
     _use(null);
     notifyListeners();
+  }
+
+  /// Checks at launch that the server answers, quickly: when it does not,
+  /// the app goes offline at once (popup leading to the downloads) instead
+  /// of leaving every page loading.
+  Future<void> checkServer() async {
+    try {
+      await _repo?.version(timeout: const Duration(seconds: 8));
+    } catch (_) {
+      // Reported through reachability; other errors are the pages' own.
+    }
   }
 
   void _connect(String url, String? key) {

@@ -12,9 +12,11 @@ import 'package:stash_android/api/stash_client.dart';
 import 'package:stash_android/api/stash_repository.dart';
 import 'package:stash_android/main.dart';
 import 'package:stash_android/models/models.dart';
+import 'package:stash_android/screens/downloads_screen.dart';
 import 'package:stash_android/screens/image_viewer_screen.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/services/downloads.dart';
+import 'package:stash_android/widgets/net_image.dart';
 import 'package:stash_android/widgets/view_list.dart';
 import 'package:video_player/video_player.dart';
 import 'package:stash_android/screens/browse_screens.dart';
@@ -160,7 +162,10 @@ http.Client _server() => MockClient((req) async {
       'findImage': {
         'id': v['id'],
         'title': 'Coucher de soleil',
-        'paths': {'image': 'http://stash.test/image/${v['id']}/image'},
+        'paths': {
+          'image': 'http://stash.test/image/${v['id']}/image',
+          'thumbnail': 'http://stash.test/image/${v['id']}/thumbnail',
+        },
         // Image 5 is a clip: a video shown among the images.
         'visual_files': [
           {'__typename': v['id'] == '5' ? 'VideoFile' : 'ImageFile'},
@@ -175,7 +180,10 @@ http.Client _server() => MockClient((req) async {
           for (var i = 0; i < 3; i++)
             {
               'id': '$i',
-              'paths': {'image': 'http://stash.test/image/$i/image'},
+              'paths': {
+                'image': 'http://stash.test/image/$i/image',
+                'thumbnail': 'http://stash.test/image/$i/thumbnail',
+              },
               'visual_files': [
                 {'__typename': i == 1 ? 'VideoFile' : 'ImageFile'},
               ],
@@ -287,15 +295,22 @@ void main() {
     await d.downloadImage('4'); // already there
     final e = d.entry(OfflineKind.image, '4')!;
     expect(e.title, 'Coucher de soleil');
-    final task = fetcher.enqueued.entries.single;
-    expect(task.value.url, 'http://stash.test/image/4/image?apikey=k');
-    expect(task.value.path, 'image_4/image.img');
+    // The image, and its thumbnail as the preview.
+    expect(
+      {for (final t in fetcher.enqueued.values) t.path: t.url},
+      {
+        'image_4/image.img': 'http://stash.test/image/4/image?apikey=k',
+        'image_4/thumb.jpg': 'http://stash.test/image/4/thumbnail?apikey=k',
+      },
+    );
 
-    fetcher.emit(task.key, FileState.done, 1);
+    for (final id in fetcher.enqueued.keys) {
+      fetcher.emit(id, FileState.done, 1);
+    }
     await Future<void>.delayed(Duration.zero);
     expect(d.isDone(e), isTrue);
     expect(d.galleryImages(e), ['${dir.path}/image_4/image.img']);
-    expect(d.coverPath(e), '${dir.path}/image_4/image.img');
+    expect(d.coverPath(e), '${dir.path}/image_4/thumb.jpg');
 
     await d.delete(e);
     expect(d.entries(OfflineKind.image), isEmpty);
@@ -334,7 +349,7 @@ void main() {
     await tester.pump();
     expect(app.downloads.entry(OfflineKind.image, '4'), isNotNull);
     expect(app.downloads.entry(OfflineKind.image, '5'), isNull);
-    expect(fetcher.enqueued, hasLength(1));
+    expect(fetcher.enqueued, hasLength(2), reason: 'image + thumbnail');
   });
 
   testWidgets('unreachable server: popup leads to the downloads', (
@@ -409,14 +424,22 @@ void main() {
     final d = app.downloads;
     await d.downloadImage('5');
     final e = d.entry(OfflineKind.image, '5')!;
-    expect(fetcher.enqueued.values.single.path, 'image_5/image.clip');
-    expect(e.cover, isNull, reason: 'a video is no picture');
+    expect(
+      [for (final t in fetcher.enqueued.values) t.path],
+      ['image_5/image.clip', 'image_5/thumb.jpg'],
+    );
+    expect(e.cover, 'image_5/thumb.jpg', reason: 'clips have a preview too');
 
     fetcher.enqueued.clear();
     await d.downloadGallery('8');
     expect(
       [for (final t in fetcher.enqueued.values) t.path],
-      ['gallery_8/00001.img', 'gallery_8/00002.clip', 'gallery_8/00003.img'],
+      [
+        'gallery_8/thumb.jpg',
+        'gallery_8/00001.img',
+        'gallery_8/00002.clip',
+        'gallery_8/00003.img',
+      ],
     );
     expect(StashImage.offline('1', '/x/00002.clip').isClip, isTrue);
     expect(StashImage.offline('1', '/x/00001.img').isClip, isFalse);
@@ -556,7 +579,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('les 2 éléments sélectionnés'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Télécharger'));
-    for (var i = 0; i < 40 && fetcher.enqueued.length < 2; i++) {
+    for (var i = 0; i < 40 && fetcher.enqueued.length < 4; i++) {
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 20)),
       );
@@ -564,7 +587,12 @@ void main() {
     }
     expect(
       [for (final t in fetcher.enqueued.values) t.path],
-      ['image_1/image.img', 'image_2/image.img'],
+      [
+        'image_1/image.img',
+        'image_1/thumb.jpg',
+        'image_2/image.img',
+        'image_2/thumb.jpg',
+      ],
     );
     await tester.pumpAndSettle();
     expect(find.byTooltip('Sélectionner'), findsOneWidget, reason: 'done');
@@ -599,5 +627,130 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byType(ImagesScreen), findsNothing);
+  });
+
+  group('at launch, a server that does not answer is offline at once', () {
+    Future<AppState> app(http.Client client) async {
+      SharedPreferences.setMockInitialValues({
+        'server_url': 'http://stash.test',
+      });
+      final app = AppState(await SharedPreferences.getInstance());
+      app.repoOverride = StashRepository(
+        StashClient(serverUrl: 'http://stash.test', client: client),
+      );
+      return app;
+    }
+
+    test('a proxy answering 502 for a stopped Stash', () async {
+      final a = await app(MockClient((_) async => http.Response('', 502)));
+      await a.checkServer();
+      expect(a.offline, isTrue);
+    });
+
+    testWidgets('a server that never answers, after 8 s', (tester) async {
+      final a = await app(MockClient((_) => Completer<http.Response>().future));
+      a.checkServer().ignore();
+      await tester.pump(const Duration(seconds: 7));
+      expect(a.offline, isFalse);
+      await tester.pump(const Duration(seconds: 2));
+      expect(a.offline, isTrue);
+      a.dispose(); // stops probing the server
+    });
+  });
+
+  testWidgets('offline behind the lock screen: the popup comes after it', (
+    tester,
+  ) async {
+    final dir = Directory.systemTemp.createTempSync('offline');
+    SharedPreferences.setMockInitialValues({
+      'server_url': 'http://stash.test',
+      'auto_update': false,
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await AppState(prefs).lock.setPassword('1234');
+    final app = AppState(prefs, fetcher: FakeFetcher(dir.path));
+    expect(app.lock.locked, isTrue);
+    app.repoOverride = StashRepository(
+      StashClient(
+        serverUrl: 'http://stash.test',
+        client: MockClient(
+          (_) async => throw http.ClientException('Network is unreachable'),
+        ),
+      ),
+    );
+    await tester.runAsync(app.downloads.init);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(value: app, child: const StashApp()),
+    );
+    await app.checkServer();
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(app.offline, isTrue);
+    expect(find.text('Hors ligne'), findsNothing, reason: 'locked');
+
+    app.lock.unlock('1234');
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Hors ligne'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    app.dispose(); // stops probing the server
+  });
+
+  testWidgets('downloads: a tab per kind, cards with previews and actions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final (app, fetcher, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    final d = app.downloads;
+    await tester.runAsync(() async {
+      await d.downloadScene('1');
+      await d.downloadImage('4');
+    });
+    // The image is done, the scene still downloading.
+    for (final t in fetcher.enqueued.entries) {
+      if (t.value.path.startsWith('image_')) {
+        fetcher.emit(t.key, FileState.done, 1);
+      } else {
+        fetcher.emit(t.key, FileState.running, 0.5);
+      }
+    }
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: const MaterialApp(home: DownloadsScreen()),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pump();
+    }
+    expect(find.text('Scènes (1)'), findsOneWidget);
+    expect(find.text('Images (1)'), findsOneWidget);
+    expect(find.text('Groupes (0)'), findsNothing, reason: 'empty kinds hide');
+    expect(find.byType(DownloadCard), findsOneWidget);
+    expect(find.text('Scène 1'), findsOneWidget);
+    expect(find.textContaining('Téléchargement · 50 %'), findsOneWidget);
+
+    // Not openable yet: a tap offers the actions.
+    await tester.tap(find.byType(DownloadCard));
+    await tester.pumpAndSettle();
+    expect(find.text('Supprimer'), findsOneWidget);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Images (1)'));
+    await tester.pumpAndSettle();
+    final cover = tester.widget<NetImage>(
+      find.descendant(
+        of: find.byType(DownloadCard),
+        matching: find.byType(NetImage),
+      ),
+    );
+    expect(cover.url, endsWith('image_4/thumb.jpg'));
   });
 }

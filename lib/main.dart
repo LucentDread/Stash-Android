@@ -17,6 +17,7 @@ Future<void> main() async {
   final app = AppState(prefs);
   // Picks up downloads that progressed while the app was closed.
   app.downloads.init().ignore();
+  app.checkServer().ignore();
   // Also applied natively at startup; this follows later changes.
   SystemBridge.instance.setSecure(app.hideInRecents).ignore();
   runApp(ChangeNotifierProvider.value(value: app, child: const StashApp()));

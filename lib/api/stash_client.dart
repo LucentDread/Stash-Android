@@ -67,6 +67,7 @@ class StashClient {
   Future<Map<String, dynamic>> query(
     String document, {
     Map<String, dynamic>? variables,
+    Duration timeout = const Duration(seconds: 30),
   }) async {
     final http.Response res;
     try {
@@ -80,10 +81,15 @@ class StashClient {
             },
             body: jsonEncode({'query': document, 'variables': ?variables}),
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(timeout);
     } catch (e) {
       onReachability?.call(false);
       throw StashException(tr.serverUnreachable('$e'));
+    }
+    // A reverse proxy answering for a stopped Stash: unreachable too.
+    if (res.statusCode >= 500) {
+      onReachability?.call(false);
+      throw StashException(tr.httpError(res.statusCode));
     }
     onReachability?.call(true);
 

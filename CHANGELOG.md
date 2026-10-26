@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.18.0
+- At launch, the app checks the server (8 s at most): when it does not
+  answer, the "Offline" popup with its Downloads button shows at once,
+  instead of pages that never load. A proxy answering 5xx errors for a
+  stopped Stash counts as unreachable too. Behind the lock screen, the
+  popup comes once unlocked.
+- Downloads page redesigned: one tab per kind (scenes, groups, galleries,
+  images) with its count, and grids of cards with their preview, progress
+  or failure over it. A tap opens; a long press (or a tap while it cannot
+  open yet) offers to retry or delete.
+- Downloaded images, image clips and galleries now have a preview: their
+  Stash thumbnail is downloaded with them. Clips show a play icon.
+
 ## 1.17.1
 - Image clips: buttons to go back or forward 10 seconds around a larger
   play/pause button, and a slider (easier to drag) to move through the

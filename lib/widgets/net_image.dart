@@ -15,6 +15,7 @@ class NetImage extends StatelessWidget {
     this.placeholderIcon = Icons.image_outlined,
     this.alignment = Alignment.center,
     this.showPlaceholder = true,
+    this.cacheWidth,
   });
 
   final String? url;
@@ -24,6 +25,10 @@ class NetImage extends StatelessWidget {
 
   /// When false, nothing is drawn while loading or on error.
   final bool showPlaceholder;
+
+  /// Decodes at most this many pixels wide, for small previews of large
+  /// pictures.
+  final int? cacheWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +51,7 @@ class NetImage extends StatelessWidget {
       return Image.file(
         File(url!),
         fit: fit,
+        cacheWidth: cacheWidth,
         alignment: alignment,
         errorBuilder: (_, _, _) => placeholder,
       );

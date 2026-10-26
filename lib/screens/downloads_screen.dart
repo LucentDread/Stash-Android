@@ -6,73 +6,125 @@ import '../models/models.dart';
 import '../services/app_state.dart';
 import '../services/downloads.dart';
 import '../utils/format.dart';
+import '../widgets/insets.dart';
 import '../widgets/net_image.dart';
+import '../widgets/paged_grid.dart';
 import 'image_viewer_screen.dart';
 import 'player_screen.dart';
 
 /// Scenes, groups, galleries and images kept on the phone, usable
-/// offline.
+/// offline: one tab per kind, as grids of previews.
 class DownloadsScreen extends StatelessWidget {
   const DownloadsScreen({super.key});
+
+  static String _title(OfflineKind kind) => switch (kind) {
+    OfflineKind.scene => tr.scenes,
+    OfflineKind.group => tr.groups,
+    OfflineKind.gallery => tr.galleries,
+    OfflineKind.image => tr.images,
+  };
 
   @override
   Widget build(BuildContext context) {
     final downloads = context.read<AppState>().downloads;
-    return Scaffold(
-      appBar: AppBar(title: Text(tr.downloads)),
-      body: FutureBuilder(
-        future: downloads.init(),
-        builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListenableBuilder(
-            listenable: downloads,
-            builder: (context, _) {
-              if (downloads.isEmpty) {
-                return Center(
+    return FutureBuilder(
+      future: downloads.init(),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return Scaffold(
+            appBar: AppBar(title: Text(tr.downloads)),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+        return ListenableBuilder(
+          listenable: downloads,
+          builder: (context, _) {
+            final kinds = [
+              for (final k in OfflineKind.values)
+                if (downloads.entries(k).isNotEmpty) k,
+            ];
+            if (kinds.isEmpty) {
+              return Scaffold(
+                appBar: AppBar(title: Text(tr.downloads)),
+                body: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(32),
                     child: Text(tr.noDownloads, textAlign: TextAlign.center),
                   ),
-                );
-              }
-              return ListView(
-                children: [
-                  for (final (kind, title) in [
-                    (OfflineKind.scene, tr.scenes),
-                    (OfflineKind.group, tr.groups),
-                    (OfflineKind.gallery, tr.galleries),
-                    (OfflineKind.image, tr.images),
-                  ])
-                    if (downloads.entries(kind).isNotEmpty) ...[
-                      _Header(title),
-                      for (final e in downloads.entries(kind))
-                        DownloadTile(entry: e),
-                    ],
-                ],
+                ),
               );
-            },
-          );
-        },
-      ),
+            }
+            // Rebuilt when a kind appears or goes.
+            return DefaultTabController(
+              key: ValueKey(kinds.join()),
+              length: kinds.length,
+              child: Scaffold(
+                appBar: AppBar(
+                  title: Text(tr.downloads),
+                  bottom: TabBar(
+                    isScrollable: kinds.length > 3,
+                    tabAlignment: kinds.length > 3 ? TabAlignment.start : null,
+                    tabs: [
+                      for (final k in kinds)
+                        Tab(
+                          text: '${_title(k)} (${downloads.entries(k).length})',
+                        ),
+                    ],
+                  ),
+                ),
+                body: TabBarView(
+                  children: [
+                    for (final k in kinds)
+                      DownloadGrid(entries: downloads.entries(k).toList()),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header(this.text);
-  final String text;
+/// Downloaded items of one kind as cards with their preview.
+class DownloadGrid extends StatelessWidget {
+  const DownloadGrid({super.key, required this.entries});
+  final List<OfflineEntry> entries;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-    child: Text(
-      text,
-      style: Theme.of(context).textTheme.labelLarge
-          ?.copyWith(color: Theme.of(context).colorScheme.primary),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final kind = entries.firstOrNull?.kind ?? OfflineKind.scene;
+    final (maxWidth, aspect) = switch (kind) {
+      OfflineKind.scene => (280.0, 16 / 9),
+      OfflineKind.group => (160.0, 2 / 3),
+      OfflineKind.gallery => (200.0, 1.0),
+      OfflineKind.image => (130.0, 1.0),
+    };
+    // Images go without a caption: their titles are rarely set.
+    final caption = kind != OfflineKind.image;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final width = gridTileWidth(box.maxWidth - 2 * gridSpacing, maxWidth);
+        return GridView.builder(
+          padding: withNavBar(context, const EdgeInsets.all(gridSpacing)),
+          gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: maxWidth,
+            mainAxisSpacing: gridSpacing,
+            crossAxisSpacing: gridSpacing,
+            mainAxisExtent: width / aspect + (caption ? 56 : 0),
+          ),
+          itemCount: entries.length,
+          itemBuilder: (_, i) => DownloadCard(
+            key: ValueKey(entries[i].key),
+            entry: entries[i],
+            aspect: aspect,
+            caption: caption,
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// Opens a downloaded entry: plays a scene, lists a group, shows a gallery.
@@ -115,9 +167,22 @@ ImageViewerScreen _offlineImages(DownloadManager downloads, OfflineEntry e) {
   );
 }
 
-class DownloadTile extends StatelessWidget {
-  const DownloadTile({super.key, required this.entry});
+/// A downloaded item: its preview, with the download progress or failure
+/// over it, and its title and details. A tap opens it; a long press (or
+/// a tap while it cannot open) offers to retry or delete it.
+class DownloadCard extends StatelessWidget {
+  const DownloadCard({
+    super.key,
+    required this.entry,
+    this.aspect = 16 / 9,
+    this.caption = true,
+  });
   final OfflineEntry entry;
+  final double aspect;
+  final bool caption;
+
+  bool get _isClip =>
+      entry.files.any((f) => f.path.endsWith(StashImage.clipExtension));
 
   Future<void> _delete(BuildContext context, DownloadManager downloads) async {
     final ok = await showDialog<bool>(
@@ -142,6 +207,50 @@ class DownloadTile extends StatelessWidget {
     if (ok == true) await downloads.delete(entry);
   }
 
+  Future<void> _actions(
+    BuildContext context,
+    DownloadManager downloads,
+    FileState state,
+  ) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(
+                entry.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            if (state == FileState.failed)
+              ListTile(
+                leading: const Icon(Icons.refresh),
+                title: Text(tr.retry),
+                onTap: () => Navigator.pop(context, 'retry'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: Text(tr.delete),
+              onTap: () => Navigator.pop(context, 'delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    switch (action) {
+      case 'retry':
+        await downloads.retry(entry);
+      case 'delete':
+        await _delete(context, downloads);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final downloads = context.read<AppState>().downloads;
@@ -150,11 +259,15 @@ class DownloadTile extends StatelessWidget {
     final details = switch (entry.kind) {
       OfflineKind.scene => [if (entry.bytes != null) formatBytes(entry.bytes!)],
       OfflineKind.group => [tr.countScenes(entry.sceneIds.length)],
-      OfflineKind.gallery => [tr.countImages(entry.files.length)],
+      OfflineKind.gallery => [
+        tr.countImages(downloads.galleryImageCount(entry)),
+      ],
       OfflineKind.image => <String>[],
     };
+    final done = state == FileState.done;
+    final failed = state == FileState.failed;
     final status = switch (state) {
-      FileState.done => tr.notifDownloaded,
+      FileState.done => null,
       FileState.failed => tr.downloadFailedRetry,
       FileState.paused => tr.notifPaused,
       FileState.queued => tr.downloadQueued,
@@ -163,54 +276,104 @@ class DownloadTile extends StatelessWidget {
             ? tr.downloadRunning
             : tr.downloadProgress((progress * 100).floor()),
     };
-    final done = state == FileState.done;
+    // A group can be opened while some of its scenes still download.
+    final opens = done || entry.kind == OfflineKind.group;
+    void actions() => _actions(context, downloads, state);
 
-    return ListTile(
-      // A group can be opened while some of its scenes still download.
-      onTap: done || entry.kind == OfflineKind.group
-          ? () => openOffline(context, entry)
-          : null,
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child: SizedBox(
-          width: 88,
-          height: 50,
-          child: NetImage(
-            downloads.coverPath(entry),
-            placeholderIcon: switch (entry.kind) {
-              OfflineKind.scene => Icons.movie,
-              OfflineKind.group => Icons.video_library,
-              OfflineKind.gallery => Icons.photo_library,
-              OfflineKind.image => Icons.image,
-            },
-          ),
-        ),
-      ),
-      title: Text(entry.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            [...details, status].join(' · '),
-            style: state == FileState.failed
-                ? TextStyle(color: theme.colorScheme.error)
-                : null,
-          ),
-          if (!done && state != FileState.failed)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: LinearProgressIndicator(value: progress),
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: opens ? () => openOffline(context, entry) : actions,
+        onLongPress: actions,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AspectRatio(
+              aspectRatio: aspect,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  NetImage(
+                    downloads.coverPath(entry),
+                    cacheWidth: 480,
+                    placeholderIcon: switch (entry.kind) {
+                      OfflineKind.scene => Icons.movie,
+                      OfflineKind.group => Icons.video_library,
+                      OfflineKind.gallery => Icons.photo_library,
+                      OfflineKind.image => Icons.image,
+                    },
+                  ),
+                  if (_isClip)
+                    const Center(
+                      child: Icon(
+                        Icons.play_circle_outline,
+                        color: Colors.white,
+                        size: 36,
+                        shadows: [Shadow(blurRadius: 6)],
+                      ),
+                    ),
+                  if (failed)
+                    ColoredBox(
+                      color: Colors.black54,
+                      child: Icon(
+                        Icons.error_outline,
+                        color: theme.colorScheme.error,
+                        size: 36,
+                      ),
+                    )
+                  else if (!done) ...[
+                    const ColoredBox(color: Colors.black38),
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: LinearProgressIndicator(value: progress),
+                    ),
+                  ],
+                  if (!caption && status != null)
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Text(
+                          status,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-        ],
-      ),
-      trailing: PopupMenuButton<String>(
-        onSelected: (v) =>
-            v == 'retry' ? downloads.retry(entry) : _delete(context, downloads),
-        itemBuilder: (_) => [
-          if (state == FileState.failed)
-            PopupMenuItem(value: 'retry', child: Text(tr.retry)),
-          PopupMenuItem(value: 'delete', child: Text(tr.delete)),
-        ],
+            if (caption)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                    Text(
+                      [...details, ?status].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: failed
+                            ? theme.colorScheme.error
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -228,11 +391,10 @@ class OfflineGroupScreen extends StatelessWidget {
       appBar: AppBar(title: Text(group.title)),
       body: ListenableBuilder(
         listenable: downloads,
-        builder: (context, _) => ListView(
-          children: [
+        builder: (context, _) => DownloadGrid(
+          entries: [
             for (final id in group.sceneIds)
-              if (downloads.entry(OfflineKind.scene, id) case final scene?)
-                DownloadTile(entry: scene),
+              ?downloads.entry(OfflineKind.scene, id),
           ],
         ),
       ),

@@ -399,10 +399,14 @@ class DownloadManager extends ChangeNotifier {
         title: gallery.displayTitle,
         data: data,
         added: DateTime.now(),
-        cover: images.isEmpty || images.first.isClip
-            ? null
-            : '$dir/${_imageName(0, images.first)}',
+        cover: images.firstOrNull?.thumbnail == null ? null : '$dir/$_thumb',
         files: [
+          if (images.firstOrNull?.thumbnail case final thumb?)
+            OfflineFile(
+              taskId: 'gallery-$id-cover-$stamp',
+              url: _url(thumb),
+              path: '$dir/$_thumb',
+            ),
           for (var i = 0; i < images.length; i++)
             if (images[i].image != null)
               OfflineFile(
@@ -428,6 +432,7 @@ class DownloadManager extends ChangeNotifier {
     final path = image.isClip
         ? 'image_$id/image${StashImage.clipExtension}'
         : 'image_$id/image.img';
+    final stamp = DateTime.now().millisecondsSinceEpoch;
     await _add(
       OfflineEntry(
         kind: OfflineKind.image,
@@ -435,19 +440,29 @@ class DownloadManager extends ChangeNotifier {
         title: title,
         data: {'id': id, 'title': image.title},
         added: DateTime.now(),
-        cover: image.isClip ? null : path,
+        cover: image.thumbnail == null ? null : 'image_$id/$_thumb',
         files: [
           if (image.image != null)
             OfflineFile(
-              taskId: 'image-$id-${DateTime.now().millisecondsSinceEpoch}',
+              taskId: 'image-$id-$stamp',
               url: _url(image.image),
               path: path,
+            ),
+          if (image.thumbnail != null)
+            OfflineFile(
+              taskId: 'image-$id-thumb-$stamp',
+              url: _url(image.thumbnail),
+              path: 'image_$id/$_thumb',
             ),
         ],
       ),
       title,
     );
   }
+
+  /// Small preview of an image (or of a gallery's first one), as Stash
+  /// makes it: clips have one too.
+  static const _thumb = 'thumb.jpg';
 
   /// File name of a gallery's [i]th image; clips are named so the viewer
   /// plays them.
@@ -459,8 +474,20 @@ class DownloadManager extends ChangeNotifier {
   /// order.
   List<String> galleryImages(OfflineEntry e) => [
     for (final f in e.files)
-      if (_states[f.taskId] == FileState.done) absolute(f.path),
+      if (_states[f.taskId] == FileState.done &&
+          (f.path.endsWith('.img') ||
+              f.path.endsWith(StashImage.clipExtension)))
+        absolute(f.path),
   ];
+
+  /// Number of images (and clips) of a downloaded gallery.
+  int galleryImageCount(OfflineEntry e) => e.files
+      .where(
+        (f) =>
+            f.path.endsWith('.img') ||
+            f.path.endsWith(StashImage.clipExtension),
+      )
+      .length;
 
   /// Restarts the files that failed.
   Future<void> retry(OfflineEntry e) async {

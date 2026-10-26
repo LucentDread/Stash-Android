@@ -31,17 +31,31 @@ class _OfflineWatcherState extends State<OfflineWatcher> {
   late bool _offline;
   bool _dialogShown = false;
 
+  /// The popup waits for the lock screen to go.
+  bool _afterUnlock = false;
+
   @override
   void initState() {
     super.initState();
     _offline = _app.offline;
     _app.addListener(_changed);
+    _app.lock.addListener(_lockChanged);
   }
 
   @override
   void dispose() {
     _app.removeListener(_changed);
+    _app.lock.removeListener(_lockChanged);
     super.dispose();
+  }
+
+  void _lockChanged() {
+    if (_app.lock.locked || !_afterUnlock) return;
+    _afterUnlock = false;
+    if (!_app.offline) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showOfflineDialog();
+    });
   }
 
   void _changed() {
@@ -64,8 +78,12 @@ class _OfflineWatcherState extends State<OfflineWatcher> {
 
   Future<void> _showOfflineDialog() async {
     final navigator = widget.navigatorKey.currentState;
+    if (navigator == null || _dialogShown) return;
     // Not above the lock screen: its button would open the app.
-    if (navigator == null || _dialogShown || _app.lock.locked) return;
+    if (_app.lock.locked) {
+      _afterUnlock = true;
+      return;
+    }
     _dialogShown = true;
     final openDownloads = await showDialog<bool>(
       context: navigator.overlay!.context,

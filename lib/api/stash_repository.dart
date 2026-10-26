@@ -476,8 +476,13 @@ class StashRepository {
     };
   }
 
-  Future<String> version() async {
-    final d = await client.query('query { version { version } }');
+  Future<String> version({
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
+    final d = await client.query(
+      'query { version { version } }',
+      timeout: timeout,
+    );
     return (d['version'] as Map?)?['version'] as String? ?? '?';
   }
 
