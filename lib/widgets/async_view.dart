@@ -49,7 +49,12 @@ class AsyncView<T> extends StatefulWidget {
 class _AsyncViewState<T> extends State<AsyncView<T>> with DataRefresh {
   late Future<T> _future = widget.load();
 
-  void _reload() => setState(() => _future = widget.load());
+  void _reload() {
+    final future = widget.load();
+    setState(() {
+      _future = future;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

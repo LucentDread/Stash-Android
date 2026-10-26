@@ -296,8 +296,17 @@ class PerformersScreen extends StatelessWidget {
   const PerformersScreen({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      _BrowseScaffold(title: tr.performers, child: performerGrid(context));
+  Widget build(BuildContext context) => _BrowseScaffold(
+    title: tr.performers,
+    actions: [
+      IconButton(
+        tooltip: tr.newPerformer,
+        icon: const Icon(Icons.add),
+        onPressed: () => createPerformer(context),
+      ),
+    ],
+    child: performerGrid(context),
+  );
 }
 
 class GalleriesScreen extends StatelessWidget {
@@ -397,6 +406,13 @@ class StudiosScreen extends StatelessWidget {
     final repo = context.read<AppState>().repo!;
     return _BrowseScaffold(
       title: tr.studios,
+      actions: [
+        IconButton(
+          tooltip: tr.newStudio,
+          icon: const Icon(Icons.add),
+          onPressed: () => createStudio(context),
+        ),
+      ],
       child: PagedGrid<Studio>(
         itemKey: (item) => item.id,
         fetch: repo.findStudios,
@@ -419,6 +435,13 @@ class TagsScreen extends StatelessWidget {
     final repo = context.read<AppState>().repo!;
     return _BrowseScaffold(
       title: tr.tags,
+      actions: [
+        IconButton(
+          tooltip: tr.newTag,
+          icon: const Icon(Icons.add),
+          onPressed: () => createTag(context),
+        ),
+      ],
       child: PagedGrid<Tag>(
         itemKey: (item) => item.id,
         fetch: repo.findTags,

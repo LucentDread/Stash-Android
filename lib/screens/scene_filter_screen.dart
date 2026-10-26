@@ -411,7 +411,10 @@ class _RefPickerScreenState extends State<RefPickerScreen> {
   void _search(String q) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
-      setState(() => _results = _repo.searchRefs(widget.kind, q.trim()));
+      final results = _repo.searchRefs(widget.kind, q.trim());
+      setState(() {
+        _results = results;
+      });
     });
   }
 

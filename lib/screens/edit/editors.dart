@@ -11,6 +11,9 @@ import 'edit_form.dart';
 import 'scrape.dart';
 
 /// Opens an edit form; returns true when changes were saved.
+///
+/// With [closeOnDelete], [context] is the page of the item: once the item
+/// is deleted, that page closes and the lists reload.
 Future<bool> _open(
   BuildContext context, {
   required String title,
@@ -19,22 +22,45 @@ Future<bool> _open(
   required List<EditField> fields,
   Future<void> Function()? delete,
   String? deleteLabel,
+  bool closeOnDelete = false,
   List<Widget> Function(BuildContext, VoidCallback)? extraActions,
 }) async {
-  final repo = context.read<AppState>().repo!;
+  final app = context.read<AppState>();
+  final repo = app.repo!;
+  var deleted = false;
   final saved = await Navigator.of(context).push<bool>(
     MaterialPageRoute(
       builder: (_) => EditScreen(
         title: title,
         fields: fields,
         save: (input) => repo.update(kind, id, input),
-        delete: delete,
+        delete: delete == null
+            ? null
+            : () async {
+                await delete();
+                deleted = true;
+              },
         deleteLabel: deleteLabel,
         extraActions: extraActions,
       ),
     ),
   );
+  if (deleted && closeOnDelete) {
+    app.refreshData();
+    if (context.mounted) Navigator.of(context).pop();
+    return false;
+  }
   return saved ?? false;
+}
+
+/// Delete action of an item's edit form: removes it from Stash.
+Future<void> Function() _destroy(
+  BuildContext context,
+  EditKind kind,
+  String id,
+) {
+  final repo = context.read<AppState>().repo!;
+  return () => repo.destroy(kind, id);
 }
 
 Map<String?, String> get _genders => {
@@ -92,12 +118,16 @@ Future<bool> _openScrapable(
   required ScrapeKind scrapeKind,
   required String id,
   required List<EditField> fields,
+  String? deleteLabel,
 }) => _open(
   context,
   title: title,
   kind: kind,
   id: id,
   fields: fields,
+  delete: deleteLabel == null ? null : _destroy(context, kind, id),
+  deleteLabel: deleteLabel,
+  closeOnDelete: true,
   extraActions: (context, refresh) => [
     IconButton(
       tooltip: tr.scrape,
@@ -120,30 +150,30 @@ Future<bool> editScene(BuildContext context, Scene s) => _openScrapable(
   fields: sceneFields(s),
 );
 
-/// Editable fields of a performer.
-List<EditField> performerFields(Performer p) => [
-  ImageEditField('image', tr.photo, p.imagePath),
-  TextEditField('name', tr.sortName, p.name, required: true),
-  TextEditField('disambiguation', tr.disambiguation, p.disambiguation),
-  StringListEditField('alias_list', tr.aliases, p.aliases),
-  ChoiceEditField('gender', tr.gender, p.gender, _genders),
-  DateEditField('birthdate', tr.sortBirthdate, p.birthdate),
-  DateEditField('death_date', tr.deathDate, p.deathDate),
-  TextEditField('country', tr.country, p.country),
-  TextEditField('ethnicity', tr.ethnicity, p.ethnicity),
-  TextEditField('hair_color', tr.hairColor, p.hairColor),
-  TextEditField('eye_color', tr.eyeColor, p.eyeColor),
-  IntEditField('height_cm', tr.height, p.heightCm, suffix: 'cm'),
-  IntEditField('weight', tr.weight, p.weight, suffix: 'kg'),
-  TextEditField('measurements', tr.measurements, p.measurements),
-  TextEditField('fake_tits', tr.fakeTits, p.fakeTits),
-  TextEditField('tattoos', tr.tattoos, p.tattoos),
-  TextEditField('piercings', tr.piercings, p.piercings),
-  RatingEditField(p.rating100),
-  BoolEditField('favorite', tr.favorite, p.favorite),
-  RefsEditField('tag_ids', tr.tags, RefKind.tags, p.tags),
-  StringListEditField('urls', tr.links, p.urls, hint: 'https://…'),
-  TextEditField('details', tr.description, p.details, multiline: true),
+/// Editable fields of a performer; [p] is null when creating one.
+List<EditField> performerFields(Performer? p) => [
+  ImageEditField('image', tr.photo, p?.imagePath),
+  TextEditField('name', tr.sortName, p?.name, required: true),
+  TextEditField('disambiguation', tr.disambiguation, p?.disambiguation),
+  StringListEditField('alias_list', tr.aliases, p?.aliases ?? const []),
+  ChoiceEditField('gender', tr.gender, p?.gender, _genders),
+  DateEditField('birthdate', tr.sortBirthdate, p?.birthdate),
+  DateEditField('death_date', tr.deathDate, p?.deathDate),
+  TextEditField('country', tr.country, p?.country),
+  TextEditField('ethnicity', tr.ethnicity, p?.ethnicity),
+  TextEditField('hair_color', tr.hairColor, p?.hairColor),
+  TextEditField('eye_color', tr.eyeColor, p?.eyeColor),
+  IntEditField('height_cm', tr.height, p?.heightCm, suffix: 'cm'),
+  IntEditField('weight', tr.weight, p?.weight, suffix: 'kg'),
+  TextEditField('measurements', tr.measurements, p?.measurements),
+  TextEditField('fake_tits', tr.fakeTits, p?.fakeTits),
+  TextEditField('tattoos', tr.tattoos, p?.tattoos),
+  TextEditField('piercings', tr.piercings, p?.piercings),
+  RatingEditField(p?.rating100),
+  BoolEditField('favorite', tr.favorite, p?.favorite ?? false),
+  RefsEditField('tag_ids', tr.tags, RefKind.tags, p?.tags ?? const []),
+  StringListEditField('urls', tr.links, p?.urls ?? const [], hint: 'https://…'),
+  TextEditField('details', tr.description, p?.details, multiline: true),
 ];
 
 Future<bool> editPerformer(BuildContext context, Performer p) => _openScrapable(
@@ -153,17 +183,18 @@ Future<bool> editPerformer(BuildContext context, Performer p) => _openScrapable(
   scrapeKind: ScrapeKind.performer,
   id: p.id,
   fields: performerFields(p),
+  deleteLabel: tr.deletePerformer,
 );
 
-/// Editable fields of a studio.
-List<EditField> studioFields(Studio s) => [
-  ImageEditField('image', tr.logo, s.imagePath),
-  TextEditField('name', tr.sortName, s.name, required: true),
-  RefEditField('parent_id', tr.parentStudio, RefKind.studios, s.parent),
-  RatingEditField(s.rating100),
-  BoolEditField('favorite', tr.favorite, s.favorite),
-  StringListEditField('urls', tr.links, s.urls, hint: 'https://…'),
-  TextEditField('details', tr.description, s.details, multiline: true),
+/// Editable fields of a studio; [s] is null when creating one.
+List<EditField> studioFields(Studio? s) => [
+  ImageEditField('image', tr.logo, s?.imagePath),
+  TextEditField('name', tr.sortName, s?.name, required: true),
+  RefEditField('parent_id', tr.parentStudio, RefKind.studios, s?.parent),
+  RatingEditField(s?.rating100),
+  BoolEditField('favorite', tr.favorite, s?.favorite ?? false),
+  StringListEditField('urls', tr.links, s?.urls ?? const [], hint: 'https://…'),
+  TextEditField('details', tr.description, s?.details, multiline: true),
 ];
 
 Future<bool> editStudio(BuildContext context, Studio s) => _openScrapable(
@@ -173,16 +204,22 @@ Future<bool> editStudio(BuildContext context, Studio s) => _openScrapable(
   scrapeKind: ScrapeKind.studio,
   id: s.id,
   fields: studioFields(s),
+  deleteLabel: tr.deleteStudio,
 );
 
-/// Editable fields of a tag.
-List<EditField> tagFields(Tag t) => [
-  ImageEditField('image', tr.image, t.imagePath),
-  TextEditField('name', tr.sortName, t.name, required: true),
-  StringListEditField('aliases', tr.aliases, t.aliases),
-  BoolEditField('favorite', tr.favorite, t.favorite),
-  RefsEditField('parent_ids', tr.parentTags, RefKind.tags, t.parents),
-  TextEditField('description', tr.description, t.description, multiline: true),
+/// Editable fields of a tag; [t] is null when creating one.
+List<EditField> tagFields(Tag? t) => [
+  ImageEditField('image', tr.image, t?.imagePath),
+  TextEditField('name', tr.sortName, t?.name, required: true),
+  StringListEditField('aliases', tr.aliases, t?.aliases ?? const []),
+  BoolEditField('favorite', tr.favorite, t?.favorite ?? false),
+  RefsEditField(
+    'parent_ids',
+    tr.parentTags,
+    RefKind.tags,
+    t?.parents ?? const [],
+  ),
+  TextEditField('description', tr.description, t?.description, multiline: true),
 ];
 
 Future<bool> editTag(BuildContext context, Tag t) => _open(
@@ -191,6 +228,9 @@ Future<bool> editTag(BuildContext context, Tag t) => _open(
   kind: EditKind.tag,
   id: t.id,
   fields: tagFields(t),
+  delete: _destroy(context, EditKind.tag, t.id),
+  deleteLabel: tr.deleteTag,
+  closeOnDelete: true,
 );
 
 /// Editable fields of a group; [g] is null when creating one.
@@ -216,6 +256,7 @@ Future<bool> editGroup(BuildContext context, Group g) => _openScrapable(
   scrapeKind: ScrapeKind.group,
   id: g.id,
   fields: groupFields(g),
+  deleteLabel: tr.deleteGroup,
 );
 
 /// "Edit" app bar button that reloads the screen after saving.
@@ -262,6 +303,8 @@ Future<bool> editGallery(BuildContext context, Gallery g) => _openScrapable(
   scrapeKind: ScrapeKind.gallery,
   id: g.id,
   fields: galleryFields(g),
+  // Galleries of a folder or a zip come back at the next scan.
+  deleteLabel: (g.folderPath?.isNotEmpty ?? false) ? null : tr.deleteGallery,
 );
 
 /// Fields of a marker; [m] is null when creating one at [at] seconds.
@@ -313,12 +356,13 @@ Future<bool> createMarker(
   return saved ?? false;
 }
 
-/// Creation form of a group or a gallery; opens the new item once saved.
+/// Creation form of a performer, studio, tag, group or gallery; opens the
+/// new item once saved.
 Future<void> _createEntity(
   BuildContext context, {
   required String title,
+  required EditKind kind,
   required List<EditField> fields,
-  required Future<String> Function(Map<String, dynamic> input) create,
   required void Function(BuildContext context, String id) open,
 }) async {
   final app = context.read<AppState>();
@@ -329,7 +373,7 @@ Future<void> _createEntity(
         title: title,
         fields: fields,
         create: true,
-        save: (input) async => id = await create(input),
+        save: (input) async => id = await app.repo!.create(kind, input),
       ),
     ),
   );
@@ -338,18 +382,42 @@ Future<void> _createEntity(
   if (context.mounted) open(context, id!);
 }
 
+Future<void> createPerformer(BuildContext context) => _createEntity(
+  context,
+  title: tr.newPerformer,
+  kind: EditKind.performer,
+  fields: performerFields(null),
+  open: openPerformer,
+);
+
+Future<void> createStudio(BuildContext context) => _createEntity(
+  context,
+  title: tr.newStudio,
+  kind: EditKind.studio,
+  fields: studioFields(null),
+  open: openStudio,
+);
+
+Future<void> createTag(BuildContext context) => _createEntity(
+  context,
+  title: tr.newTag,
+  kind: EditKind.tag,
+  fields: tagFields(null),
+  open: openTag,
+);
+
 Future<void> createGroup(BuildContext context) => _createEntity(
   context,
   title: tr.newGroup,
+  kind: EditKind.group,
   fields: groupFields(null),
-  create: context.read<AppState>().repo!.createGroup,
   open: openGroup,
 );
 
 Future<void> createGallery(BuildContext context) => _createEntity(
   context,
   title: tr.newGallery,
+  kind: EditKind.gallery,
   fields: galleryFields(null),
-  create: context.read<AppState>().repo!.createGallery,
   open: openGallery,
 );

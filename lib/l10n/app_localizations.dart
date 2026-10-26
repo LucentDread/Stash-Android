@@ -2534,6 +2534,54 @@ abstract class AppLocalizations {
   /// **'New gallery'**
   String get newGallery;
 
+  /// No description provided for @newPerformer.
+  ///
+  /// In en, this message translates to:
+  /// **'New performer'**
+  String get newPerformer;
+
+  /// No description provided for @newStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'New studio'**
+  String get newStudio;
+
+  /// No description provided for @newTag.
+  ///
+  /// In en, this message translates to:
+  /// **'New tag'**
+  String get newTag;
+
+  /// No description provided for @deletePerformer.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the performer'**
+  String get deletePerformer;
+
+  /// No description provided for @deleteStudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the studio'**
+  String get deleteStudio;
+
+  /// No description provided for @deleteTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the tag'**
+  String get deleteTag;
+
+  /// No description provided for @deleteGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the group'**
+  String get deleteGroup;
+
+  /// No description provided for @deleteGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the gallery'**
+  String get deleteGallery;
+
   /// No description provided for @untitled.
   ///
   /// In en, this message translates to:

@@ -1530,6 +1530,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get newGallery => 'Neue Galerie';
 
   @override
+  String get newPerformer => 'Neuer Darsteller';
+
+  @override
+  String get newStudio => 'Neues Studio';
+
+  @override
+  String get newTag => 'Neuer Tag';
+
+  @override
+  String get deletePerformer => 'Darsteller löschen';
+
+  @override
+  String get deleteStudio => 'Studio löschen';
+
+  @override
+  String get deleteTag => 'Tag löschen';
+
+  @override
+  String get deleteGroup => 'Gruppe löschen';
+
+  @override
+  String get deleteGallery => 'Galerie löschen';
+
+  @override
   String get untitled => 'Ohne Titel';
 
   @override

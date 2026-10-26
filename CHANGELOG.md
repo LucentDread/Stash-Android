@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.15.0
+- Create performers, studios and tags too: "+" button at the top of their
+  screens, like groups and galleries.
+- Delete performers, studios, tags, groups and galleries: delete button in
+  their edit screen, after a confirmation. The page closes and the lists
+  reload. Galleries made of a folder or a zip file cannot be deleted (the
+  next scan would bring them back); scenes and images, which are files,
+  stay managed by the server.
+
 ## 1.14.0
 - Create groups and galleries: "+" button at the top of the Groups and
   Galleries screens. The form is the edit one (name or title required);

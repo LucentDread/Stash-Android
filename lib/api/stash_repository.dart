@@ -811,28 +811,56 @@ class StashRepository {
     );
   }
 
-  /// Creates a group; returns its id.
-  Future<String> createGroup(Map<String, dynamic> input) async {
+  /// Creates a performer, studio, tag, group or (empty) gallery; returns
+  /// its id.
+  Future<String> create(EditKind kind, Map<String, dynamic> input) async {
+    final (mutation, type) = switch (kind) {
+      EditKind.performer => ('performerCreate', 'PerformerCreateInput'),
+      EditKind.studio => ('studioCreate', 'StudioCreateInput'),
+      EditKind.tag => ('tagCreate', 'TagCreateInput'),
+      EditKind.group => ('groupCreate', 'GroupCreateInput'),
+      EditKind.gallery => ('galleryCreate', 'GalleryCreateInput'),
+      EditKind.scene || EditKind.marker => throw ArgumentError(kind),
+    };
     final d = await client.query(
       '''
-      mutation CreateGroup(\$input: GroupCreateInput!) {
-        groupCreate(input: \$input) { id }
+      mutation Create(\$input: $type!) {
+        $mutation(input: \$input) { id }
       }''',
       variables: {'input': input},
     );
-    return (d['groupCreate'] as Map)['id'] as String;
+    return (d[mutation] as Map)['id'] as String;
   }
 
-  /// Creates an empty gallery; returns its id.
-  Future<String> createGallery(Map<String, dynamic> input) async {
-    final d = await client.query(
+  /// Deletes a performer, studio, tag, group or gallery from Stash. A
+  /// gallery's files, if any, stay on disk.
+  Future<void> destroy(EditKind kind, String id) async {
+    final (mutation, type, input) = switch (kind) {
+      EditKind.performer => (
+        'performerDestroy',
+        'PerformerDestroyInput',
+        {'id': id},
+      ),
+      EditKind.studio => ('studioDestroy', 'StudioDestroyInput', {'id': id}),
+      EditKind.tag => ('tagDestroy', 'TagDestroyInput', {'id': id}),
+      EditKind.group => ('groupDestroy', 'GroupDestroyInput', {'id': id}),
+      EditKind.gallery => (
+        'galleryDestroy',
+        'GalleryDestroyInput',
+        {
+          'ids': [id],
+          'delete_file': false,
+        },
+      ),
+      EditKind.scene || EditKind.marker => throw ArgumentError(kind),
+    };
+    await client.query(
       '''
-      mutation CreateGallery(\$input: GalleryCreateInput!) {
-        galleryCreate(input: \$input) { id }
+      mutation Destroy(\$input: $type!) {
+        $mutation(input: \$input)
       }''',
       variables: {'input': input},
     );
-    return (d['galleryCreate'] as Map)['id'] as String;
   }
 
   Future<void> deleteMarker(String id) async {

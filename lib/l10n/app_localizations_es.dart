@@ -1529,6 +1529,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get newGallery => 'Nueva galería';
 
   @override
+  String get newPerformer => 'Nuevo actor';
+
+  @override
+  String get newStudio => 'Nuevo estudio';
+
+  @override
+  String get newTag => 'Nueva etiqueta';
+
+  @override
+  String get deletePerformer => 'Eliminar el actor';
+
+  @override
+  String get deleteStudio => 'Eliminar el estudio';
+
+  @override
+  String get deleteTag => 'Eliminar la etiqueta';
+
+  @override
+  String get deleteGroup => 'Eliminar el grupo';
+
+  @override
+  String get deleteGallery => 'Eliminar la galería';
+
+  @override
   String get untitled => 'Sin título';
 
   @override
