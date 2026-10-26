@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.2
+- Scene page: while scrolling, the scene title fades into the top bar at
+  the pace it slides under it, and stays there further down. The other
+  pages (performer, studio, group, gallery, tag) already show their name
+  in the bar.
+
 ## 1.13.1
 - Fix: the end of the scene page (links…) could sit under Android's
   navigation bar and not be tapped. Same fix for the other pages that

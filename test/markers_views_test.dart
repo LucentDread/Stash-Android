@@ -227,4 +227,67 @@ void main() {
     // 800 logical pixels tall, the bar covering the last 48.
     expect(tester.getBottomLeft(link).dy, lessThanOrEqualTo(800 - 48));
   });
+
+  testWidgets('the scene title fades from the page into the app bar', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final (app, _) = await _app(
+      jsonEncode({
+        'data': {
+          'findScene': {
+            'id': '1',
+            'title': 'Plage',
+            'paths': <String, dynamic>{},
+            'details': 'Une longue description.\n' * 40,
+          },
+        },
+      }),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: const MaterialApp(home: SceneScreen(sceneId: '1')),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    double opacity(Finder within) => tester
+        .widget<Opacity>(
+          find.ancestor(
+            of: find.descendant(of: within, matching: find.text('Plage')),
+            matching: find.byType(Opacity),
+          ),
+        )
+        .opacity;
+    final bar = find.byType(AppBar);
+    final page = find.byType(SliverList);
+    expect(opacity(bar), 0);
+    expect(opacity(page), 1);
+
+    // Small steps until the page title has slid under the bar.
+    final position = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    final seen = <double>[];
+    for (var i = 0; i < 200 && opacity(bar) < 1; i++) {
+      position.jumpTo(position.pixels + 3);
+      await tester.pump();
+      seen.add(opacity(bar));
+      expect(opacity(bar) + opacity(page), closeTo(1, 1e-9));
+    }
+    expect(seen.where((o) => o > 0 && o < 1).length, greaterThan(3));
+    expect(opacity(bar), 1);
+
+    // Far down, then back to the top.
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -3000));
+    await tester.pumpAndSettle();
+    expect(opacity(bar), 1);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, 6000));
+    await tester.pumpAndSettle();
+    expect(opacity(bar), 0);
+  });
 }
