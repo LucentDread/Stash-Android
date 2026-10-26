@@ -946,6 +946,8 @@
   "discardChangesQuestion": "Discard the changes?",
   "continueEditing": "Keep editing",
   "discard": "Discard",
+  "newGroup": "New group",
+  "newGallery": "New gallery",
   "untitled": "Untitled",
   "newImage": "New image",
   "nothingNewInResult": "Nothing new in this result",

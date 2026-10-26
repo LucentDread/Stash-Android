@@ -403,6 +403,8 @@
   "discardChangesQuestion": "¿Descartar los cambios?",
   "continueEditing": "Seguir editando",
   "discard": "Descartar",
+  "newGroup": "Nuevo grupo",
+  "newGallery": "Nueva galería",
   "untitled": "Sin título",
   "newImage": "Nueva imagen",
   "nothingNewInResult": "Nada nuevo en este resultado",

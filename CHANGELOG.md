@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.14.0
+- Create groups and galleries: "+" button at the top of the Groups and
+  Galleries screens. The form is the edit one (name or title required);
+  the new item opens once saved. A new gallery starts empty.
+- Uploading media is not possible: Stash's API has no way to send video
+  or image files, it only indexes what is already in its library folders.
+
 ## 1.13.2
 - Scene page: while scrolling, the scene title fades into the top bar at
   the pace it slides under it, and stays there further down. The other

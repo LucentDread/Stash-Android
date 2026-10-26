@@ -10,6 +10,7 @@ import '../widgets/cards.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/paged_grid.dart';
 import '../widgets/view_list.dart';
+import 'edit/editors.dart';
 import 'scene_filter_screen.dart';
 
 Widget sceneGrid(BuildContext context, {EntityFilter? entity}) {
@@ -264,13 +265,21 @@ Widget markerGrid(BuildContext context, {EntityFilter? entity}) {
 }
 
 class _BrowseScaffold extends StatelessWidget {
-  const _BrowseScaffold({required this.title, required this.child});
+  const _BrowseScaffold({
+    required this.title,
+    required this.child,
+    this.actions = const [],
+  });
   final String title;
   final Widget child;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: BrandTitle(page: title)),
+    appBar: AppBar(
+      title: BrandTitle(page: title),
+      actions: actions,
+    ),
     body: child,
   );
 }
@@ -295,8 +304,17 @@ class GalleriesScreen extends StatelessWidget {
   const GalleriesScreen({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      _BrowseScaffold(title: tr.galleries, child: galleryGrid(context));
+  Widget build(BuildContext context) => _BrowseScaffold(
+    title: tr.galleries,
+    actions: [
+      IconButton(
+        tooltip: tr.newGallery,
+        icon: const Icon(Icons.add),
+        onPressed: () => createGallery(context),
+      ),
+    ],
+    child: galleryGrid(context),
+  );
 }
 
 /// Every image of the library, whatever its gallery.
@@ -338,6 +356,13 @@ class GroupsScreen extends StatelessWidget {
     final repo = context.read<AppState>().repo!;
     return _BrowseScaffold(
       title: tr.groups,
+      actions: [
+        IconButton(
+          tooltip: tr.newGroup,
+          icon: const Icon(Icons.add),
+          onPressed: () => createGroup(context),
+        ),
+      ],
       child: PagedGrid<Group>(
         itemKey: (item) => item.id,
         fetch: repo.findGroups,

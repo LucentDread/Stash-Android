@@ -2522,6 +2522,18 @@ abstract class AppLocalizations {
   /// **'Discard'**
   String get discard;
 
+  /// No description provided for @newGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'New group'**
+  String get newGroup;
+
+  /// No description provided for @newGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'New gallery'**
+  String get newGallery;
+
   /// No description provided for @untitled.
   ///
   /// In en, this message translates to:

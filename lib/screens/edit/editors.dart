@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../api/stash_repository.dart';
 import '../../l10n/l10n.dart';
 import '../../models/models.dart';
+import '../../navigation.dart';
 import '../../services/app_state.dart';
 import '../../utils/format.dart';
 import 'edit_form.dart';
@@ -192,20 +193,20 @@ Future<bool> editTag(BuildContext context, Tag t) => _open(
   fields: tagFields(t),
 );
 
-/// Editable fields of a group.
-List<EditField> groupFields(Group g) => [
-  ImageEditField('front_image', tr.frontCover, g.frontImage),
-  ImageEditField('back_image', tr.backCover, g.backImage),
-  TextEditField('name', tr.sortName, g.name, required: true),
-  TextEditField('aliases', tr.aliases, g.aliases),
-  DateEditField('date', tr.date, g.date),
-  IntEditField('duration', tr.duration, g.duration, factor: 60, suffix: 'min'),
-  TextEditField('director', tr.director, g.director),
-  RefEditField('studio_id', tr.studio, RefKind.studios, g.studio),
-  RatingEditField(g.rating100),
-  RefsEditField('tag_ids', tr.tags, RefKind.tags, g.tags),
-  StringListEditField('urls', tr.links, g.urls, hint: 'https://…'),
-  TextEditField('synopsis', tr.synopsis, g.synopsis, multiline: true),
+/// Editable fields of a group; [g] is null when creating one.
+List<EditField> groupFields(Group? g) => [
+  ImageEditField('front_image', tr.frontCover, g?.frontImage),
+  ImageEditField('back_image', tr.backCover, g?.backImage),
+  TextEditField('name', tr.sortName, g?.name, required: true),
+  TextEditField('aliases', tr.aliases, g?.aliases),
+  DateEditField('date', tr.date, g?.date),
+  IntEditField('duration', tr.duration, g?.duration, factor: 60, suffix: 'min'),
+  TextEditField('director', tr.director, g?.director),
+  RefEditField('studio_id', tr.studio, RefKind.studios, g?.studio),
+  RatingEditField(g?.rating100),
+  RefsEditField('tag_ids', tr.tags, RefKind.tags, g?.tags ?? const []),
+  StringListEditField('urls', tr.links, g?.urls ?? const [], hint: 'https://…'),
+  TextEditField('synopsis', tr.synopsis, g?.synopsis, multiline: true),
 ];
 
 Future<bool> editGroup(BuildContext context, Group g) => _openScrapable(
@@ -233,24 +234,25 @@ class EditButton extends StatelessWidget {
   );
 }
 
-/// Editable fields of a gallery.
-List<EditField> galleryFields(Gallery g) => [
-  TextEditField('title', tr.sortTitle, g.title),
-  TextEditField('code', tr.code, g.code),
-  DateEditField('date', tr.date, g.date),
-  TextEditField('photographer', tr.photographer, g.photographer),
-  RatingEditField(g.rating100),
-  BoolEditField('organized', tr.organized, g.organized),
-  RefEditField('studio_id', tr.studio, RefKind.studios, g.studio),
+/// Editable fields of a gallery; [g] is null when creating one (Stash
+/// then requires a title).
+List<EditField> galleryFields(Gallery? g) => [
+  TextEditField('title', tr.sortTitle, g?.title, required: g == null),
+  TextEditField('code', tr.code, g?.code),
+  DateEditField('date', tr.date, g?.date),
+  TextEditField('photographer', tr.photographer, g?.photographer),
+  RatingEditField(g?.rating100),
+  BoolEditField('organized', tr.organized, g?.organized ?? false),
+  RefEditField('studio_id', tr.studio, RefKind.studios, g?.studio),
   RefsEditField(
     'performer_ids',
     tr.performers,
     RefKind.performers,
-    g.performers,
+    g?.performers ?? const [],
   ),
-  RefsEditField('tag_ids', tr.tags, RefKind.tags, g.tags),
-  StringListEditField('urls', tr.links, g.urls, hint: 'https://…'),
-  TextEditField('details', tr.description, g.details, multiline: true),
+  RefsEditField('tag_ids', tr.tags, RefKind.tags, g?.tags ?? const []),
+  StringListEditField('urls', tr.links, g?.urls ?? const [], hint: 'https://…'),
+  TextEditField('details', tr.description, g?.details, multiline: true),
 ];
 
 Future<bool> editGallery(BuildContext context, Gallery g) => _openScrapable(
@@ -310,3 +312,44 @@ Future<bool> createMarker(
   );
   return saved ?? false;
 }
+
+/// Creation form of a group or a gallery; opens the new item once saved.
+Future<void> _createEntity(
+  BuildContext context, {
+  required String title,
+  required List<EditField> fields,
+  required Future<String> Function(Map<String, dynamic> input) create,
+  required void Function(BuildContext context, String id) open,
+}) async {
+  final app = context.read<AppState>();
+  String? id;
+  final saved = await Navigator.of(context).push<bool>(
+    MaterialPageRoute(
+      builder: (_) => EditScreen(
+        title: title,
+        fields: fields,
+        create: true,
+        save: (input) async => id = await create(input),
+      ),
+    ),
+  );
+  if (saved != true || id == null) return;
+  app.refreshData(); // lists show the new item
+  if (context.mounted) open(context, id!);
+}
+
+Future<void> createGroup(BuildContext context) => _createEntity(
+  context,
+  title: tr.newGroup,
+  fields: groupFields(null),
+  create: context.read<AppState>().repo!.createGroup,
+  open: openGroup,
+);
+
+Future<void> createGallery(BuildContext context) => _createEntity(
+  context,
+  title: tr.newGallery,
+  fields: galleryFields(null),
+  create: context.read<AppState>().repo!.createGallery,
+  open: openGallery,
+);

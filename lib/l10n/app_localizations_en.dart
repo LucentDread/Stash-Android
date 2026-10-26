@@ -1521,6 +1521,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discard => 'Discard';
 
   @override
+  String get newGroup => 'New group';
+
+  @override
+  String get newGallery => 'New gallery';
+
+  @override
   String get untitled => 'Untitled';
 
   @override

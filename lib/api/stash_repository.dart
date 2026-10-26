@@ -811,6 +811,30 @@ class StashRepository {
     );
   }
 
+  /// Creates a group; returns its id.
+  Future<String> createGroup(Map<String, dynamic> input) async {
+    final d = await client.query(
+      '''
+      mutation CreateGroup(\$input: GroupCreateInput!) {
+        groupCreate(input: \$input) { id }
+      }''',
+      variables: {'input': input},
+    );
+    return (d['groupCreate'] as Map)['id'] as String;
+  }
+
+  /// Creates an empty gallery; returns its id.
+  Future<String> createGallery(Map<String, dynamic> input) async {
+    final d = await client.query(
+      '''
+      mutation CreateGallery(\$input: GalleryCreateInput!) {
+        galleryCreate(input: \$input) { id }
+      }''',
+      variables: {'input': input},
+    );
+    return (d['galleryCreate'] as Map)['id'] as String;
+  }
+
   Future<void> deleteMarker(String id) async {
     await client.query(
       '''

@@ -1523,6 +1523,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get discard => 'Descartar';
 
   @override
+  String get newGroup => 'Nuevo grupo';
+
+  @override
+  String get newGallery => 'Nueva galería';
+
+  @override
   String get untitled => 'Sin título';
 
   @override
