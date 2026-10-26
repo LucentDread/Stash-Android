@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.16.1
+- Unrated items no longer show empty stars: nothing on cards, a "Not
+  rated" button on pages and edit forms, which shows the stars to pick
+  from (× goes back without rating).
+
 ## 1.16.0
 - Ratings: a "×" button next to the stars clears the rating (tapping the
   current star still does too).

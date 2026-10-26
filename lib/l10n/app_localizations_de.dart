@@ -555,9 +555,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get noRating => 'Keine Wertung';
-
-  @override
   String starsOutOfFive(Object stars) {
     return '$stars / 5';
   }
@@ -649,6 +646,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get clearRating => 'Wertung entfernen';
+
+  @override
+  String get notRated => 'Nicht bewertet';
 
   @override
   String get info => 'Infos';

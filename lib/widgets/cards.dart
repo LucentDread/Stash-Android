@@ -406,7 +406,8 @@ class StudioWatermark extends StatelessWidget {
   }
 }
 
-/// Five small stars filled according to a 1-100 rating (halves included).
+/// Five small stars filled according to a 1-100 rating (halves included);
+/// nothing when unrated.
 class _Stars extends StatelessWidget {
   const _Stars(this.rating100, {required this.size});
   final int? rating100;
@@ -414,11 +415,12 @@ class _Stars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (rating100 == null) return const SizedBox.shrink();
     final stars = starsFromRating(rating100);
     final empty = Theme.of(context).colorScheme.onSurfaceVariant
         .withValues(alpha: 0.45);
     return Tooltip(
-      message: rating100 == null ? tr.noRating : tr.starsOutOfFive(stars),
+      message: tr.starsOutOfFive(stars),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

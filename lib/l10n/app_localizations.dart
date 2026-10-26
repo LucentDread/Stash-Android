@@ -884,12 +884,6 @@ abstract class AppLocalizations {
   /// **'Added {date}'**
   String addedOn(Object date);
 
-  /// No description provided for @noRating.
-  ///
-  /// In en, this message translates to:
-  /// **'No rating'**
-  String get noRating;
-
   /// No description provided for @starsOutOfFive.
   ///
   /// In en, this message translates to:
@@ -1045,6 +1039,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear the rating'**
   String get clearRating;
+
+  /// No description provided for @notRated.
+  ///
+  /// In en, this message translates to:
+  /// **'Not rated'**
+  String get notRated;
 
   /// No description provided for @info.
   ///

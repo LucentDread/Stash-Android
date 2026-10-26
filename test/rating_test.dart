@@ -107,14 +107,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(_lastUpdate(sent), {'id': '1', 'rating100': null});
     expect(_fullStars(tester), 0);
-    // Nothing left to clear: the button hides, keeping its room.
-    final button = tester.widget<Visibility>(
-      find.ancestor(
-        of: find.byTooltip('Supprimer la note'),
-        matching: find.byType(Visibility),
-      ),
-    );
-    expect(button.visible, isFalse);
+    // Unrated: a "Not rated" button instead of empty stars.
+    expect(find.text('Non noté'), findsOneWidget);
+    expect(find.byIcon(Icons.star_border), findsOneWidget);
+
+    // It shows the stars to pick from; ✕ goes back without saving.
+    await tester.tap(find.text('Non noté'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.star_border), findsNWidgets(5));
+    final count = sent.length;
+    await tester.tap(find.byTooltip('Annuler'));
+    await tester.pumpAndSettle();
+    expect(find.text('Non noté'), findsOneWidget);
+    expect(sent, hasLength(count));
+
+    await tester.tap(find.text('Non noté'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.star_border).at(3)); // 4 stars
+    await tester.pumpAndSettle();
+    expect(_lastUpdate(sent), {'id': '1', 'rating100': 80});
+    expect(_fullStars(tester), 4);
     _dump(sent, 'rate_scene');
   });
 

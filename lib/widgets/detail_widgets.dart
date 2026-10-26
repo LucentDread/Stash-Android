@@ -135,14 +135,42 @@ class UrlList extends StatelessWidget {
 }
 
 /// Five-star rating editor; [rating100] uses Stash's 1-100 scale.
-class StarRating extends StatelessWidget {
+///
+/// Unrated, it reads "Not rated" (nothing at all when read-only); tapping
+/// that shows the stars to pick from.
+class StarRating extends StatefulWidget {
   const StarRating({super.key, required this.rating100, this.onChanged});
   final int? rating100;
   final ValueChanged<int?>? onChanged;
 
   @override
+  State<StarRating> createState() => _StarRatingState();
+}
+
+class _StarRatingState extends State<StarRating> {
+  /// Stars shown although unrated, to pick a first rating.
+  bool _picking = false;
+
+  @override
+  void didUpdateWidget(StarRating old) {
+    super.didUpdateWidget(old);
+    // Cleared: back to "Not rated".
+    if (widget.rating100 == null && old.rating100 != null) _picking = false;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final stars = rating100 == null ? 0.0 : rating100! / 20;
+    final rating100 = widget.rating100;
+    final onChanged = widget.onChanged;
+    if (rating100 == null && !_picking) {
+      if (onChanged == null) return const SizedBox.shrink();
+      return TextButton.icon(
+        onPressed: () => setState(() => _picking = true),
+        icon: const Icon(Icons.star_border, color: Colors.amber),
+        label: Text(tr.notRated),
+      );
+    }
+    final stars = rating100 == null ? 0.0 : rating100 / 20;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -152,7 +180,7 @@ class StarRating extends StatelessWidget {
             onTap: onChanged == null
                 ? null
                 // Tapping the current rating clears it, like the web UI.
-                : () => onChanged!(stars.round() == i ? null : i * 20),
+                : () => onChanged(stars.round() == i ? null : i * 20),
             child: Padding(
               padding: const EdgeInsets.all(2),
               child: Icon(
@@ -166,16 +194,14 @@ class StarRating extends StatelessWidget {
               ),
             ),
           ),
-        // Keeps its room when unrated so the stars do not move.
         if (onChanged != null)
-          Visibility.maintain(
-            visible: rating100 != null,
-            child: IconButton(
-              tooltip: tr.clearRating,
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.close, size: 20),
-              onPressed: () => onChanged!(null),
-            ),
+          IconButton(
+            tooltip: rating100 == null ? tr.cancel : tr.clearRating,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.close, size: 20),
+            onPressed: () => rating100 == null
+                ? setState(() => _picking = false)
+                : onChanged(null),
           ),
       ],
     );

@@ -373,7 +373,6 @@
       }
     }
   },
-  "noRating": "No rating",
   "starsOutOfFive": "{stars} / 5",
   "@starsOutOfFive": {
     "placeholders": {
@@ -421,6 +420,7 @@
   "wrongPassword": "Wrong password",
   "unlock": "Unlock",
   "clearRating": "Clear the rating",
+  "notRated": "Not rated",
   "info": "Info",
   "information": "Information",
   "parentStudio": "Parent studio",

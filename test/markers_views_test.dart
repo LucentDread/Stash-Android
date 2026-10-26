@@ -129,6 +129,32 @@ void main() {
     expect(find.byIcon(Icons.star), findsNWidgets(3));
     expect(find.byIcon(Icons.star_half), findsOneWidget);
     expect(find.byIcon(Icons.star_border), findsOneWidget);
+
+    // Unrated: no empty stars.
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Center(
+              child: SizedBox(
+                width: 200,
+                height: SceneCard.heightFor(context, 200),
+                child: SceneCard(
+                  scene: Scene.fromJson({
+                    'id': '2',
+                    'title': 'Sans note',
+                    'paths': <String, dynamic>{},
+                  }),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.byIcon(Icons.star_border), findsNothing);
   });
 
   testWidgets('a saved view cannot change its filter while browsing', (

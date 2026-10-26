@@ -555,9 +555,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get noRating => 'Sin puntuación';
-
-  @override
   String starsOutOfFive(Object stars) {
     return '$stars / 5';
   }
@@ -648,6 +645,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get clearRating => 'Quitar la puntuación';
+
+  @override
+  String get notRated => 'Sin puntuar';
 
   @override
   String get info => 'Info';
