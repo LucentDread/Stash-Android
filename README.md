@@ -1,118 +1,112 @@
 # Stash Android
 
-Client Android pour [Stash](https://github.com/stashapp/stash), écrit en
-Flutter. Inspiré de [StashAppAndroidTV](https://github.com/damontecres/StashAppAndroidTV),
-mais pensé pour les téléphones et tablettes (écran tactile).
+Android client for [Stash](https://github.com/stashapp/stash), written in
+Flutter. Inspired by [StashAppAndroidTV](https://github.com/damontecres/StashAppAndroidTV),
+but designed for phones and tablets (touch screens).
 
-L'application dialogue directement avec l'API GraphQL de votre serveur Stash :
-aucun service tiers, aucune donnée n'est envoyée ailleurs.
+The app talks directly to your Stash server's GraphQL API: no third-party
+service, no data sent anywhere else.
 
-## Fonctionnalités
+## Features
 
-- **Accueil** : reprendre la lecture, scènes ajoutées récemment, sorties
-  récentes, performeurs favoris, sélection aléatoire, galeries récentes et
-  statistiques de la bibliothèque.
-- **Scènes** : grille avec défilement infini, recherche, tri (date d'ajout,
-  date, titre, note, lectures, compteur O, durée, taille, aléatoire),
-  aperçu vidéo par appui long.
-- **Filtres par champ** : performeurs, tags, studio, groupes (au moins un /
-  tous / aucun de / vide / non vide, avec sous-tags, sous-studios et
-  sous-groupes), note minimale, résolution minimale, durée, déjà vues ou
-  jamais vues, organisées, marqueurs, performeur favori.
-- **Vues enregistrées** : une recherche + filtres + tri de scènes,
-  performeurs, studios, groupes, galeries, tags, marqueurs ou images peut être
-  enregistrée (Plus > Vues enregistrées, ou icône signet dans Scènes) et
-  ajoutée à la page d'accueil (icône maison) ; plusieurs vues s'y empilent,
-  une seule donne son nom à la page. Les filtres enregistrés dans
-  l'interface web de Stash sont aussi proposés (convertis d'après le schéma
-  du serveur ; un avertissement orange signale les critères ignorés).
-- **Images** (dans **Plus**) : toutes les images de la bibliothèque, avec
-  recherche et tri, et visionneuse plein écran. Les vues peuvent aussi
-  lister des images. L'accueil par défaut
-  reste accessible par le bouton en haut à droite. Les vues apparaissent aussi en
-  lignes sur l'accueil par défaut. Leur filtre n'est modifiable que depuis
-  **Plus > Vues enregistrées** (création, modification, ordre, suppression).
-  Exemple : « Groupes : Vide » affiche toutes les scènes hors groupe.
-- **Modification** : bouton crayon sur les fiches scène, performeur,
-  studio, tag, groupe et galerie (titre, date, note, studio, performeurs,
-  tags, groupes, liens, description, images…). Les images peuvent venir du
-  téléphone ou d'une URL ; la couverture d'une scène peut aussi être prise
-  sur l'image en cours de lecture (menu ⋮ du lecteur).
-- **Marqueurs** : ajout depuis le lecteur (bouton à côté de la qualité, à la
-  position courante), modification ou suppression par appui long. Seuls les champs modifiés sont envoyés à
-  Stash ; la position d'une scène dans ses groupes est conservée.
-- **Scraping** depuis l'écran de modification (bouton loupe) des scènes,
-  performeurs, groupes, galeries et studios : stash-box et scrapers
-  configurés sur le serveur (selon ce que chacun gère), ou une URL. Un écran de
-  comparaison permet de choisir les valeurs reprises ; les performeurs,
-  tags, studios et groupes absents de Stash peuvent y être créés puis liés.
-- **Hors ligne** : téléchargement d'une scène, d'un groupe (toutes ses
-  scènes), d'une galerie (bouton dans leur fiche) ou d'une image (bouton
-  dans la visionneuse), en arrière-plan avec
-  notification. Les copies se trouvent dans **Plus > Téléchargements** et se
-  lisent sans serveur. Si le serveur devient injoignable, une fenêtre le
-  signale et mène aux téléchargements.
-- **Scan de la bibliothèque** depuis **Plus > Serveur**, avec les options de
-  scan par défaut de Stash. La progression (pourcentage, fichier en cours)
-  s'affiche en bas de toutes les pages ; à la fin, les pages ouvertes se
-  rechargent sans changer de navigation.
-- **Logo du studio** en filigrane sur les miniatures et la fiche scène,
-  quand le studio en a un.
-- **Page d'accueil** (**Plus > Page d'accueil**) : l'accueil personnalisé
-  empile des vues et des sections de l'accueil par défaut (« Reprendre la
-  lecture »…) dans l'ordre voulu ; les lignes de l'accueil par défaut se
-  choisissent et s'ordonnent aussi.
-- **Onglets** au choix (**Plus > Affichage > Onglets**) : jusqu'à 4 écrans
-  dans la barre du bas, dans l'ordre voulu ; les autres sont dans **Plus**.
-- **Groupes** : onglet dédié, fiche avec jaquettes et scènes dans l'ordre du
-  groupe.
-- **Fiche scène** : performeurs, studio, tags, galeries, marqueurs,
-  description, informations techniques du fichier, note (étoiles) et
-  compteur O modifiables.
-- **Lecteur vidéo** : reprise là où vous vous étiez arrêté (position effaçable depuis la fiche), double-tap
-  ±10 s, saut aux marqueurs (repères sur la barre de progression), vitesse
-  de lecture, choix du flux (direct ou transcodé HLS/DASH/MP4) avec bascule
-  automatique sur un flux transcodé si le codec n'est pas supporté.
-  La position et le temps de visionnage sont renvoyés à Stash.
-  En quittant l'application pendant la lecture, la vidéo continue dans une
-  petite fenêtre (lecteur popup, désactivable).
-- **Langues** : anglais, français, allemand, italien et espagnol (vocabulaire
-  des traductions de Stash). L'application suit la langue du téléphone
-  (anglais par défaut) ou celle choisie dans les paramètres.
-- **Paramètres** (**Plus > Application**) : langue, lecteur popup, aperçu noir dans
-  les applications récentes, mot de passe à l'ouverture (création,
-  modification, suppression, délai avant de le redemander), mises à jour.
-- **Mises à jour** : au démarrage, l'application consulte les releases
-  GitHub du projet ; une nouvelle version est proposée avec ses nouveautés,
-  téléchargée puis installée (Android demande confirmation, et la première
-  fois l'autorisation d'installer des applications).
-- **Performeurs**, **studios**, **tags**, **galeries** (dans **Plus**) : fiches détaillées avec leurs
-  scènes, galeries, marqueurs ; ajout/retrait des favoris (performeurs).
-- **Galeries** : grille d'images et visionneuse plein écran (glisser,
-  pincer pour zoomer, double-tap).
-- **Marqueurs** : liste de tous les marqueurs, lecture directe au bon moment.
+- **Home**: continue watching, recently added scenes, recent releases,
+  favorite performers, random picks, recent galleries and library
+  statistics.
+- **Scenes**: infinite-scroll grid, search, sort (date added, date, title,
+  rating, plays, O counter, duration, size, random), video preview on long
+  press.
+- **Field filters**: performers, tags, studio, groups (at least one / all /
+  none of / empty / not empty, with sub-tags, sub-studios and sub-groups),
+  minimum rating, minimum resolution, duration, watched or never watched,
+  organized, markers, favorite performer.
+- **Saved views**: a search + filters + sort of scenes, performers, studios,
+  groups, galleries, tags, markers or images can be saved (More > Saved
+  views, or the bookmark icon in Scenes) and added to the home page (house
+  icon); several views stack there, a single one names the page. Filters
+  saved in the Stash web UI are offered too (converted using the server's
+  schema; an orange warning flags ignored criteria). The default home stays
+  reachable from the button at the top right, and views also show as rows
+  on it. A view's filter is only edited from **More > Saved views**
+  (create, edit, reorder, delete). Example: "Groups: Empty" shows every
+  scene outside a group.
+- **Images** (in **More**): every image of the library, with search, sort
+  and a full-screen viewer. Views can list images too.
+- **Editing**: pencil button on scene, performer, studio, tag, group and
+  gallery pages (title, date, rating, studio, performers, tags, groups,
+  links, description, images…). Images can come from the phone or a URL; a
+  scene's cover can also be taken from the frame being played (player's ⋮
+  menu).
+- **Markers**: added from the player (button next to the quality, at the
+  current position), edited or deleted by long press. Only changed fields
+  are sent to Stash; a scene's position in its groups is kept.
+- **Scraping** from the edit screen (magnifier button) of scenes,
+  performers, groups, galleries and studios: stash-box and scrapers set up
+  on the server (depending on what each supports), or a URL. A comparison
+  screen picks the values to keep; performers, tags, studios and groups
+  missing from Stash can be created there, then linked.
+- **Offline**: download a scene, a group (all its scenes), a gallery
+  (button on their page) or an image (button in the viewer), in the
+  background with a notification. Copies are in **More > Downloads** and
+  play without the server. When the server cannot be reached, a window says
+  so and leads to the downloads.
+- **Library scan** from **More > Server**, with Stash's default scan
+  options. Progress (percentage, current file) shows at the bottom of every
+  page; at the end, open pages reload without changing the navigation.
+- **Studio logo** as a watermark on thumbnails and the scene page, when the
+  studio has one.
+- **Home page** (**More > Home page**): the custom home stacks views and
+  sections of the default home ("Continue watching"…) in the chosen order;
+  the rows of the default home can be chosen and ordered too.
+- **Tabs** of your choice (**More > Display > Tabs**): up to 4 screens in
+  the bottom bar, in the chosen order; the others are in **More**.
+- **Groups**: dedicated tab, page with covers and scenes in group order.
+- **Scene page**: performers, studio, tags, galleries, markers,
+  description, file details, editable rating (stars) and O counter.
+- **Video player**: resumes where you stopped (position can be cleared from
+  the scene page), double-tap ±10 s, jump to markers (ticks on the progress
+  bar), playback speed, stream choice (direct or transcoded HLS/DASH/MP4)
+  with automatic fallback to a transcoded stream when the codec is not
+  supported. Position and watch time are sent back to Stash. Leaving the
+  app during playback keeps the video in a small window (popup player, can
+  be turned off).
+- **Languages**: English, French, German, Italian and Spanish (vocabulary
+  of Stash's own translations). The app follows the phone's language
+  (English by default) or the one chosen in the settings.
+- **Settings** (**More > Application**): language, popup player, black
+  preview in recent apps, password at launch (create, change, remove, delay
+  before asking again), updates.
+- **Updates**: at startup, the app checks the project's GitHub releases; a
+  new version is offered with its changes, downloaded then installed
+  (Android asks for confirmation, and the first time for permission to
+  install apps).
+- **Performers**, **studios**, **tags**, **galleries** (in **More**):
+  detailed pages with their scenes, galleries, markers; add/remove
+  favorites (performers).
+- **Galleries**: image grid and full-screen viewer (swipe, pinch to zoom,
+  double-tap).
+- **Markers**: list of every marker, played straight at the right moment.
 
 ## Installation
 
-### Compiler l'APK
+### Building the APK
 
-Prérequis : [Flutter](https://docs.flutter.dev/get-started/install) (stable)
-et le SDK Android (le plus simple : installer Android Studio, puis lancer
+Requirements: [Flutter](https://docs.flutter.dev/get-started/install)
+(stable) and the Android SDK (easiest: install Android Studio, then run
 `flutter doctor --android-licenses`).
 
 ```bash
 flutter pub get
-flutter run                 # sur un appareil connecté
+flutter run                 # on a connected device
 flutter build apk --release --split-per-abi
 ```
 
-Les APK se trouvent dans `build/app/outputs/flutter-apk/` ; pour la plupart
-des téléphones récents, installez `app-arm64-v8a-release.apk`.
+The APKs are in `build/app/outputs/flutter-apk/`; for most recent phones,
+install `app-arm64-v8a-release.apk`.
 
-### Signature
+### Signing
 
-Les APK de release sont signés avec la clé décrite par `android/key.properties`
-(fichier et keystore exclus de git) :
+Release APKs are signed with the key described by `android/key.properties`
+(file and keystore excluded from git):
 
 ```properties
 storePassword=…
@@ -121,48 +115,48 @@ keyAlias=stash
 storeFile=../stash-release.jks
 ```
 
-Placez `stash-release.jks` et `key.properties` dans `android/` avant de
-compiler. Sans eux, l'APK est signé avec la clé de debug et ne pourra pas
-mettre à jour une version installée signée avec la clé de release.
-**Conservez la clé en lieu sûr** : si elle est perdue, il faudra désinstaller
-l'application pour installer une nouvelle version.
+Put `stash-release.jks` and `key.properties` in `android/` before building.
+Without them, the APK is signed with the debug key and cannot update an
+installed version signed with the release key. **Keep the key somewhere
+safe**: if it is lost, the app has to be uninstalled before a new version
+can be installed.
 
 ## Configuration
 
-1. Au premier lancement, saisissez l'adresse de votre serveur, par exemple
+1. At first launch, enter your server's address, for example
    `http://192.168.1.10:9999`.
-2. Si l'authentification est activée sur Stash, générez une clé API dans
-   **Paramètres > Sécurité > Clé API** et collez-la dans l'application.
+2. If authentication is enabled in Stash, generate an API key in
+   **Settings > Security > API Key** and paste it into the app.
 
-Le trafic HTTP en clair est autorisé pour pouvoir joindre un serveur local ;
-utilisez HTTPS (reverse proxy) si votre serveur est exposé sur Internet.
+Plain HTTP traffic is allowed so a local server can be reached; use HTTPS
+(reverse proxy) if your server is exposed on the Internet.
 
-## Structure du code
+## Code layout
 
 ```
 lib/
-  api/stash_client.dart      Client GraphQL (auth par clé API, URLs média)
-  api/stash_repository.dart  Requêtes et mutations Stash
+  api/stash_client.dart      GraphQL client (API key auth, media URLs)
+  api/stash_repository.dart  Stash queries and mutations
   models/models.dart         Scene, Performer, Studio, Tag, Gallery…
-  services/app_state.dart    Configuration du serveur et préférences
-  screens/                   Écrans (accueil, listes, fiches, lecteur…)
-  widgets/                   Cartes, grille paginée, images réseau…
-  l10n/                      Traductions (app_<langue>.arb ; le code
-                             app_localizations*.dart en est généré par
-                             `flutter gen-l10n`)
-test/                        Tests unitaires et de widgets
+  services/app_state.dart    Server configuration and preferences
+  screens/                   Screens (home, lists, pages, player…)
+  widgets/                   Cards, paged grid, network images…
+  l10n/                      Translations (app_<lang>.arb; the
+                             app_localizations*.dart code is generated
+                             from them by `flutter gen-l10n`)
+test/                        Unit and widget tests
 ```
 
-## Traductions et versions
+## Translations and releases
 
-Les textes de l'application sont dans `lib/l10n/app_<langue>.arb`
-(`app_en.arb` est la référence). Après une modification, `flutter gen-l10n`
-(ou `flutter pub get`) régénère `app_localizations*.dart`.
+The app's texts are in `lib/l10n/app_<lang>.arb` (`app_en.arb` is the
+reference). After a change, `flutter gen-l10n` (or `flutter pub get`)
+regenerates `app_localizations*.dart`.
 
-Le journal des versions (`CHANGELOG.md`) et les notes des releases GitHub
-sont rédigés en anglais ; les notes des releases sont tirées du
-`CHANGELOG.md` et mises à jour s'il change.
+The changelog (`CHANGELOG.md`) and the GitHub release notes are written in
+English; release notes are taken from `CHANGELOG.md` and updated when it
+changes.
 
-## Licence
+## License
 
-Projet indépendant, non affilié à l'équipe Stash.
+Independent project, not affiliated with the Stash team.

@@ -6,7 +6,8 @@
   language (English when the phone uses another one); More > Application >
   Settings > App language picks one instead. Open pages switch at once.
 - Dates, sizes and counts follow the chosen language.
-- The changelog and the release notes are now written in English.
+- The changelog, the release notes and the README are now written in
+  English.
 
 ## 1.12.1
 - Download a single image to view it offline: button in the viewer
