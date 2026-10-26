@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -16,6 +17,7 @@ import 'package:stash_android/screens/downloads_screen.dart';
 import 'package:stash_android/screens/image_viewer_screen.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/services/downloads.dart';
+import 'package:stash_android/widgets/clip_poster.dart';
 import 'package:stash_android/widgets/net_image.dart';
 import 'package:stash_android/widgets/view_list.dart';
 import 'package:video_player/video_player.dart';
@@ -790,10 +792,31 @@ void main() {
     await dir.delete(recursive: true);
   });
 
-  testWidgets('clip tiles never load a video as a picture', (tester) async {
-    VideoPlayerPlatform.instance = _FakePlayer();
-    final (app, _, _) =
+  testWidgets('clip tiles show a frame taken once, without a player', (
+    tester,
+  ) async {
+    final (app, _, dir) =
         await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    ClipPoster.frameDir = () async => '${dir.path}/frames';
+    final calls = <Map<Object?, Object?>>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('stash/system'),
+      (call) async {
+        if (call.method != 'videoFrame') return null;
+        final args = call.arguments as Map<Object?, Object?>;
+        calls.add(args);
+        final out = File(args['out']! as String);
+        out.parent.createSync(recursive: true);
+        out.writeAsBytesSync([0xFF, 0xD8, 0xFF]);
+        return true;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('stash/system'),
+        null,
+      ),
+    );
     final clip = StashImage(
       id: '6',
       thumbnail: 'http://stash.test/image/6/thumbnail',
@@ -801,35 +824,51 @@ void main() {
       image: 'http://stash.test/image/6/image',
       isClip: true,
     );
-    await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: app,
-        child: MaterialApp(
-          home: Scaffold(
-            body: SizedBox.square(
-              dimension: 160,
-              child: ImageTile(image: clip, all: [clip], index: 0),
+    Future<void> show() async {
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: app,
+          child: MaterialApp(
+            home: Scaffold(
+              body: Row(
+                children: [
+                  for (var i = 0; i < 2; i++)
+                    SizedBox.square(
+                      dimension: 160,
+                      child: ImageTile(image: clip, all: [clip], index: 0),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-    for (
-      var i = 0;
-      i < 20 && find.byType(VideoPlayer).evaluate().isEmpty;
-      i++
-    ) {
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 20)),
       );
-      await tester.pump();
+      for (var i = 0; i < 10; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump();
+      }
     }
-    debugPrint(
-      'DBG ${_thumbRequests.map((r) => r.url).toList()} ${find.byType(ColoredBox).evaluate().length}',
+
+    await show();
+    // The preview's first frame, never the thumbnail (the clip itself).
+    expect(calls, hasLength(1), reason: 'two tiles, one frame');
+    expect(
+      calls.single['source'],
+      'http://stash.test/image/6/preview?apikey=k',
     );
-    // The preview's first frame, not the thumbnail.
-    expect(find.byType(VideoPlayer), findsOneWidget);
-    expect(find.byType(NetImage), findsNothing);
+    expect(calls.single['headers'], {'ApiKey': 'k'});
+    final urls = [
+      for (final w in tester.widgetList<NetImage>(find.byType(NetImage))) w.url,
+    ];
+    expect(urls, everyElement(startsWith('${dir.path}/frames/')));
+    expect(find.byType(VideoPlayer), findsNothing);
+
+    // Kept: shown again without taking it.
+    await tester.pumpWidget(const SizedBox());
+    await show();
+    expect(calls, hasLength(1));
     await tester.pumpWidget(const SizedBox());
   });
 

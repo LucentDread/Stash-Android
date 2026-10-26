@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.18.2
+- Image clips without a thumbnail: their preview frame is now taken once,
+  natively and without a video player, and kept as a small picture. A
+  tablet showing ~90 clips at once ran out of video decoders: previews
+  stopped loading and the app could crash.
+- Downloads: previews are decoded at the size of their tile.
+
 ## 1.18.1
 - Image clips without a thumbnail: when Stash cannot make a clip's
   thumbnail it serves the whole clip instead, which the app loaded as a

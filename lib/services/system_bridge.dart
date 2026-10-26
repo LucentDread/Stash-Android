@@ -42,6 +42,33 @@ class SystemBridge {
     }
   }
 
+  /// Writes the first frame of the video [source] (local file or URL) to
+  /// [out] as a JPEG at most [width] pixels wide, without playing it.
+  /// False when it could not.
+  Future<bool> videoFrame({
+    required String source,
+    Map<String, String> headers = const {},
+    required String out,
+    int width = 320,
+  }) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return false;
+    }
+    try {
+      return await _channel.invokeMethod<bool>('videoFrame', {
+            'source': source,
+            'headers': headers,
+            'out': out,
+            'width': width,
+          }) ??
+          false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   /// Hides the app content in recent apps (and blocks screenshots).
   Future<void> setSecure(bool secure) => _invoke('setSecure', secure);
 

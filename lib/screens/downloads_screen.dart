@@ -247,6 +247,8 @@ class DownloadGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, box) {
         final width = gridTileWidth(box.maxWidth - 2 * gridSpacing, maxWidth);
+        // Previews decoded at the tile's size: a tablet shows ~90 at once.
+        final pixels = (width * MediaQuery.devicePixelRatioOf(context)).ceil();
         return GridView.builder(
           padding: withNavBar(context, const EdgeInsets.all(gridSpacing)),
           gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
@@ -263,6 +265,7 @@ class DownloadGrid extends StatelessWidget {
               entry: e,
               aspect: aspect,
               caption: caption,
+              previewWidth: pixels,
               selected: selected?.contains(e.key),
               onSelect: onSelect == null ? null : () => onSelect!(e),
             );
@@ -322,12 +325,16 @@ class DownloadCard extends StatelessWidget {
     required this.entry,
     this.aspect = 16 / 9,
     this.caption = true,
+    this.previewWidth = 480,
     this.selected,
     this.onSelect,
   });
   final OfflineEntry entry;
   final double aspect;
   final bool caption;
+
+  /// Pixels the preview is decoded at.
+  final int previewWidth;
 
   /// Whether it is selected, while selecting; null otherwise.
   final bool? selected;
@@ -478,11 +485,12 @@ class DownloadCard extends StatelessWidget {
                       video: done
                           ? downloads.galleryImages(entry).firstOrNull
                           : null,
+                      cacheWidth: previewWidth,
                     )
                   else
                     NetImage(
                       downloads.coverPath(entry),
-                      cacheWidth: 480,
+                      cacheWidth: previewWidth,
                       placeholderIcon: switch (entry.kind) {
                         OfflineKind.scene => Icons.movie,
                         OfflineKind.group => Icons.video_library,

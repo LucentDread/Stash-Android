@@ -1,25 +1,31 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:video_player/video_player.dart';
 
 import '../api/stash_client.dart';
 import '../services/app_state.dart';
+import '../services/system_bridge.dart';
 import 'net_image.dart';
 
 /// Preview of an image clip (a video among the images): its thumbnail when
-/// Stash could make one, else the first frame of [video].
+/// Stash could make one, else a frame of [video].
 ///
 /// When Stash cannot make a clip's thumbnail it serves the clip itself in
 /// its place; loaded as a picture, that whole video would only fail, and
-/// fill the memory on the way. So the thumbnail is checked first.
+/// fill the memory on the way. So the thumbnail is checked first. Frames
+/// are taken once, natively and without a player (a grid may show dozens
+/// of clips; video decoders are few), and kept as small pictures.
 class ClipPoster extends StatefulWidget {
   const ClipPoster({
     super.key,
     required this.thumbnail,
     required this.video,
     this.fit = BoxFit.cover,
+    this.cacheWidth = 480,
   });
 
   /// Server URL or local file.
@@ -29,14 +35,23 @@ class ClipPoster extends StatefulWidget {
   /// or local file); none, nothing is shown then.
   final String? video;
   final BoxFit fit;
+  final int cacheWidth;
+
+  /// Where frames are kept (a cache the system may clear).
+  @visibleForTesting
+  static Future<String> Function() frameDir = () async =>
+      '${(await getTemporaryDirectory()).path}/clip_frames';
+
+  /// Frames being taken, by file: each is taken once.
+  static final _taking = <String, Future<bool>>{};
 
   @override
   State<ClipPoster> createState() => _ClipPosterState();
 }
 
 class _ClipPosterState extends State<ClipPoster> {
-  bool _picture = false;
-  VideoPlayerController? _frame;
+  /// What to show: the thumbnail or a frame file.
+  String? _shown;
 
   @override
   void initState() {
@@ -48,31 +63,26 @@ class _ClipPosterState extends State<ClipPoster> {
     final client = context.read<AppState>().client;
     final thumb = widget.thumbnail;
     if (thumb != null && await _isPicture(thumb, client)) {
-      if (mounted) setState(() => _picture = true);
+      if (mounted) setState(() => _shown = thumb);
       return;
     }
     final video = widget.video;
-    if (!mounted || video == null) return;
+    if (video == null) return;
     final local = video.startsWith('/');
     if (!local && client == null) return;
-    final c = local
-        ? VideoPlayerController.file(File(video))
-        : VideoPlayerController.networkUrl(
-            Uri.parse(client!.mediaUrl(video)!),
-            httpHeaders: client.authHeaders,
-          );
-    try {
-      await c.initialize();
-      await c.setVolume(0);
-    } catch (_) {
-      await c.dispose();
-      return;
-    }
-    if (!mounted) {
-      await c.dispose();
-      return;
-    }
-    setState(() => _frame = c);
+    // Named after the video, without the API key.
+    final dir = await ClipPoster.frameDir();
+    final name = sha1.convert(utf8.encode(video)).toString();
+    final out = '$dir/$name.jpg';
+    final ok =
+        await File(out).exists() ||
+        await (ClipPoster._taking[out] ??= SystemBridge.instance.videoFrame(
+          source: local ? video : client!.mediaUrl(video)!,
+          headers: local ? const {} : client!.authHeaders,
+          out: out,
+        ));
+    ClipPoster._taking.remove(out);
+    if (ok && mounted) setState(() => _shown = out);
   }
 
   Future<bool> _isPicture(String thumb, StashClient? client) async {
@@ -100,27 +110,13 @@ class _ClipPosterState extends State<ClipPoster> {
   }
 
   @override
-  void dispose() {
-    _frame?.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (_picture) {
-      return NetImage(widget.thumbnail, fit: widget.fit, cacheWidth: 480);
-    }
-    final c = _frame;
-    if (c == null) {
+    final shown = _shown;
+    if (shown == null) {
       return ColoredBox(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
       );
     }
-    return ClipRect(
-      child: FittedBox(
-        fit: widget.fit,
-        child: SizedBox.fromSize(size: c.value.size, child: VideoPlayer(c)),
-      ),
-    );
+    return NetImage(shown, fit: widget.fit, cacheWidth: widget.cacheWidth);
   }
 }

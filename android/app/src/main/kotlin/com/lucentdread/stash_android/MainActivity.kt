@@ -8,7 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.drawable.Icon
+import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
@@ -19,10 +21,14 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.util.concurrent.Executors
 
 /// Native side of lib/services/system_bridge.dart.
 class MainActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
+
+    // Video frames are extracted off the UI thread, two at a time.
+    private val frameExecutor = Executors.newFixedThreadPool(2)
 
     // Picture in picture, as configured by the player.
     private var pipEnabled = false
@@ -76,6 +82,20 @@ class MainActivity : FlutterActivity() {
                         updatePipParams()
                         result.success(null)
                     }
+                    "videoFrame" -> {
+                        val source = call.argument<String>("source")!!
+                        val headers = call.argument<Map<String, String>>("headers") ?: emptyMap()
+                        val out = call.argument<String>("out")!!
+                        val width = call.argument<Int>("width") ?: 320
+                        frameExecutor.execute {
+                            val ok = try {
+                                writeVideoFrame(source, headers, out, width)
+                            } catch (e: Exception) {
+                                false
+                            }
+                            runOnUiThread { result.success(ok) }
+                        }
+                    }
                     "installApk" -> {
                         try {
                             installApk(call.arguments as String)
@@ -87,6 +107,38 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        }
+    }
+
+    /// Writes the first frame of a video (local file or URL) to [out] as a
+    /// JPEG [width] pixels wide, without playing it.
+    private fun writeVideoFrame(
+        source: String,
+        headers: Map<String, String>,
+        out: String,
+        width: Int,
+    ): Boolean {
+        val retriever = MediaMetadataRetriever()
+        try {
+            if (source.startsWith("/")) {
+                retriever.setDataSource(source)
+            } else {
+                retriever.setDataSource(source, headers)
+            }
+            val frame = retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                ?: return false
+            val scaled = if (frame.width > width) {
+                Bitmap.createScaledBitmap(frame, width, frame.height * width / frame.width, true)
+            } else {
+                frame
+            }
+            val file = File(out)
+            file.parentFile?.mkdirs()
+            val tmp = File("$out.tmp")
+            tmp.outputStream().use { scaled.compress(Bitmap.CompressFormat.JPEG, 80, it) }
+            return tmp.renameTo(file)
+        } finally {
+            retriever.release()
         }
     }
 
