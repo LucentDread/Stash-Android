@@ -60,6 +60,7 @@ class NetImage extends StatelessWidget {
     return CachedNetworkImage(
       imageUrl: resolved,
       httpHeaders: client!.authHeaders,
+      memCacheWidth: cacheWidth,
       fit: fit,
       alignment: alignment,
       fadeInDuration: const Duration(milliseconds: 150),

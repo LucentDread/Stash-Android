@@ -115,5 +115,24 @@ class StashClient {
     return (body['data'] as Map<String, dynamic>?) ?? const {};
   }
 
+  final _pictures = <String, Future<bool>>{};
+
+  /// Whether [url] serves a picture rather than a video. Stash serves a
+  /// clip's own video as its thumbnail when it cannot make one; only the
+  /// headers are read, never such a video. Remembered per URL.
+  Future<bool> isPicture(String url) => _pictures[url] ??= () async {
+    try {
+      final req = http.Request('GET', Uri.parse(mediaUrl(url)!))
+        ..headers.addAll({...authHeaders, 'Range': 'bytes=0-0'});
+      final res = await _http.send(req).timeout(const Duration(seconds: 30));
+      // Closes the connection, whatever the server would still send.
+      res.stream.listen(null).cancel().ignore();
+      final type = res.headers['content-type'] ?? '';
+      return !type.startsWith('video/');
+    } catch (_) {
+      return true; // let the image widget try
+    }
+  }();
+
   void close() => _http.close();
 }

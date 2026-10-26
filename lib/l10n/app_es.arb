@@ -316,6 +316,7 @@
   "downloadQueued": "En espera",
   "downloadRunning": "Descargando…",
   "downloadProgress": "Descargando · {percent} %",
+  "deleteSelectionQuestion": "{count, plural, one{¿Eliminar el elemento seleccionado del teléfono?} other{¿Eliminar los {count} elementos seleccionados del teléfono?}}",
   "resumeAt": "Reanudar en {time}",
   "play": "Reproducir",
   "fromStart": "Desde el principio",

@@ -8,6 +8,7 @@ import '../navigation.dart';
 import '../services/app_state.dart';
 import '../services/downloads.dart';
 import 'cards.dart';
+import 'clip_poster.dart';
 import 'net_image.dart';
 import 'paged_grid.dart';
 
@@ -153,7 +154,16 @@ class ImageTile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          NetImage(image.thumbnail),
+          if (image.isClip)
+            ClipPoster(
+              thumbnail: image.thumbnail,
+              // The small preview video when Stash made one.
+              video: (image.preview?.isNotEmpty ?? false)
+                  ? image.preview
+                  : image.image,
+            )
+          else
+            NetImage(image.thumbnail),
           if (image.isClip)
             const Align(
               alignment: Alignment.bottomRight,

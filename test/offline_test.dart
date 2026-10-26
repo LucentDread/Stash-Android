@@ -129,8 +129,21 @@ Map<String, dynamic> _scene(String id) => {
   },
 };
 
-/// Fake server for scenes 1-2, group 5 (both scenes) and gallery 8.
+/// Thumbnail requests seen by [_server].
+final _thumbRequests = <http.BaseRequest>[];
+
+/// Fake server for scenes 1-2, group 5 (both scenes) and gallery 8; images
+/// 5 and 6 are clips, Stash could not make image 6's thumbnail.
 http.Client _server() => MockClient((req) async {
+  if (req.method == 'GET') {
+    _thumbRequests.add(req);
+    final video = req.url.path.startsWith('/image/6/');
+    return http.Response.bytes(
+      [0],
+      206,
+      headers: {'content-type': video ? 'video/mp4' : 'image/jpeg'},
+    );
+  }
   final body = jsonDecode(req.body) as Map<String, dynamic>;
   final q = body['query'] as String;
   final v = body['variables'] as Map<String, dynamic>? ?? const {};
@@ -168,7 +181,11 @@ http.Client _server() => MockClient((req) async {
         },
         // Image 5 is a clip: a video shown among the images.
         'visual_files': [
-          {'__typename': v['id'] == '5' ? 'VideoFile' : 'ImageFile'},
+          {
+            '__typename': v['id'] == '5' || v['id'] == '6'
+                ? 'VideoFile'
+                : 'ImageFile',
+          },
         ],
       },
     };
@@ -752,5 +769,139 @@ void main() {
       ),
     );
     expect(cover.url, endsWith('image_4/thumb.jpg'));
+  });
+
+  test('a clip whose thumbnail is the clip itself keeps no preview', () async {
+    final (app, fetcher, dir) = await _setup();
+    final d = app.downloads;
+    _thumbRequests.clear();
+    await d.downloadImage('6');
+    expect(
+      [for (final t in fetcher.enqueued.values) t.path],
+      ['image_6/image.clip'],
+    );
+    expect(d.entry(OfflineKind.image, '6')!.cover, isNull);
+    // Only the headers were asked for.
+    expect(_thumbRequests.single.headers['Range'], 'bytes=0-0');
+
+    // A real thumbnail is kept.
+    await d.downloadImage('5');
+    expect(d.entry(OfflineKind.image, '5')!.cover, 'image_5/thumb.jpg');
+    await dir.delete(recursive: true);
+  });
+
+  testWidgets('clip tiles never load a video as a picture', (tester) async {
+    VideoPlayerPlatform.instance = _FakePlayer();
+    final (app, _, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    final clip = StashImage(
+      id: '6',
+      thumbnail: 'http://stash.test/image/6/thumbnail',
+      preview: 'http://stash.test/image/6/preview',
+      image: 'http://stash.test/image/6/image',
+      isClip: true,
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox.square(
+              dimension: 160,
+              child: ImageTile(image: clip, all: [clip], index: 0),
+            ),
+          ),
+        ),
+      ),
+    );
+    for (
+      var i = 0;
+      i < 20 && find.byType(VideoPlayer).evaluate().isEmpty;
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    debugPrint(
+      'DBG ${_thumbRequests.map((r) => r.url).toList()} ${find.byType(ColoredBox).evaluate().length}',
+    );
+    // The preview's first frame, not the thumbnail.
+    expect(find.byType(VideoPlayer), findsOneWidget);
+    expect(find.byType(NetImage), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('downloads: several items are selected and deleted at once', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final (app, fetcher, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    final d = app.downloads;
+    await tester.runAsync(() async {
+      await d.downloadScene('1');
+      await d.downloadScene('2');
+      await d.downloadImage('4');
+    });
+    for (final t in fetcher.enqueued.keys) {
+      fetcher.emit(t, FileState.done, 1);
+    }
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: const MaterialApp(home: DownloadsScreen()),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pump();
+    }
+    expect(find.byType(DownloadCard), findsNWidgets(2));
+
+    // A long press starts selecting, with that card.
+    await tester.longPress(find.byType(DownloadCard).first);
+    await tester.pump();
+    expect(find.text('1 sélectionné'), findsOneWidget);
+    await tester.tap(find.text('Tout'));
+    await tester.pump();
+    expect(find.text('2 sélectionnés'), findsOneWidget);
+    // While selecting, a tap selects instead of opening.
+    await tester.tap(find.byType(DownloadCard).last);
+    await tester.pump();
+    expect(find.text('1 sélectionné'), findsOneWidget);
+    await tester.tap(find.byType(DownloadCard).last);
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Supprimer'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Supprimer les 2 éléments sélectionnés du téléphone ?'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Supprimer'));
+    for (var i = 0; i < 10; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    for (
+      var i = 0;
+      i < 20 && find.byTooltip('Sélectionner').evaluate().isEmpty;
+      i++
+    ) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    expect(d.entries(OfflineKind.scene), isEmpty);
+    expect(d.entries(OfflineKind.image), hasLength(1), reason: 'other tab');
+    expect(find.text('Images (1)'), findsOneWidget);
+    expect(find.byTooltip('Sélectionner'), findsOneWidget, reason: 'done');
   });
 }

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.18.1
+- Image clips without a thumbnail: when Stash cannot make a clip's
+  thumbnail it serves the whole clip instead, which the app loaded as a
+  picture (no preview, and much memory, a likely cause of the crash when
+  going back to the grid). The app now checks first and shows the first
+  frame of the clip's preview video instead, like the web UI. Downloads
+  keep no such false thumbnail.
+- Big pictures are decoded at most at twice the screen width in the
+  viewer, and previews at a small size, to spare the memory.
+- Downloads: a small play badge in the corner of clips instead of the big
+  icon over the preview.
+- Downloads: select several items (long press, or the select button) to
+  delete them at once; "All" selects the tab shown.
+
 ## 1.18.0
 - At launch, the app checks the server (8 s at most): when it does not
   answer, the "Offline" popup with its Downloads button shows at once,

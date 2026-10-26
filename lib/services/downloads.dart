@@ -392,6 +392,7 @@ class DownloadManager extends ChangeNotifier {
     }
     final dir = 'gallery_$id';
     final stamp = DateTime.now().millisecondsSinceEpoch;
+    final cover = await _thumbnailOf(images.firstOrNull);
     await _add(
       OfflineEntry(
         kind: OfflineKind.gallery,
@@ -399,9 +400,9 @@ class DownloadManager extends ChangeNotifier {
         title: gallery.displayTitle,
         data: data,
         added: DateTime.now(),
-        cover: images.firstOrNull?.thumbnail == null ? null : '$dir/$_thumb',
+        cover: cover == null ? null : '$dir/$_thumb',
         files: [
-          if (images.firstOrNull?.thumbnail case final thumb?)
+          if (cover case final thumb?)
             OfflineFile(
               taskId: 'gallery-$id-cover-$stamp',
               url: _url(thumb),
@@ -433,6 +434,7 @@ class DownloadManager extends ChangeNotifier {
         ? 'image_$id/image${StashImage.clipExtension}'
         : 'image_$id/image.img';
     final stamp = DateTime.now().millisecondsSinceEpoch;
+    final thumb = await _thumbnailOf(image);
     await _add(
       OfflineEntry(
         kind: OfflineKind.image,
@@ -440,7 +442,7 @@ class DownloadManager extends ChangeNotifier {
         title: title,
         data: {'id': id, 'title': image.title},
         added: DateTime.now(),
-        cover: image.thumbnail == null ? null : 'image_$id/$_thumb',
+        cover: thumb == null ? null : 'image_$id/$_thumb',
         files: [
           if (image.image != null)
             OfflineFile(
@@ -448,16 +450,25 @@ class DownloadManager extends ChangeNotifier {
               url: _url(image.image),
               path: path,
             ),
-          if (image.thumbnail != null)
+          if (thumb != null)
             OfflineFile(
               taskId: 'image-$id-thumb-$stamp',
-              url: _url(image.thumbnail),
+              url: _url(thumb),
               path: 'image_$id/$_thumb',
             ),
         ],
       ),
       title,
     );
+  }
+
+  /// Thumbnail URL of [image] worth keeping: a clip's may be the clip
+  /// itself (Stash's stand-in when it cannot make one).
+  Future<String?> _thumbnailOf(StashImage? image) async {
+    final thumb = image?.thumbnail;
+    if (thumb == null) return null;
+    if (image!.isClip && !await _repo.client.isPicture(thumb)) return null;
+    return thumb;
   }
 
   /// Small preview of an image (or of a gallery's first one), as Stash

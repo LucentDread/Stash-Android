@@ -2000,6 +2000,12 @@ abstract class AppLocalizations {
   /// **'Downloading · {percent} %'**
   String downloadProgress(Object percent);
 
+  /// No description provided for @deleteSelectionQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Delete the selected item from the phone?} other{Delete the {count} selected items from the phone?}}'**
+  String deleteSelectionQuestion(int count);
+
   /// No description provided for @resumeAt.
   ///
   /// In en, this message translates to:

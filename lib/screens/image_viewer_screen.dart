@@ -11,6 +11,7 @@ import '../models/models.dart';
 import '../services/app_state.dart';
 import '../services/downloads.dart';
 import '../utils/format.dart';
+import '../widgets/clip_poster.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/download_button.dart';
 import '../widgets/net_image.dart';
@@ -222,6 +223,13 @@ class _ZoomableImageState extends State<_ZoomableImage> {
           child: NetImage(
             widget.image.image ?? widget.image.preview,
             fit: BoxFit.contain,
+            // Big pictures are decoded at twice the screen width: enough to
+            // zoom, without filling the memory.
+            cacheWidth:
+                (MediaQuery.sizeOf(context).width *
+                        MediaQuery.devicePixelRatioOf(context) *
+                        2)
+                    .round(),
           ),
         ),
       ),
@@ -321,7 +329,12 @@ class _ClipViewState extends State<_ClipView> {
       return Stack(
         fit: StackFit.expand,
         children: [
-          NetImage(widget.image.thumbnail, fit: BoxFit.contain),
+          // Not the video's own frame: the clip itself is loading.
+          ClipPoster(
+            thumbnail: widget.image.thumbnail,
+            video: null,
+            fit: BoxFit.contain,
+          ),
           Center(
             child: _error != null
                 ? Icon(

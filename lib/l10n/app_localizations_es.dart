@@ -1257,6 +1257,17 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String deleteSelectionQuestion(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '¿Eliminar los $count elementos seleccionados del teléfono?',
+      one: '¿Eliminar el elemento seleccionado del teléfono?',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String resumeAt(Object time) {
     return 'Reanudar en $time';
   }

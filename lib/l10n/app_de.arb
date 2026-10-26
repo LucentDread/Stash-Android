@@ -316,6 +316,7 @@
   "downloadQueued": "Wartend",
   "downloadRunning": "Wird heruntergeladen…",
   "downloadProgress": "Download · {percent} %",
+  "deleteSelectionQuestion": "{count, plural, one{Das ausgewählte Element vom Telefon löschen?} other{Die {count} ausgewählten Elemente vom Telefon löschen?}}",
   "resumeAt": "Fortsetzen bei {time}",
   "play": "Abspielen",
   "fromStart": "Von vorn",

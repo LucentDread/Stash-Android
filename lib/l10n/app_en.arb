@@ -793,6 +793,14 @@
       }
     }
   },
+  "deleteSelectionQuestion": "{count, plural, one{Delete the selected item from the phone?} other{Delete the {count} selected items from the phone?}}",
+  "@deleteSelectionQuestion": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "resumeAt": "Resume at {time}",
   "@resumeAt": {
     "placeholders": {
