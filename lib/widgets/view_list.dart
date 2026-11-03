@@ -11,6 +11,7 @@ import 'cards.dart';
 import 'clip_poster.dart';
 import 'net_image.dart';
 import 'paged_grid.dart';
+import 'tv_focus.dart';
 
 /// How the items of a kind of view are shown: card, grid size, sorts.
 class ViewStyle {
@@ -147,37 +148,40 @@ class ImageTile extends StatelessWidget {
   final int index;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: () => openImages(context, List.of(all), index),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (image.isClip)
-            ClipPoster(
-              thumbnail: image.thumbnail,
-              // The small preview video when Stash made one.
-              video: (image.preview?.isNotEmpty ?? false)
-                  ? image.preview
-                  : image.image,
-            )
-          else
-            NetImage(image.thumbnail),
-          if (image.isClip)
-            const Align(
-              alignment: Alignment.bottomRight,
-              child: Padding(
-                padding: EdgeInsets.all(4),
-                child: Icon(
-                  Icons.play_circle_outline,
-                  color: Colors.white,
-                  size: 20,
-                  shadows: [Shadow(blurRadius: 4)],
+  Widget build(BuildContext context) => FocusFrame(
+    radius: 4,
+    child: InkWell(
+      onTap: () => openImages(context, List.of(all), index),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (image.isClip)
+              ClipPoster(
+                thumbnail: image.thumbnail,
+                // The small preview video when Stash made one.
+                video: (image.preview?.isNotEmpty ?? false)
+                    ? image.preview
+                    : image.image,
+              )
+            else
+              NetImage(image.thumbnail),
+            if (image.isClip)
+              const Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.play_circle_outline,
+                    color: Colors.white,
+                    size: 20,
+                    shadows: [Shadow(blurRadius: 4)],
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     ),
   );

@@ -12,6 +12,7 @@ import '../services/app_state.dart';
 import '../services/system_bridge.dart';
 import '../utils/format.dart';
 import 'net_image.dart';
+import 'tv_focus.dart';
 
 class _Badge extends StatelessWidget {
   const _Badge(this.text, {this.icon});
@@ -157,65 +158,67 @@ class _SceneCardState extends State<SceneCard> {
         : 0.0;
     final preview = _preview;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: () => openScene(context, s.id),
-        onLongPress: _startPreview,
-        onTapCancel: _stopPreview,
-        child: Listener(
-          onPointerUp: (_) => _stopPreview(),
-          onPointerCancel: (_) => _stopPreview(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    NetImage(s.screenshot, placeholderIcon: Icons.movie),
-                    if (s.studio?.hasImage ?? false)
-                      StudioWatermark(s.studio!.imagePath!),
-                    if (preview != null && preview.value.isInitialized)
-                      FittedBox(
-                        fit: BoxFit.cover,
-                        clipBehavior: Clip.hardEdge,
-                        child: SizedBox(
-                          width: preview.value.size.width,
-                          height: preview.value.size.height,
-                          child: VideoPlayer(preview),
+    return FocusFrame(
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        margin: EdgeInsets.zero,
+        child: InkWell(
+          onTap: () => openScene(context, s.id),
+          onLongPress: _startPreview,
+          onTapCancel: _stopPreview,
+          child: Listener(
+            onPointerUp: (_) => _stopPreview(),
+            onPointerCancel: (_) => _stopPreview(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      NetImage(s.screenshot, placeholderIcon: Icons.movie),
+                      if (s.studio?.hasImage ?? false)
+                        StudioWatermark(s.studio!.imagePath!),
+                      if (preview != null && preview.value.isInitialized)
+                        FittedBox(
+                          fit: BoxFit.cover,
+                          clipBehavior: Clip.hardEdge,
+                          child: SizedBox(
+                            width: preview.value.size.width,
+                            height: preview.value.size.height,
+                            child: ExcludeFocus(child: VideoPlayer(preview)),
+                          ),
                         ),
-                      ),
-                    Positioned(
-                      right: 4,
-                      bottom: 6,
-                      child: Row(
-                        children: [
-                          if (res != null) ...[
-                            _Badge(res),
-                            const SizedBox(width: 4),
+                      Positioned(
+                        right: 4,
+                        bottom: 6,
+                        child: Row(
+                          children: [
+                            if (res != null) ...[
+                              _Badge(res),
+                              const SizedBox(width: 4),
+                            ],
+                            if (s.duration > 0)
+                              _Badge(formatDuration(s.duration)),
                           ],
-                          if (s.duration > 0)
-                            _Badge(formatDuration(s.duration)),
-                        ],
-                      ),
-                    ),
-                    if (progress > 0)
-                      Align(
-                        alignment: Alignment.bottomCenter,
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 3,
-                          backgroundColor: Colors.black45,
                         ),
                       ),
-                  ],
+                      if (progress > 0)
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 3,
+                            backgroundColor: Colors.black45,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              Expanded(child: _SceneCardText(scene: s)),
-            ],
+                Expanded(child: _SceneCardText(scene: s)),
+              ],
+            ),
           ),
         ),
       ),
@@ -498,74 +501,76 @@ class PerformerCard extends StatelessWidget {
     final p = performer;
     final theme = Theme.of(context);
     final age = ageFrom(p.birthdate);
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: () => openPerformer(context, p.id),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetImage(
-                    p.imagePath,
-                    placeholderIcon: Icons.person,
-                    alignment: Alignment.topCenter,
-                  ),
-                  if (p.favorite)
-                    const Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Icon(
-                        Icons.favorite,
-                        color: Colors.redAccent,
-                        size: 20,
+    return FocusFrame(
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        margin: EdgeInsets.zero,
+        child: InkWell(
+          onTap: () => openPerformer(context, p.id),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetImage(
+                      p.imagePath,
+                      placeholderIcon: Icons.person,
+                      alignment: Alignment.topCenter,
+                    ),
+                    if (p.favorite)
+                      const Positioned(
+                        right: 6,
+                        top: 6,
+                        child: Icon(
+                          Icons.favorite,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
+                      ),
+                    Positioned(
+                      right: 4,
+                      bottom: 4,
+                      child: Row(
+                        children: [
+                          if (p.oCounter > 0) ...[
+                            _Badge('${p.oCounter}', icon: Icons.water_drop),
+                            const SizedBox(width: 4),
+                          ],
+                          if (p.sceneCount > 0)
+                            _Badge('${p.sceneCount}', icon: Icons.movie),
+                        ],
                       ),
                     ),
-                  Positioned(
-                    right: 4,
-                    bottom: 4,
-                    child: Row(
-                      children: [
-                        if (p.oCounter > 0) ...[
-                          _Badge('${p.oCounter}', icon: Icons.water_drop),
-                          const SizedBox(width: 4),
-                        ],
-                        if (p.sceneCount > 0)
-                          _Badge('${p.sceneCount}', icon: Icons.movie),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    p.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      p.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  // Always one line so every card has the same layout.
-                  Text(
-                    _subtitle(p, age),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
+                    // Always one line so every card has the same layout.
+                    Text(
+                      _subtitle(p, age),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -600,59 +605,61 @@ class EntityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Padding(
-                    padding: imagePadding,
-                    child: NetImage(image, fit: fit, placeholderIcon: icon),
-                  ),
-                  if (favorite)
-                    const Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Icon(
-                        Icons.favorite,
-                        color: Colors.redAccent,
-                        size: 20,
+    return FocusFrame(
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        margin: EdgeInsets.zero,
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Padding(
+                      padding: imagePadding,
+                      child: NetImage(image, fit: fit, placeholderIcon: icon),
+                    ),
+                    if (favorite)
+                      const Positioned(
+                        right: 6,
+                        top: 6,
+                        child: Icon(
+                          Icons.favorite,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (subtitle != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      subtitle!,
+                      title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                ],
+                    if (subtitle != null)
+                      Text(
+                        subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -757,57 +764,59 @@ class MarkerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = marker;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: m.sceneId == null
-            ? null
-            : () => playScene(context, m.sceneId!, start: m.seconds),
-        onLongPress: () => _actions(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetImage(m.screenshot, placeholderIcon: Icons.bookmark),
-                  Positioned(
-                    right: 4,
-                    bottom: 4,
-                    child: _Badge(
-                      formatDuration(m.seconds),
-                      icon: Icons.play_arrow,
+    return FocusFrame(
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        margin: EdgeInsets.zero,
+        child: InkWell(
+          onTap: m.sceneId == null
+              ? null
+              : () => playScene(context, m.sceneId!, start: m.seconds),
+          onLongPress: () => _actions(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetImage(m.screenshot, placeholderIcon: Icons.bookmark),
+                    Positioned(
+                      right: 4,
+                      bottom: 4,
+                      child: _Badge(
+                        formatDuration(m.seconds),
+                        icon: Icons.play_arrow,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Padding(
-              padding: CardText.padding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    m.displayTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: CardText.title(context),
-                    strutStyle: CardText.titleStrut,
-                  ),
-                  Text(
-                    m.sceneTitle ?? m.primaryTag.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: CardText.small(context),
-                    strutStyle: CardText.smallStrut,
-                  ),
-                ],
+              Padding(
+                padding: CardText.padding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      m.displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: CardText.title(context),
+                      strutStyle: CardText.titleStrut,
+                    ),
+                    Text(
+                      m.sceneTitle ?? m.primaryTag.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: CardText.small(context),
+                      strutStyle: CardText.smallStrut,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -825,54 +834,59 @@ class GroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final g = group;
     final theme = Theme.of(context);
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: () => openGroup(context, g.id),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  NetImage(g.frontImage, placeholderIcon: Icons.video_library),
-                  if (g.sceneCount > 0)
-                    Positioned(
-                      right: 4,
-                      bottom: 4,
-                      child: _Badge('${g.sceneCount}', icon: Icons.movie),
+    return FocusFrame(
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        margin: EdgeInsets.zero,
+        child: InkWell(
+          onTap: () => openGroup(context, g.id),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetImage(
+                      g.frontImage,
+                      placeholderIcon: Icons.video_library,
                     ),
-                ],
+                    if (g.sceneCount > 0)
+                      Positioned(
+                        right: 4,
+                        bottom: 4,
+                        child: _Badge('${g.sceneCount}', icon: Icons.movie),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    g.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      g.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  Text(
-                    [
-                      if (g.studio != null) g.studio!.name,
-                      if (g.date != null) g.date!,
-                    ].join(' • '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
+                    Text(
+                      [
+                        if (g.studio != null) g.studio!.name,
+                        if (g.date != null) g.date!,
+                      ].join(' • '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

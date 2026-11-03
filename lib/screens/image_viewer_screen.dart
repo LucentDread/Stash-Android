@@ -69,7 +69,7 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
 
   /// The page's own focus (Left/Right change images) and the bars around
   /// their buttons, which the remote enters with Up/Down.
-  final _pageFocus = FocusNode(debugLabel: 'viewer');
+  final _pageFocus = FocusNode(debugLabel: 'viewer', skipTraversal: true);
   final _topBar = FocusNode(
     debugLabel: 'top bar',
     canRequestFocus: false,
@@ -497,7 +497,7 @@ class _ClipViewState extends State<_ClipView> {
     return Center(
       child: AspectRatio(
         aspectRatio: c.value.aspectRatio,
-        child: VideoPlayer(c),
+        child: ExcludeFocus(child: VideoPlayer(c)),
       ),
     );
   }

@@ -73,8 +73,8 @@ service, no data sent anywhere else.
   be turned off).
 - **Android TV**: one APK for phones, tablets and TVs; on a TV the app
   shows in the launcher and is driven with the remote: tabs in a rail on
-  the left, a frame around whatever has the focus, Up/Down out of text
-  fields, OK to open, OK held for a long press
+  the left, the focus outlined in each item's shape, arrows out of text
+  fields at their edges, a TV layout for scene pages, OK to open, OK held for a long press
   (scene preview, actions, selection). Player: OK plays/pauses, Left/Right
   seek ±10 s, Up/Down show the controls, media keys (play/pause, fast
   forward, rewind) work. Image viewer: Left/Right change images.

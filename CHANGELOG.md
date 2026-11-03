@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.19.3
+- Android TV: the focus shows in each item's own shape instead of a frame
+  laid over the page: a white outline on buttons (round, pill-shaped…)
+  and chips, a light background on list rows, tabs and the side rail, a
+  white frame on pictures (cards, image tiles, markers). Text fields keep
+  their own focused border.
+- Android TV: Left/Right leave a text field once the cursor is at its
+  start/end (e.g. from a search field to the tabs' rail).
+- Android TV: a scene's page is laid out for the TV: its picture in the
+  background of the top right, the title, details and buttons (play,
+  download, edit) on the left, Play focused; the rest below.
+- Android TV, player: the remote goes through the controls row by row (top
+  bar, buttons, progress bar) and stops at the edges, instead of
+  sometimes landing on nothing visible (the video, the page).
+
 ## 1.19.2
 - Android TV: videos and image clips play. Every stream failed with
   "MediacodecVideoRenderer error": the TV's video decoders refuse to draw

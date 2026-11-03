@@ -80,9 +80,45 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   /// Remote control and keyboard: keys reach [_keys] while the controls
   /// are hidden; showing them puts the focus on play/pause.
-  final _keys = FocusNode(debugLabel: 'player');
-  final _playButton = FocusNode(debugLabel: 'play');
-  final _sliderFocus = remoteSliderFocusNode();
+  // Never reached by moving the focus, only given back (it covers the
+  // whole page, so it would be "next to" every button).
+  final _keys = FocusNode(debugLabel: 'player', skipTraversal: true);
+  late final _playButton = _control('play');
+
+  // The other controls, which the remote goes through row by row (see
+  // [_controlRows]).
+  late final _backButton = _control('back');
+  late final _markersButton = _control('markers');
+  late final _addMarkerButton = _control('add marker');
+  late final _sourcesButton = _control('streams');
+  late final _menuButton = _control('menu');
+  late final _back10Button = _control('-10 s');
+  late final _forward10Button = _control('+10 s');
+
+  /// A control's focus node: it moves the focus itself with the arrows
+  /// (before a widget around it, such as the menu's, does it its own way).
+  FocusNode _control(String label) => FocusNode(
+    debugLabel: label,
+    onKeyEvent: (_, event) {
+      if (event is KeyUpEvent) return KeyEventResult.ignored;
+      if (!_moveFocus(event.logicalKey)) return KeyEventResult.ignored;
+      _scheduleHide();
+      return KeyEventResult.handled;
+    },
+  );
+
+  /// The progress bar: Left/Right move it, Up/Down leave it.
+  late final _sliderFocus = FocusNode(
+    debugLabel: 'progress',
+    onKeyEvent: (_, event) =>
+        event is! KeyUpEvent &&
+            (event.logicalKey == LogicalKeyboardKey.arrowUp ||
+                event.logicalKey == LogicalKeyboardKey.arrowDown) &&
+            _moveFocus(event.logicalKey)
+        ? KeyEventResult.handled
+        : KeyEventResult.ignored,
+  );
+  final _menu = MenuController();
 
   /// Last state sent for the small window, to send only changes.
   String? _pipState;
@@ -133,8 +169,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _hideTimer?.cancel();
     _activityTimer?.cancel();
     _keys.dispose();
-    _playButton.dispose();
-    _sliderFocus.dispose();
+    for (final n in _controlNodes) {
+      n.dispose();
+    }
     _saveActivity(finalSave: true);
     _controller?.removeListener(_onTick);
     _controller?.dispose();
@@ -329,9 +366,82 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _hideControls() {
+    // Not while the menu is open, nor under a sheet (streams, markers…):
+    // taking the focus back would leave it.
+    if (_menu.isOpen || !(ModalRoute.of(context)?.isCurrent ?? true)) {
+      _scheduleHide();
+      return;
+    }
     setState(() => _controlsVisible = false);
     // Hidden buttons give up the focus: the keys come back here.
     _keys.requestFocus();
+  }
+
+  List<FocusNode> get _controlNodes => [
+    _playButton,
+    _backButton,
+    _markersButton,
+    _addMarkerButton,
+    _sourcesButton,
+    _menuButton,
+    _back10Button,
+    _forward10Button,
+    _sliderFocus,
+  ];
+
+  /// The controls on screen, by row, left to right.
+  List<List<FocusNode>> _controlRows() =>
+      [
+            [
+              _backButton,
+              _markersButton,
+              _addMarkerButton,
+              _sourcesButton,
+              _menuButton,
+            ],
+            [_back10Button, _playButton, _forward10Button],
+            [_sliderFocus],
+          ]
+          .map(
+            (row) => row
+                .where((n) => n.context != null && n.canRequestFocus)
+                .toList(),
+          )
+          .where((row) => row.isNotEmpty)
+          .toList();
+
+  /// Moves the focus between the controls with an arrow: along a row, or
+  /// to the nearest control of the row above or below. Stops at the edges
+  /// (nothing else on the page can take the focus, e.g. the video). False
+  /// when the focus is not on a control (e.g. in the menu).
+  bool _moveFocus(LogicalKeyboardKey key) {
+    final rows = _controlRows();
+    final current = FocusManager.instance.primaryFocus;
+    final r = rows.indexWhere((row) => row.contains(current));
+    if (current == null || r < 0) return false;
+    final c = rows[r].indexOf(current);
+    FocusNode? target;
+    switch (key) {
+      case LogicalKeyboardKey.arrowLeft:
+        target = c > 0 ? rows[r][c - 1] : null;
+      case LogicalKeyboardKey.arrowRight:
+        target = c + 1 < rows[r].length ? rows[r][c + 1] : null;
+      case LogicalKeyboardKey.arrowUp || LogicalKeyboardKey.arrowDown:
+        final to = r + (key == LogicalKeyboardKey.arrowUp ? -1 : 1);
+        if (to >= 0 && to < rows.length) {
+          final x = current.rect.center.dx;
+          target = rows[to].reduce(
+            (a, b) =>
+                (a.rect.center.dx - x).abs() <= (b.rect.center.dx - x).abs()
+                ? a
+                : b,
+          );
+        }
+      default:
+        return false;
+    }
+    target?.requestFocus();
+    return true;
   }
 
   void _showControls({bool focusPlay = false}) {
@@ -383,7 +493,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     // (just opened): like hidden, the first key focuses play/pause.
     if (_controlsVisible && !_keys.hasPrimaryFocus) {
       _scheduleHide();
-      return KeyEventResult.ignored;
+      return _moveFocus(key) ? KeyEventResult.handled : KeyEventResult.ignored;
     }
     if (RemoteKeys.okKeys.contains(key)) {
       if (event is KeyDownEvent) _togglePlay();
@@ -558,7 +668,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ? null
               : AspectRatio(
                   aspectRatio: c.value.aspectRatio,
-                  child: VideoPlayer(c),
+                  child: ExcludeFocus(child: VideoPlayer(c)),
                 ),
         ),
       );
@@ -583,7 +693,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ? const CircularProgressIndicator()
                       : AspectRatio(
                           aspectRatio: c.value.aspectRatio,
-                          child: VideoPlayer(c),
+                          child: ExcludeFocus(child: VideoPlayer(c)),
                         ),
                 ),
                 if (c != null && c.value.isBuffering)
@@ -657,7 +767,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
               children: [
                 Row(
                   children: [
-                    const BackButton(color: Colors.white),
+                    IconButton(
+                      focusNode: _backButton,
+                      color: Colors.white,
+                      tooltip: MaterialLocalizations.of(context)
+                          .backButtonTooltip,
+                      icon: const BackButtonIcon(),
+                      onPressed: () => Navigator.maybePop(context),
+                    ),
                     Expanded(
                       child: Text(
                         _scene?.displayTitle ?? '',
@@ -671,45 +788,49 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ),
                     if (markers.isNotEmpty)
                       IconButton(
+                        focusNode: _markersButton,
                         tooltip: tr.markers,
                         icon: const Icon(Icons.bookmarks_outlined),
                         onPressed: _pickMarker,
                       ),
                     if (!widget.offline)
                       IconButton(
+                        focusNode: _addMarkerButton,
                         tooltip: tr.addMarkerHere,
                         icon: const Icon(Icons.bookmark_add_outlined),
                         onPressed: c == null ? null : _addMarker,
                       ),
                     if (_sources.length > 1)
                       IconButton(
+                        focusNode: _sourcesButton,
                         tooltip: tr.streams,
                         icon: const Icon(Icons.high_quality_outlined),
                         onPressed: _pickSource,
                       ),
-                    PopupMenuButton<String>(
-                      iconColor: Colors.white,
-                      onSelected: (v) => switch (v) {
-                        'cover' => _useFrameAsCover(),
-                        _ => _pickSpeed(),
-                      },
-                      itemBuilder: (_) => [
-                        PopupMenuItem(
-                          value: 'speed',
-                          child: ListTile(
-                            leading: const Icon(Icons.speed),
-                            title: Text(tr.playbackSpeed),
-                          ),
+                    MenuAnchor(
+                      controller: _menu,
+                      menuChildren: [
+                        MenuItemButton(
+                          leadingIcon: const Icon(Icons.speed),
+                          onPressed: _pickSpeed,
+                          child: Text(tr.playbackSpeed),
                         ),
                         if (!widget.offline)
-                          PopupMenuItem(
-                            value: 'cover',
-                            child: ListTile(
-                              leading: const Icon(Icons.wallpaper),
-                              title: Text(tr.useFrameAsCover),
-                            ),
+                          MenuItemButton(
+                            leadingIcon: const Icon(Icons.wallpaper),
+                            onPressed: _useFrameAsCover,
+                            child: Text(tr.useFrameAsCover),
                           ),
                       ],
+                      builder: (context, menu, _) => IconButton(
+                        focusNode: _menuButton,
+                        color: Colors.white,
+                        tooltip: MaterialLocalizations.of(context)
+                            .showMenuTooltip,
+                        icon: const Icon(Icons.more_vert),
+                        onPressed: () =>
+                            menu.isOpen ? menu.close() : menu.open(),
+                      ),
                     ),
                   ],
                 ),
@@ -718,6 +839,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     IconButton(
+                      focusNode: _back10Button,
                       iconSize: 40,
                       icon: const Icon(Icons.replay_10),
                       onPressed: () => _seekBy(-_seekStep),
@@ -735,6 +857,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ),
                     const SizedBox(width: 24),
                     IconButton(
+                      focusNode: _forward10Button,
                       iconSize: 40,
                       icon: const Icon(Icons.forward_10),
                       onPressed: () => _seekBy(_seekStep),
