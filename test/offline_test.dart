@@ -566,6 +566,82 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('remote in the viewer: Up/Down reach the bars and come back', (
+    tester,
+  ) async {
+    final player = _FakePlayer();
+    VideoPlayerPlatform.instance = player;
+    final (app, _, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: ImageViewerScreen(
+            images: [
+              StashImage(
+                id: '5',
+                image: 'http://stash.test/image/5/image',
+                isClip: true,
+              ),
+            ],
+            initialIndex: 0,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    final page = FocusManager.instance.primaryFocus!;
+
+    // Down: the clip's controls (its bar, then its buttons); OK there
+    // presses a button instead of hiding the bars.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus, isNot(page));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    final button = FocusManager.instance.primaryFocus!;
+    expect(button, isNot(page));
+    expect(
+      button.context!.findAncestorWidgetOfExactType<IconButton>(),
+      isNotNull,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    expect(find.byType(AppBar), findsOneWidget, reason: 'bars still shown');
+
+    // Down through the rating, then past the bottom edge: back on the
+    // picture.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(
+      FocusManager.instance.primaryFocus,
+      isNot(page),
+      reason: 'the rating stars',
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus, page);
+
+    // Up: the top bar's buttons (here, the sound).
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    await tester.pump();
+    final top = FocusManager.instance.primaryFocus!.context!;
+    expect(top.findAncestorWidgetOfExactType<AppBar>(), isNotNull);
+    expect(
+      top.findAncestorWidgetOfExactType<Tooltip>()?.message,
+      'Activer le son',
+    );
+    // Past its top edge: back on the picture.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus, page);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('a clip has a bar to seek, ±10 s and play/pause', (tester) async {
     final player = _FakePlayer();
     VideoPlayerPlatform.instance = player;

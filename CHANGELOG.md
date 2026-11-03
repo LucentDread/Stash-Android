@@ -7,6 +7,12 @@
   surface instead, as TV apps do. Phones are unchanged.
 - Android TV: the play button over a scene's picture can be reached and
   pressed with the remote.
+- Android TV, image viewer: Up/Down reach the buttons of the top bar
+  (sound, download) and of the bottom bar (clip controls, rating); going
+  past a bar's edge comes back to the picture, where Left/Right change
+  images and OK shows or hides the bars.
+- A clip that cannot be played shows its thumbnail and the reason,
+  instead of a broken picture.
 - Android TV: a thick frame now shows what has the remote's focus, on
   every page and every kind of item (buttons, tabs, lists, fields…), and
   follows it while pages scroll.
