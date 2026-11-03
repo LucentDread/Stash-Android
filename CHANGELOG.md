@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.19.2
+- Android TV: a thick frame now shows what has the remote's focus, on
+  every page and every kind of item (buttons, tabs, lists, fields…), and
+  follows it while pages scroll.
+- Android TV: items that do nothing (information rows, disabled buttons)
+  no longer take the focus.
+- Android TV: Up/Down leave a text field (from its first or last line for
+  a multi-line one) and the player's and viewer's progress bars, instead
+  of only Back, which also closed the page.
+
 ## 1.19.1
 - One APK for every device: phones, tablets and Android TVs, 32- and
   64-bit (most TVs run a 32-bit system, which the 64-bit-only APK could

@@ -403,6 +403,14 @@ class _ClipProgressState extends State<_ClipProgress> {
   /// Position under the finger while dragging, in ms.
   double? _dragging;
 
+  final _sliderFocus = remoteSliderFocusNode();
+
+  @override
+  void dispose() {
+    _sliderFocus.dispose();
+    super.dispose();
+  }
+
   void _skip(VideoPlayerValue v, int seconds) {
     final to = v.position + Duration(seconds: seconds);
     widget.controller.seekTo(
@@ -431,6 +439,7 @@ class _ClipProgressState extends State<_ClipProgress> {
                 Text(formatDuration(at / 1000), style: white),
                 Expanded(
                   child: Slider(
+                    focusNode: _sliderFocus,
                     value: at,
                     max: length > 0 ? length : 1,
                     onChanged: length > 0
