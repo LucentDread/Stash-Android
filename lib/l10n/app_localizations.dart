@@ -962,6 +962,18 @@ abstract class AppLocalizations {
   /// **'Connection to the server restored'**
   String get connectionRestored;
 
+  /// No description provided for @serverUnreachableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Server unreachable'**
+  String get serverUnreachableTitle;
+
+  /// No description provided for @stillUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'The server still does not answer.'**
+  String get stillUnreachable;
+
   /// No description provided for @offlineTitle.
   ///
   /// In en, this message translates to:

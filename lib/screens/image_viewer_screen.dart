@@ -15,6 +15,7 @@ import '../widgets/clip_poster.dart';
 import '../widgets/detail_widgets.dart';
 import '../widgets/download_button.dart';
 import '../widgets/net_image.dart';
+import '../widgets/remote_keys.dart';
 
 /// Full-screen swipeable image viewer with pinch-to-zoom.
 class ImageViewerScreen extends StatefulWidget {
@@ -108,8 +109,42 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
     );
   }
 
+  /// Remote control: Left/Right go to the previous/next image, OK shows
+  /// or hides the bars (while no button of theirs has the focus).
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (!node.hasPrimaryFocus || event is KeyUpEvent) {
+      return KeyEventResult.ignored;
+    }
+    final key = event.logicalKey;
+    final step = key == LogicalKeyboardKey.arrowRight
+        ? 1
+        : key == LogicalKeyboardKey.arrowLeft
+        ? -1
+        : 0;
+    if (step != 0) {
+      final i = _index + step;
+      if (i >= 0 && i < widget.images.length) {
+        _controller.animateToPage(
+          i,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+      return KeyEventResult.handled;
+    }
+    if (RemoteKeys.okKeys.contains(key)) {
+      if (event is KeyDownEvent) setState(() => _chrome = !_chrome);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) {
+    return Focus(autofocus: true, onKeyEvent: _onKey, child: _page(context));
+  }
+
+  Widget _page(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,

@@ -64,7 +64,14 @@ class AppState extends ChangeNotifier {
   bool _offline = false;
   Timer? _probe;
 
+  /// Whether the server answered since the app started (or since it was
+  /// set up): when it never did, there is nothing to warn about losing,
+  /// the pages say it cannot be reached.
+  bool get reachedOnce => _reachedOnce;
+  bool _reachedOnce = false;
+
   void _onReachability(bool reachable) {
+    if (reachable) _reachedOnce = true;
     if (reachable != _offline) return;
     _offline = !reachable;
     notifyListeners();
@@ -91,6 +98,7 @@ class AppState extends ChangeNotifier {
     _serverVersion = null;
     _repo?.client.onReachability = null;
     _repo = repo;
+    _reachedOnce = false;
     repo?.client.onReachability = _onReachability;
     if (repo == null && _offline) {
       _offline = false;
@@ -388,8 +396,9 @@ class AppState extends ChangeNotifier {
   }
 
   /// Checks at launch that the server answers, quickly: when it does not,
-  /// the app goes offline at once (popup leading to the downloads) instead
-  /// of leaving every page loading.
+  /// the app goes offline at once (the pages say so and lead to the
+  /// downloads) instead of leaving every page loading. Also the offline
+  /// notice's retry button.
   Future<void> checkServer() async {
     try {
       await _repo?.version(timeout: const Duration(seconds: 8));

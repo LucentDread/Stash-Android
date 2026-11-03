@@ -5,9 +5,11 @@ import '../l10n/l10n.dart';
 import '../screens/downloads_screen.dart';
 import '../services/app_state.dart';
 
-/// Tells the user when the Stash server becomes unreachable (popup with a
-/// shortcut to the downloads) and when it is back (snack bar). Sits above
-/// the navigator, so it uses the app's navigator and messenger keys.
+/// Tells the user when the Stash server stops answering during use (popup
+/// with a shortcut to the downloads) and when it is back (snack bar). A
+/// server unreachable from the start gets no popup: the pages show the
+/// offline notice instead of their content. Sits above the navigator, so
+/// it uses the app's navigator and messenger keys.
 class OfflineWatcher extends StatefulWidget {
   const OfflineWatcher({
     super.key,
@@ -52,7 +54,7 @@ class _OfflineWatcherState extends State<OfflineWatcher> {
   void _lockChanged() {
     if (_app.lock.locked || !_afterUnlock) return;
     _afterUnlock = false;
-    if (!_app.offline) return;
+    if (!_app.offline || !_app.reachedOnce) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _showOfflineDialog();
     });
@@ -67,7 +69,7 @@ class _OfflineWatcherState extends State<OfflineWatcher> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_offline) {
-        _showOfflineDialog();
+        if (_app.reachedOnce) _showOfflineDialog();
       } else {
         widget.messengerKey.currentState?.showSnackBar(
           SnackBar(content: Text(tr.connectionRestored)),

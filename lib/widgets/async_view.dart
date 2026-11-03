@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import 'data_refresh.dart';
+import 'offline_notice.dart';
 
+/// A page's error, or the offline notice (leading to the downloads) when
+/// the server cannot be reached.
 class ErrorView extends StatelessWidget {
   const ErrorView({super.key, required this.error, this.onRetry});
   final Object error;
@@ -10,6 +13,9 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (OfflineNotice.isOffline(context)) {
+      return OfflineNotice(onRetry: onRetry);
+    }
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),

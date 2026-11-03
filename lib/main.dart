@@ -9,11 +9,13 @@ import 'services/app_state.dart';
 import 'services/system_bridge.dart';
 import 'widgets/app_gate.dart';
 import 'widgets/offline_watcher.dart';
+import 'widgets/remote_keys.dart';
 import 'widgets/scan_banner.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
+  await SystemBridge.instance.detectTv();
   final app = AppState(prefs);
   // Picks up downloads that progressed while the app was closed.
   app.downloads.init().ignore();
@@ -50,15 +52,20 @@ class StashApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: messengerKey,
-      // Scan progress and the offline popup work above every page.
+      // Scan progress, the offline popup and the remote's long presses
+      // work above every page.
       builder: (context, child) => _Relabel(
         language: language,
-        child: AppGate(
-          navigatorKey: navigatorKey,
-          child: OfflineWatcher(
-            navigatorKey: navigatorKey,
-            messengerKey: messengerKey,
-            child: ScanBannerHost(child: child!),
+        child: _TvNavigation(
+          child: RemoteKeys(
+            child: AppGate(
+              navigatorKey: navigatorKey,
+              child: OfflineWatcher(
+                navigatorKey: navigatorKey,
+                messengerKey: messengerKey,
+                child: ScanBannerHost(child: child!),
+              ),
+            ),
           ),
         ),
       ),
@@ -78,6 +85,24 @@ class StashApp extends StatelessWidget {
       home: configured
           ? HomeShell(key: ValueKey('$serverUrl|$tabs'))
           : const SetupScreen(),
+    );
+  }
+}
+
+/// On a TV, the arrows of the remote move the focus everywhere: sliders,
+/// for instance, then change with Left/Right only (not Up/Down, which
+/// would trap the focus on them).
+class _TvNavigation extends StatelessWidget {
+  const _TvNavigation({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!SystemBridge.instance.isTv) return child;
+    return MediaQuery(
+      data: MediaQuery.of(context)
+          .copyWith(navigationMode: NavigationMode.directional),
+      child: child,
     );
   }
 }

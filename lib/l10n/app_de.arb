@@ -143,6 +143,8 @@
   "downloadStarted": "Download gestartet (Mehr > Downloads)",
   "downloadInProgress": "Wird heruntergeladen",
   "connectionRestored": "Verbindung zum Server wiederhergestellt",
+  "serverUnreachableTitle": "Server nicht erreichbar",
+  "stillUnreachable": "Der Server antwortet immer noch nicht.",
   "offlineTitle": "Offline",
   "offlineMessage": "Der Stash-Server ({url}) ist nicht erreichbar. Heruntergeladene Szenen, Gruppen, Galerien und Bilder bleiben verfügbar.",
   "scanRunning": "Bibliothek wird gescannt…",

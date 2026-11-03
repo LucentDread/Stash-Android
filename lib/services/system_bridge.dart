@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import '../l10n/l10n.dart';
 
 /// Android features without a Flutter plugin, implemented in MainActivity:
-/// black preview in recent apps, picture in picture, APK installation.
+/// black preview in recent apps, picture in picture, APK installation, TV
+/// detection.
 class SystemBridge {
   SystemBridge._() {
     _channel.setMethodCallHandler(_onCall);
@@ -12,6 +13,23 @@ class SystemBridge {
 
   static final instance = SystemBridge._();
   static const _channel = MethodChannel('stash/system');
+
+  /// Running on Android TV: the interface is driven with a remote (side
+  /// navigation, held OK button for long presses…). Read once at startup
+  /// by [detectTv].
+  bool isTv = false;
+
+  /// Asks Android whether this is a TV. False elsewhere and in tests.
+  Future<void> detectTv() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      isTv = await _channel.invokeMethod<bool>('isTv') ?? false;
+    } on MissingPluginException {
+      // Tests.
+    } on PlatformException {
+      // Keeps the phone interface.
+    }
+  }
 
   /// True while the activity is shown as a small window.
   final inPip = ValueNotifier<bool>(false);

@@ -378,7 +378,7 @@ void main() {
     expect(fetcher.enqueued, hasLength(2), reason: 'image + thumbnail');
   });
 
-  testWidgets('unreachable server: popup leads to the downloads', (
+  testWidgets('unreachable server: the home page leads to the downloads', (
     tester,
   ) async {
     final dir = Directory.systemTemp.createTempSync('offline');
@@ -411,12 +411,29 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider.value(value: app, child: const StashApp()),
     );
-    // Requests fail asynchronously, then the dialog needs a few frames.
+    // Requests fail asynchronously, then the page needs a few frames.
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(app.offline, isTrue);
-    expect(find.text('Hors ligne'), findsOneWidget);
+    // A message in the page rather than errors, and no popup over it: the
+    // server never answered.
+    expect(find.text('Serveur injoignable'), findsOneWidget);
+    expect(find.textContaining('http://stash.test'), findsOneWidget);
+    expect(find.textContaining('Erreur'), findsNothing);
+    expect(find.text('Hors ligne'), findsNothing);
+
+    // Retrying while the server is still down says so.
+    await tester.tap(find.text('Réessayer'));
+    for (var i = 0; i < 3; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Le serveur ne répond toujours pas.'), findsOneWidget);
+    // Its timeout, then its closing animation.
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Le serveur ne répond toujours pas.'), findsNothing);
 
     await tester.tap(find.text('Téléchargements'));
     // Spinners on the home page behind never settle: pump a few frames.
@@ -684,7 +701,7 @@ void main() {
     });
   });
 
-  testWidgets('offline behind the lock screen: the popup comes after it', (
+  testWidgets('lost during use: a popup, behind the lock after unlocking', (
     tester,
   ) async {
     final dir = Directory.systemTemp.createTempSync('offline');
@@ -696,18 +713,31 @@ void main() {
     await AppState(prefs).lock.setPassword('1234');
     final app = AppState(prefs, fetcher: FakeFetcher(dir.path));
     expect(app.lock.locked, isTrue);
+    var reachable = true;
     app.repoOverride = StashRepository(
       StashClient(
         serverUrl: 'http://stash.test',
-        client: MockClient(
-          (_) async => throw http.ClientException('Network is unreachable'),
-        ),
+        client: MockClient((_) async {
+          if (!reachable) throw http.ClientException('Network is unreachable');
+          return http.Response(
+            jsonEncode({
+              'data': {
+                'version': {'version': 'v1'},
+              },
+            }),
+            200,
+          );
+        }),
       ),
     );
     await tester.runAsync(app.downloads.init);
     await tester.pumpWidget(
       ChangeNotifierProvider.value(value: app, child: const StashApp()),
     );
+    // The server answered once, then stops.
+    await app.checkServer();
+    expect(app.reachedOnce, isTrue);
+    reachable = false;
     await app.checkServer();
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 100));
