@@ -15,6 +15,7 @@ import 'package:stash_android/main.dart';
 import 'package:stash_android/models/models.dart';
 import 'package:stash_android/screens/downloads_screen.dart';
 import 'package:stash_android/screens/image_viewer_screen.dart';
+import 'package:stash_android/screens/player_screen.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/services/downloads.dart';
 import 'package:stash_android/services/system_bridge.dart';
@@ -640,6 +641,67 @@ void main() {
     await tester.pump();
     expect(FocusManager.instance.primaryFocus, page);
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('remote in the player: OK, arrows and the controls', (
+    tester,
+  ) async {
+    final player = _FakePlayer();
+    VideoPlayerPlatform.instance = player;
+    final (app, _, dir) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    final video = File('${dir.path}/v.mp4')..writeAsBytesSync([0]);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: PlayerScreen(
+            sceneId: '1',
+            offlinePath: video.path,
+            offlineData: const {'id': '1', 'title': 'Scène'},
+          ),
+        ),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(player.playing[0], isTrue);
+    bool playFocused() =>
+        FocusManager.instance.primaryFocus?.debugLabel == 'play';
+
+    // Just opened, controls shown: OK pauses and puts the focus on
+    // play/pause at once (no waiting for the controls to hide).
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    await tester.pump();
+    expect(player.playing[0], isFalse);
+    expect(playFocused(), isTrue);
+
+    // The arrows now move between the buttons, OK presses them.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(playFocused(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    // 3 s + 10 s, within the 12 s of the video.
+    expect(player.seeks.last, const Duration(seconds: 12), reason: '+10 s');
+
+    // Playing, the controls hide after 4 s; then Left seeks back 10 s
+    // and shows them, focused on play/pause.
+    await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlayPause);
+    await tester.pump();
+    expect(player.playing[0], isTrue);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(playFocused(), isFalse, reason: 'hidden controls let go');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    await tester.pump();
+    expect(player.seeks.last, Duration.zero, reason: '3 s - 10 s');
+    expect(playFocused(), isTrue);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
   });
 
   testWidgets('a clip has a bar to seek, ±10 s and play/pause', (tester) async {

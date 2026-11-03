@@ -378,8 +378,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _showControls();
       return KeyEventResult.handled;
     }
-    if (_controlsVisible) {
-      // Moving between the buttons: they stay up meanwhile.
+    // Controls shown and a button focused: the arrows move between the
+    // buttons, which stay up meanwhile. Shown without a focused button
+    // (just opened): like hidden, the first key focuses play/pause.
+    if (_controlsVisible && !_keys.hasPrimaryFocus) {
       _scheduleHide();
       return KeyEventResult.ignored;
     }

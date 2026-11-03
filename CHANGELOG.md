@@ -11,6 +11,9 @@
   (sound, download) and of the bottom bar (clip controls, rating); going
   past a bar's edge comes back to the picture, where Left/Right change
   images and OK shows or hides the bars.
+- Android TV, player: the remote works as soon as the video opens (OK
+  plays/pauses and goes to the buttons, Left/Right seek), instead of only
+  once the controls had hidden themselves.
 - A clip that cannot be played shows its thumbnail and the reason,
   instead of a broken picture.
 - Android TV: a thick frame now shows what has the remote's focus, on
