@@ -7,6 +7,7 @@ import 'package:stash_android/main.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/services/system_bridge.dart';
 import 'package:stash_android/widgets/remote_keys.dart';
+import 'package:stash_android/widgets/tv_focus.dart';
 
 /// Presses OK on the remote: a short press, or held (the remote repeats
 /// the key) for a long press.
@@ -67,51 +68,123 @@ void main() {
     tearDown(() => SystemBridge.instance.isTv = false);
 
     Widget app(Widget home) => MaterialApp(
-      builder: (_, child) => FocusRing(child: RemoteKeys(child: child!)),
+      theme: tvTheme(ThemeData.dark()),
+      builder: (_, child) => RemoteKeys(child: child!),
       home: Scaffold(body: home),
     );
 
-    /// The frame drawn around the focus, if any.
-    Rect? ring(WidgetTester tester) {
-      final f = find.descendant(
-        of: find.byType(FocusRing),
-        matching: find.byType(Positioned),
-      );
-      return f.evaluate().isEmpty ? null : tester.getRect(f.first);
-    }
-
-    testWidgets('a frame around the focused item, following it', (
+    testWidgets('buttons are outlined in their own shape when focused', (
       tester,
     ) async {
       await tester.pumpWidget(
         app(
           Column(
             children: [
-              for (final k in ['a', 'b'])
-                InkWell(
-                  key: ValueKey(k),
-                  onTap: () {},
-                  child: const SizedBox(width: 100, height: 50),
-                ),
+              FilledButton(onPressed: () {}, child: const Text('play')),
+              IconButton(onPressed: () {}, icon: const Icon(Icons.edit)),
             ],
           ),
         ),
       );
-      expect(ring(tester), isNull, reason: 'nothing focused');
+      BorderSide side(Type button) {
+        final m = tester.widget<Material>(
+          find
+              .descendant(
+                of: find.byType(button),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+        return (m.shape! as OutlinedBorder).side;
+      }
 
+      expect(side(FilledButton), BorderSide.none);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pump();
-      await tester.pump();
-      final a = tester.getRect(find.byKey(const ValueKey('a')));
-      expect(ring(tester), a.inflate(4));
-
+      expect(side(FilledButton).width, 3);
+      expect(side(FilledButton).color, Colors.white);
+      // The filled button keeps its stadium shape, the icon button its
+      // circle: the outline follows them.
+      expect(
+        tester
+            .widget<Material>(
+              find
+                  .descendant(
+                    of: find.byType(FilledButton),
+                    matching: find.byType(Material),
+                  )
+                  .first,
+            )
+            .shape,
+        isA<StadiumBorder>(),
+      );
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pump();
+      expect(side(FilledButton), BorderSide.none);
+      expect(side(IconButton).width, 3);
+    });
+
+    testWidgets('pictures are framed when focused', (tester) async {
+      await tester.pumpWidget(
+        app(
+          FocusFrame(
+            child: Card(
+              child: InkWell(
+                onTap: () {},
+                child: const SizedBox(width: 100, height: 50),
+              ),
+            ),
+          ),
+        ),
+      );
+      Decoration frame() => tester
+          .widget<DecoratedBox>(
+            find
+                .descendant(
+                  of: find.byType(FocusFrame),
+                  matching: find.byType(DecoratedBox),
+                )
+                .first,
+          )
+          .decoration;
+      expect((frame() as BoxDecoration).border, isNull);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pump();
-      final b = tester.getRect(find.byKey(const ValueKey('b')));
-      expect(ring(tester), b.inflate(4));
-      // Let the frame stop following.
-      await tester.pump(const Duration(seconds: 1));
+      expect((frame() as BoxDecoration).border, isNotNull);
+    });
+
+    testWidgets('Left at the start of a field reaches what is on its left', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        app(
+          Row(
+            children: [
+              TextButton(onPressed: () {}, child: const Text('rail')),
+              const Expanded(child: TextField(autofocus: true)),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'ab');
+      final field = tester.widget<EditableText>(find.byType(EditableText));
+      field.controller.selection = const TextSelection.collapsed(offset: 1);
+      await tester.pump();
+      // Inside the text, Left moves the cursor.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      expect(field.focusNode.hasPrimaryFocus, isTrue);
+      expect(field.controller.selection.baseOffset, 0);
+      // At its start, it leaves.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump();
+      expect(field.focusNode.hasFocus, isFalse);
+      expect(
+        FocusManager.instance.primaryFocus!.context!
+            .findAncestorWidgetOfExactType<TextButton>(),
+        isNotNull,
+      );
     });
 
     testWidgets('items that do nothing never take the focus', (tester) async {

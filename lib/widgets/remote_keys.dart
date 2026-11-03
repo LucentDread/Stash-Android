@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../services/system_bridge.dart';
@@ -11,9 +10,9 @@ import '../services/system_bridge.dart';
 ///   still taps it. Works for any [InkWell] without changing it: this sits
 ///   below the app's shortcuts, so it sees the key before they turn it
 ///   into a tap, and only keeps it for items that have a long press;
-/// - on a TV, Up/Down leave a text field (a single-line field would keep
-///   them for its cursor, leaving Back as the only way out, which also
-///   closes the page).
+/// - on a TV, the arrows leave a text field at its edges (a field would
+///   keep them for its cursor, leaving Back as the only way out, which
+///   also closes the page).
 class RemoteKeys extends StatefulWidget {
   const RemoteKeys({super.key, required this.child});
   final Widget child;
@@ -65,23 +64,35 @@ class _RemoteKeysState extends State<RemoteKeys> {
     return r != null && r.onLongPress != null ? r : null;
   }
 
-  /// Up/Down out of the focused text field: always for a single line,
-  /// from its first/last line otherwise.
+  /// Arrows out of the focused text field: Up/Down always for a single
+  /// line (from its first/last line otherwise), Left/Right once the
+  /// cursor is at the start/end of the text (e.g. Left from a search field
+  /// to the tabs' rail).
   static bool _leaveField(LogicalKeyboardKey key) {
-    final up = key == LogicalKeyboardKey.arrowUp;
-    if (!up && key != LogicalKeyboardKey.arrowDown) return false;
+    final direction = switch (key) {
+      LogicalKeyboardKey.arrowUp => TraversalDirection.up,
+      LogicalKeyboardKey.arrowDown => TraversalDirection.down,
+      LogicalKeyboardKey.arrowLeft => TraversalDirection.left,
+      LogicalKeyboardKey.arrowRight => TraversalDirection.right,
+      _ => null,
+    };
+    if (direction == null) return false;
     final field = _focusedField();
     if (field == null) return false;
-    if (field.maxLines != 1) {
-      final text = field.controller.text;
-      final caret = field.controller.selection.baseOffset.clamp(0, text.length);
-      final otherLines = up
-          ? text.substring(0, caret).contains('\n')
-          : text.substring(caret).contains('\n');
-      if (otherLines) return false;
-    }
-    final node = FocusManager.instance.primaryFocus!;
-    node.focusInDirection(up ? TraversalDirection.up : TraversalDirection.down);
+    final text = field.controller.text;
+    final selection = field.controller.selection;
+    final caret = selection.baseOffset.clamp(0, text.length);
+    final atEdge = switch (direction) {
+      TraversalDirection.up =>
+        field.maxLines == 1 || !text.substring(0, caret).contains('\n'),
+      TraversalDirection.down =>
+        field.maxLines == 1 || !text.substring(caret).contains('\n'),
+      // A selection is first collapsed by the arrow, as usual.
+      TraversalDirection.left => selection.isCollapsed && caret == 0,
+      TraversalDirection.right => selection.isCollapsed && caret == text.length,
+    };
+    if (!atEdge) return false;
+    FocusManager.instance.primaryFocus!.focusInDirection(direction);
     return true;
   }
 
@@ -145,126 +156,3 @@ FocusNode remoteSliderFocusNode() => FocusNode(
     return KeyEventResult.handled;
   },
 );
-
-/// On a TV, a thick frame around whatever has the remote's focus, on top
-/// of every page: the ink's own focus color is faint, and hidden under
-/// pictures. It follows the item while pages scroll or slide in.
-class FocusRing extends StatefulWidget {
-  const FocusRing({super.key, required this.child});
-  final Widget child;
-
-  /// A focused area this big is a page catching keys (player, viewer),
-  /// not an item: no frame.
-  static const _maxShare = 0.6;
-
-  @override
-  State<FocusRing> createState() => _FocusRingState();
-}
-
-class _FocusRingState extends State<FocusRing>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  final _stack = GlobalKey();
-  late final Ticker _ticker = createTicker(_tick);
-  Rect? _rect;
-  int _stableFrames = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    FocusManager.instance.addListener(_wake);
-    FocusManager.instance.addHighlightModeListener(_onMode);
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    FocusManager.instance.removeListener(_wake);
-    FocusManager.instance.removeHighlightModeListener(_onMode);
-    WidgetsBinding.instance.removeObserver(this);
-    _ticker.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeMetrics() => _wake();
-
-  void _onMode(FocusHighlightMode _) => _wake();
-
-  /// Follows the focus for a while: until the frame has stayed put for
-  /// half a second (the end of a scroll or page transition).
-  void _wake() {
-    _stableFrames = 0;
-    if (!_ticker.isActive && mounted) _ticker.start();
-  }
-
-  void _tick(Duration _) {
-    final rect = _focusRect();
-    if (rect != _rect) {
-      setState(() => _rect = rect);
-      _stableFrames = 0;
-    } else if (++_stableFrames > 30) {
-      _ticker.stop();
-    }
-  }
-
-  Rect? _focusRect() {
-    if (FocusManager.instance.highlightMode != FocusHighlightMode.traditional) {
-      return null;
-    }
-    final node = FocusManager.instance.primaryFocus;
-    final box = _stack.currentContext?.findRenderObject() as RenderBox?;
-    if (node == null || node is FocusScopeNode || box == null) return null;
-    final context = node.context;
-    if (context == null || !context.mounted) return null;
-    final target = context.findRenderObject();
-    if (target is! RenderBox || !target.attached || !target.hasSize) {
-      return null;
-    }
-    final topLeft = box.globalToLocal(target.localToGlobal(Offset.zero));
-    final rect = topLeft & target.size;
-    final screen = box.size;
-    if (rect.width * rect.height >
-        FocusRing._maxShare * screen.width * screen.height) {
-      return null;
-    }
-    return rect;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final rect = _rect;
-    final scheme = Theme.of(context).colorScheme;
-    return NotificationListener<ScrollNotification>(
-      onNotification: (_) {
-        _wake();
-        return false;
-      },
-      child: Stack(
-        key: _stack,
-        fit: StackFit.passthrough,
-        children: [
-          widget.child,
-          if (rect != null)
-            Positioned.fromRect(
-              rect: rect.inflate(4),
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: scheme.onSurface, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: scheme.primary.withValues(alpha: 0.8),
-                        blurRadius: 12,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}

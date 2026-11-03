@@ -62,7 +62,8 @@ service, no data sent anywhere else.
 - **Tabs** of your choice (**More > Display > Tabs**): up to 4 screens in
   the bottom bar, in the chosen order; the others are in **More**.
 - **Groups**: dedicated tab, page with covers and scenes in group order.
-- **Scene page**: performers, studio, tags, galleries, markers,
+- **Scene page** (wide layout on TVs and tablets in landscape: picture
+  in the top right, title and buttons on the left): performers, studio, tags, galleries, markers,
   description, file details, editable rating (stars) and O counter.
 - **Video player**: resumes where you stopped (position can be cleared from
   the scene page), double-tap ±10 s, jump to markers (ticks on the progress
@@ -73,8 +74,8 @@ service, no data sent anywhere else.
   be turned off).
 - **Android TV**: one APK for phones, tablets and TVs; on a TV the app
   shows in the launcher and is driven with the remote: tabs in a rail on
-  the left, a frame around whatever has the focus, Up/Down out of text
-  fields, OK to open, OK held for a long press
+  the left, the focus outlined in each item's shape, arrows out of text
+  fields at their edges, a TV layout for scene pages, OK to open, OK held for a long press
   (scene preview, actions, selection). Player: OK plays/pauses, Left/Right
   seek ±10 s, Up/Down show the controls, media keys (play/pause, fast
   forward, rewind) work. Image viewer: Left/Right change images.

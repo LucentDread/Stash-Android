@@ -687,6 +687,32 @@ void main() {
     // 3 s + 10 s, within the 12 s of the video.
     expect(player.seeks.last, const Duration(seconds: 12), reason: '+10 s');
 
+    // Row by row, never onto anything invisible: up to the top bar
+    // (nearest button: the menu), Left to back, which is the edge.
+    String? label() => FocusManager.instance.primaryFocus?.debugLabel;
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pump();
+    }
+
+    expect(label(), '+10 s');
+    await press(LogicalKeyboardKey.arrowUp);
+    expect(label(), 'menu');
+    await press(LogicalKeyboardKey.arrowUp);
+    expect(label(), 'menu', reason: 'top edge');
+    await press(LogicalKeyboardKey.arrowLeft);
+    expect(label(), 'back');
+    await press(LogicalKeyboardKey.arrowLeft);
+    expect(label(), 'back', reason: 'left edge');
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(label(), '-10 s', reason: 'nearest below');
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(label(), 'progress');
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(label(), 'progress', reason: 'bottom edge');
+    await press(LogicalKeyboardKey.arrowUp);
+    expect(label(), 'play', reason: 'nearest above the bar');
+
     // Playing, the controls hide after 4 s; then Left seeks back 10 s
     // and shows them, focused on play/pause.
     await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlayPause);

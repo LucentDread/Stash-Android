@@ -12,6 +12,7 @@ import '../widgets/net_image.dart';
 import '../widgets/paged_grid.dart';
 import 'image_viewer_screen.dart';
 import 'player_screen.dart';
+import '../widgets/tv_focus.dart';
 
 /// Scenes, groups, galleries and images kept on the phone, usable
 /// offline: one tab per kind, as grids of previews. Several items can be
@@ -454,137 +455,139 @@ class DownloadCard extends StatelessWidget {
     final selecting = selected != null;
     final scheme = theme.colorScheme;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      margin: EdgeInsets.zero,
-      shape: selected == true
-          ? RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: scheme.primary, width: 3),
-            )
-          : null,
-      child: InkWell(
-        onTap: selecting
-            ? onSelect
-            : opens
-            ? () => openOffline(context, entry)
-            : actions,
-        onLongPress: selecting ? onSelect : (onSelect ?? actions),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(
-              aspectRatio: aspect,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (_isClip)
-                    // The clip's first frame when it has no thumbnail.
-                    ClipPoster(
-                      thumbnail: downloads.coverPath(entry),
-                      video: done
-                          ? downloads.galleryImages(entry).firstOrNull
-                          : null,
-                      cacheWidth: previewWidth,
-                    )
-                  else
-                    NetImage(
-                      downloads.coverPath(entry),
-                      cacheWidth: previewWidth,
-                      placeholderIcon: switch (entry.kind) {
-                        OfflineKind.scene => Icons.movie,
-                        OfflineKind.group => Icons.video_library,
-                        OfflineKind.gallery => Icons.photo_library,
-                        OfflineKind.image => Icons.image,
-                      },
-                    ),
-                  if (_isClip && entry.kind == OfflineKind.image)
-                    const Align(
-                      alignment: Alignment.bottomRight,
-                      child: Padding(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.play_circle_outline,
-                          color: Colors.white,
-                          size: 18,
-                          shadows: [Shadow(blurRadius: 4)],
-                        ),
+    return FocusFrame(
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        margin: EdgeInsets.zero,
+        shape: selected == true
+            ? RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: scheme.primary, width: 3),
+              )
+            : null,
+        child: InkWell(
+          onTap: selecting
+              ? onSelect
+              : opens
+              ? () => openOffline(context, entry)
+              : actions,
+          onLongPress: selecting ? onSelect : (onSelect ?? actions),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AspectRatio(
+                aspectRatio: aspect,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (_isClip)
+                      // The clip's first frame when it has no thumbnail.
+                      ClipPoster(
+                        thumbnail: downloads.coverPath(entry),
+                        video: done
+                            ? downloads.galleryImages(entry).firstOrNull
+                            : null,
+                        cacheWidth: previewWidth,
+                      )
+                    else
+                      NetImage(
+                        downloads.coverPath(entry),
+                        cacheWidth: previewWidth,
+                        placeholderIcon: switch (entry.kind) {
+                          OfflineKind.scene => Icons.movie,
+                          OfflineKind.group => Icons.video_library,
+                          OfflineKind.gallery => Icons.photo_library,
+                          OfflineKind.image => Icons.image,
+                        },
                       ),
-                    ),
-                  if (failed)
-                    ColoredBox(
-                      color: Colors.black54,
-                      child: Icon(
-                        Icons.error_outline,
-                        color: theme.colorScheme.error,
-                        size: 36,
-                      ),
-                    )
-                  else if (!done) ...[
-                    const ColoredBox(color: Colors.black38),
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: LinearProgressIndicator(value: progress),
-                    ),
-                  ],
-                  if (selecting)
-                    Align(
-                      alignment: Alignment.topLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Icon(
-                          selected!
-                              ? Icons.check_circle
-                              : Icons.radio_button_unchecked,
-                          color: selected! ? scheme.primary : Colors.white,
-                          shadows: const [Shadow(blurRadius: 4)],
-                        ),
-                      ),
-                    ),
-                  if (!caption && status != null)
-                    Align(
-                      alignment: Alignment.topCenter,
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Text(
-                          status,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
+                    if (_isClip && entry.kind == OfflineKind.image)
+                      const Align(
+                        alignment: Alignment.bottomRight,
+                        child: Padding(
+                          padding: EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.play_circle_outline,
                             color: Colors.white,
-                            fontSize: 11,
+                            size: 18,
+                            shadows: [Shadow(blurRadius: 4)],
                           ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
-            if (caption)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    Text(
-                      [...details, ?status].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: failed
-                            ? theme.colorScheme.error
-                            : theme.colorScheme.onSurfaceVariant,
+                    if (failed)
+                      ColoredBox(
+                        color: Colors.black54,
+                        child: Icon(
+                          Icons.error_outline,
+                          color: theme.colorScheme.error,
+                          size: 36,
+                        ),
+                      )
+                    else if (!done) ...[
+                      const ColoredBox(color: Colors.black38),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: LinearProgressIndicator(value: progress),
                       ),
-                    ),
+                    ],
+                    if (selecting)
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            selected!
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked,
+                            color: selected! ? scheme.primary : Colors.white,
+                            shadows: const [Shadow(blurRadius: 4)],
+                          ),
+                        ),
+                      ),
+                    if (!caption && status != null)
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Text(
+                            status,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
-          ],
+              if (caption)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      Text(
+                        [...details, ?status].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: failed
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

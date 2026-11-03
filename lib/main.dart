@@ -11,6 +11,7 @@ import 'widgets/app_gate.dart';
 import 'widgets/offline_watcher.dart';
 import 'widgets/remote_keys.dart';
 import 'widgets/scan_banner.dart';
+import 'widgets/tv_focus.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,10 @@ class StashApp extends StatelessWidget {
   static final navigatorKey = GlobalKey<NavigatorState>();
   static final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
+  /// On a TV, the focus shows clearly on every item (see [tvTheme]).
+  static ThemeData _themed(ThemeData base) =>
+      SystemBridge.instance.isTv ? tvTheme(base) : base;
+
   @override
   Widget build(BuildContext context) {
     final configured = context.select<AppState, bool>((s) => s.isConfigured);
@@ -52,33 +57,35 @@ class StashApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: messengerKey,
-      // Scan progress, the offline popup and the remote's focus frame and
-      // long presses work above every page.
+      // Scan progress, the offline popup and the remote's long presses
+      // work above every page.
       builder: (context, child) => _Relabel(
         language: language,
-        child: _TvFocus(
-          child: RemoteKeys(
-            child: AppGate(
+        child: RemoteKeys(
+          child: AppGate(
+            navigatorKey: navigatorKey,
+            child: OfflineWatcher(
               navigatorKey: navigatorKey,
-              child: OfflineWatcher(
-                navigatorKey: navigatorKey,
-                messengerKey: messengerKey,
-                child: ScanBannerHost(child: child!),
-              ),
+              messengerKey: messengerKey,
+              child: ScanBannerHost(child: child!),
             ),
           ),
         ),
       ),
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: _seed),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _seed,
-          brightness: Brightness.dark,
+      theme: _themed(
+        ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: _seed),
+          useMaterial3: true,
         ),
-        useMaterial3: true,
+      ),
+      darkTheme: _themed(
+        ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: _seed,
+            brightness: Brightness.dark,
+          ),
+          useMaterial3: true,
+        ),
       ),
       themeMode: ThemeMode.dark,
       // Rebuild the whole tree when the server changes so caches reset.
@@ -87,16 +94,6 @@ class StashApp extends StatelessWidget {
           : const SetupScreen(),
     );
   }
-}
-
-/// On a TV, a clear frame around the remote's focus, over every page.
-class _TvFocus extends StatelessWidget {
-  const _TvFocus({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) =>
-      SystemBridge.instance.isTv ? FocusRing(child: child) : child;
 }
 
 /// Redraws every page, open ones included, when the language changes:

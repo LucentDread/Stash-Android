@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -15,7 +16,11 @@ import 'package:stash_android/screens/image_viewer_screen.dart';
 import 'package:stash_android/screens/performer_screen.dart';
 import 'package:stash_android/screens/scene_screen.dart';
 import 'package:stash_android/screens/studio_screen.dart';
+import 'package:stash_android/screens/edit/editors.dart';
 import 'package:stash_android/services/app_state.dart';
+import 'package:stash_android/services/system_bridge.dart';
+import 'package:stash_android/widgets/download_button.dart';
+import 'package:stash_android/widgets/tv_focus.dart';
 import 'package:stash_android/widgets/detail_widgets.dart';
 
 /// Server whose items are rated 3 stars; updates fail when [failUpdates].
@@ -97,6 +102,85 @@ int _fullStars(WidgetTester tester) =>
     tester.widgetList(find.byIcon(Icons.star)).length;
 
 void main() {
+  testWidgets('a landscape tablet gets the wide scene page, touch-ready', (
+    tester,
+  ) async {
+    final (app, _) = await _app();
+    Future<void> show(Size size) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: app,
+          child: const MaterialApp(home: SceneScreen(sceneId: '1')),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    addTearDown(tester.view.reset);
+    await show(const Size(1280, 800));
+    expect(find.byType(SliverAppBar), findsNothing);
+    expect(find.byType(BackButton), findsOneWidget, reason: 'no remote');
+    expect(find.byIcon(Icons.play_circle_fill), findsOneWidget);
+    expect(find.byType(DownloadButton), findsOneWidget);
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<FilledButton>(),
+      isNull,
+      reason: 'no focus to show on a touch screen',
+    );
+
+    // Portrait: the phone page.
+    await show(const Size(800, 1280));
+    expect(find.byType(SliverAppBar), findsOneWidget);
+  });
+
+  testWidgets('on a TV, the scene page is laid out for the remote', (
+    tester,
+  ) async {
+    SystemBridge.instance.isTv = true;
+    addTearDown(() => SystemBridge.instance.isTv = false);
+    final (app, _) = await _app();
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          theme: tvTheme(ThemeData.dark()),
+          home: const SceneScreen(sceneId: '1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // No app bar: the title and buttons are on the left, over the picture.
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.byType(SliverAppBar), findsNothing);
+    final title = tester.getRect(find.text('X').first);
+    expect(title.left, lessThan(1920 / 2));
+
+    // Play has the focus at once; Right goes on to download and edit.
+    Element focused() =>
+        FocusManager.instance.primaryFocus!.context! as Element;
+    expect(focused().findAncestorWidgetOfExactType<FilledButton>(), isNotNull);
+    final reached = <Type>{};
+    for (var i = 0; i < 6; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      if (focused().findAncestorWidgetOfExactType<DownloadButton>() != null) {
+        reached.add(DownloadButton);
+      }
+      if (focused().findAncestorWidgetOfExactType<EditButton>() != null) {
+        reached.add(EditButton);
+      }
+    }
+    expect(reached, {DownloadButton, EditButton});
+  });
+
   testWidgets('the scene rating can be cleared with its button', (
     tester,
   ) async {
