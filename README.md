@@ -105,11 +105,14 @@ Requirements: [Flutter](https://docs.flutter.dev/get-started/install)
 ```bash
 flutter pub get
 flutter run                 # on a connected device
-flutter build apk --release --split-per-abi
+flutter build apk --release
 ```
 
-The APKs are in `build/app/outputs/flutter-apk/`; for most recent phones,
-install `app-arm64-v8a-release.apk`.
+The APK is `build/app/outputs/flutter-apk/app-release.apk`: a single APK
+for every device (phones, tablets, Android TV; 32- and 64-bit ARM, x86_64).
+Its version code is the build number of `pubspec.yaml` plus 10000, to stay
+above the per-architecture APKs of 1.18.x and earlier (Flutter numbered
+them 1000 × architecture + build number).
 
 ### Signing
 
@@ -128,6 +131,21 @@ Without them, the APK is signed with the debug key and cannot update an
 installed version signed with the release key. **Keep the key somewhere
 safe**: if it is lost, the app has to be uninstalled before a new version
 can be installed.
+
+Releases are built by GitHub Actions (`.github/workflows/publish-releases.yml`)
+when the current version's release has no APK yet. The key is taken from
+these repository secrets (Settings > Secrets and variables > Actions):
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | `stash-release.jks` in base64 (`base64 -w0 stash-release.jks`) |
+| `ANDROID_KEYSTORE_PASSWORD` | `storePassword` |
+| `ANDROID_KEY_PASSWORD` | `keyPassword` |
+| `ANDROID_KEY_ALIAS` | `keyAlias` (`stash`) |
+
+The workflow checks that the APK is signed with the release key (its
+SHA-256 fingerprint) before publishing it. A signed APK can still be
+handed over on a temporary `release-apks` branch as `Stash-X.Y.Z.apk`.
 
 ## Configuration
 

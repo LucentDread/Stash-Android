@@ -9,7 +9,8 @@
 # Runs in GitHub Actions (.github/workflows/publish-releases.yml) or from a
 # clone with git and an authenticated GitHub CLI:
 #   bash scripts/publish-releases.sh [--apks DIR]
-# With --apks, DIR/Stash-X.Y.Z-arm64-v8a.apk is attached to release X.Y.Z.
+# With --apks, DIR/Stash-X.Y.Z.apk (universal APK; or the older
+# Stash-X.Y.Z-arm64-v8a.apk) is attached to release X.Y.Z.
 set -euo pipefail
 
 apks=
@@ -58,9 +59,12 @@ for version in "${order[@]}"; do
   fi
 
   apk=
-  if [[ -n "$apks" && -f "$apks/Stash-$version-arm64-v8a.apk" ]]; then
-    apk="$apks/Stash-$version-arm64-v8a.apk"
-  fi
+  for name in "Stash-$version.apk" "Stash-$version-arm64-v8a.apk"; do
+    if [[ -n "$apks" && -f "$apks/$name" ]]; then
+      apk="$apks/$name"
+      break
+    fi
+  done
   if current=$(gh release view "$tag" --json body -q .body 2> /dev/null); then
     if [[ "$(trimmed "$current")" != "$(trimmed "$body")" ]]; then
       gh release edit "$tag" --notes "$body" > /dev/null

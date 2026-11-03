@@ -167,6 +167,24 @@ void main() {
       expect(info.latest.apkSize, 1234);
     });
 
+    test('the universal APK first, for 32- and 64-bit devices', () {
+      expect(
+        pickApk([
+          'Stash-1.19.1-arm64-v8a.apk',
+          'notes.txt',
+          'Stash-1.19.1.apk',
+          'Stash-1.19.1-armeabi-v7a.apk',
+        ]),
+        'Stash-1.19.1.apk',
+      );
+      // Releases from before it: the 64-bit ARM one.
+      expect(
+        pickApk(['Stash-1.18.3-x86.apk', 'Stash-1.18.3-arm64-v8a.apk']),
+        'Stash-1.18.3-arm64-v8a.apk',
+      );
+      expect(pickApk(['notes.txt']), isNull);
+    });
+
     test('up to date: nothing to offer', () async {
       expect(
         await _updater([

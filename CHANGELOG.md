@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.19.1
+- One APK for every device: phones, tablets and Android TVs, 32- and
+  64-bit (most TVs run a 32-bit system, which the 64-bit-only APK could
+  not install on). Automatic updates now take this APK, from 1.18.x too.
+- Releases get their signed APK built by GitHub Actions.
+
 ## 1.19.0
 - Server unreachable: instead of errors, the home page (and any page that
   cannot load) says the server cannot be reached, with a button to the
