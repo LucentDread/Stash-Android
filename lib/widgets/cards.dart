@@ -9,9 +9,9 @@ import '../models/models.dart';
 import '../navigation.dart';
 import '../screens/edit/editors.dart';
 import '../services/app_state.dart';
+import '../services/system_bridge.dart';
 import '../utils/format.dart';
 import 'net_image.dart';
-import 'remote_keys.dart';
 
 class _Badge extends StatelessWidget {
   const _Badge(this.text, {this.icon});
@@ -118,6 +118,7 @@ class _SceneCardState extends State<SceneCard> {
     final c = VideoPlayerController.networkUrl(
       Uri.parse(url),
       httpHeaders: state.client!.authHeaders,
+      viewType: SystemBridge.instance.videoViewType,
     );
     setState(() => _preview = c);
     try {
@@ -156,7 +157,7 @@ class _SceneCardState extends State<SceneCard> {
         : 0.0;
     final preview = _preview;
 
-    return FocusCard(
+    return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -497,7 +498,7 @@ class PerformerCard extends StatelessWidget {
     final p = performer;
     final theme = Theme.of(context);
     final age = ageFrom(p.birthdate);
-    return FocusCard(
+    return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -599,7 +600,7 @@ class EntityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return FocusCard(
+    return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -756,7 +757,7 @@ class MarkerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = marker;
-    return FocusCard(
+    return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -824,7 +825,7 @@ class GroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final g = group;
     final theme = Theme.of(context);
-    return FocusCard(
+    return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(

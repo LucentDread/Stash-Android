@@ -136,7 +136,8 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
               ],
               expandedHeight: expanded,
               flexibleSpace: FlexibleSpaceBar(
-                background: GestureDetector(
+                // A button, not just a touch area: the remote reaches it.
+                background: InkWell(
                   onTap: () => _play(),
                   child: Stack(
                     fit: StackFit.expand,

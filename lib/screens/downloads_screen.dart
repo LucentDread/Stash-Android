@@ -10,7 +10,6 @@ import '../widgets/clip_poster.dart';
 import '../widgets/insets.dart';
 import '../widgets/net_image.dart';
 import '../widgets/paged_grid.dart';
-import '../widgets/remote_keys.dart';
 import 'image_viewer_screen.dart';
 import 'player_screen.dart';
 
@@ -455,7 +454,7 @@ class DownloadCard extends StatelessWidget {
     final selecting = selected != null;
     final scheme = theme.colorScheme;
 
-    return FocusCard(
+    return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       shape: selected == true

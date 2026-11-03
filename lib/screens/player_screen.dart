@@ -82,6 +82,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// are hidden; showing them puts the focus on play/pause.
   final _keys = FocusNode(debugLabel: 'player');
   final _playButton = FocusNode(debugLabel: 'play');
+  final _sliderFocus = remoteSliderFocusNode();
 
   /// Last state sent for the small window, to send only changes.
   String? _pipState;
@@ -133,6 +134,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _activityTimer?.cancel();
     _keys.dispose();
     _playButton.dispose();
+    _sliderFocus.dispose();
     _saveActivity(finalSave: true);
     _controller?.removeListener(_onTick);
     _controller?.dispose();
@@ -232,11 +234,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     final source = _sources[index];
     final c = source.local
-        ? VideoPlayerController.file(File(source.url))
+        ? VideoPlayerController.file(
+            File(source.url),
+            viewType: _bridge.videoViewType,
+          )
         : VideoPlayerController.networkUrl(
             Uri.parse(source.url),
             formatHint: source.hint,
             httpHeaders: _app.client!.authHeaders,
+            viewType: _bridge.videoViewType,
           );
     try {
       await c.initialize();
@@ -372,8 +378,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _showControls();
       return KeyEventResult.handled;
     }
-    if (_controlsVisible) {
-      // Moving between the buttons: they stay up meanwhile.
+    // Controls shown and a button focused: the arrows move between the
+    // buttons, which stay up meanwhile. Shown without a focused button
+    // (just opened): like hidden, the first key focuses play/pause.
+    if (_controlsVisible && !_keys.hasPrimaryFocus) {
       _scheduleHide();
       return KeyEventResult.ignored;
     }
@@ -751,6 +759,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                                 ),
                               ),
                             Slider(
+                              focusNode: _sliderFocus,
                               value: position.inMilliseconds.toDouble().clamp(
                                 0,
                                 maxMs > 0 ? maxMs : 1,

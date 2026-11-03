@@ -62,30 +62,168 @@ void main() {
     expect(events, ['tap2']);
   });
 
-  testWidgets('remote: the focused card is framed', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: FocusCard(
-            child: InkWell(
-              onTap: () {},
-              child: const SizedBox(width: 100, height: 50),
+  group('on a TV', () {
+    setUp(() => SystemBridge.instance.isTv = true);
+    tearDown(() => SystemBridge.instance.isTv = false);
+
+    Widget app(Widget home) => MaterialApp(
+      builder: (_, child) => FocusRing(child: RemoteKeys(child: child!)),
+      home: Scaffold(body: home),
+    );
+
+    /// The frame drawn around the focus, if any.
+    Rect? ring(WidgetTester tester) {
+      final f = find.descendant(
+        of: find.byType(FocusRing),
+        matching: find.byType(Positioned),
+      );
+      return f.evaluate().isEmpty ? null : tester.getRect(f.first);
+    }
+
+    testWidgets('a frame around the focused item, following it', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        app(
+          Column(
+            children: [
+              for (final k in ['a', 'b'])
+                InkWell(
+                  key: ValueKey(k),
+                  onTap: () {},
+                  child: const SizedBox(width: 100, height: 50),
+                ),
+            ],
+          ),
+        ),
+      );
+      expect(ring(tester), isNull, reason: 'nothing focused');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      await tester.pump();
+      final a = tester.getRect(find.byKey(const ValueKey('a')));
+      expect(ring(tester), a.inflate(4));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      await tester.pump();
+      final b = tester.getRect(find.byKey(const ValueKey('b')));
+      expect(ring(tester), b.inflate(4));
+      // Let the frame stop following.
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('items that do nothing never take the focus', (tester) async {
+      await tester.pumpWidget(
+        app(
+          Column(
+            children: [
+              const ListTile(title: Text('info')), // no onTap
+              const TextButton(onPressed: null, child: Text('off')),
+              InkWell(
+                key: const ValueKey('on'),
+                onTap: () {},
+                child: const SizedBox(width: 100, height: 50),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      final focused = FocusManager.instance.primaryFocus!.context!;
+      expect(
+        focused.findAncestorWidgetOfExactType<InkWell>()?.key,
+        const ValueKey('on'),
+      );
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('Up/Down leave a text field', (tester) async {
+      await tester.pumpWidget(
+        app(
+          Column(
+            children: [
+              TextButton(onPressed: () {}, child: const Text('above')),
+              const TextField(autofocus: true),
+              const TextField(maxLines: 3),
+              TextButton(onPressed: () {}, child: const Text('below')),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+      String? focusedText() => FocusManager.instance.primaryFocus!.context!
+          .findAncestorWidgetOfExactType<TextButton>()
+          ?.child
+          .toString();
+      bool inField(int i) => tester
+          .widget<EditableText>(find.byType(EditableText).at(i))
+          .focusNode
+          .hasPrimaryFocus;
+      expect(inField(0), isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump();
+      expect(focusedText(), contains('above'));
+
+      // Back down, then into the multi-line field: Down moves between its
+      // lines before leaving it.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(inField(0), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(inField(1), isTrue);
+      await tester.enterText(find.byType(EditableText).at(1), 'one\ntwo');
+      final multi = tester.widget<EditableText>(
+        find.byType(EditableText).at(1),
+      );
+      multi.controller.selection = const TextSelection.collapsed(offset: 0);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(inField(1), isTrue, reason: 'a line below');
+      multi.controller.selection = const TextSelection.collapsed(offset: 7);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(focusedText(), contains('below'));
+      await tester.pump(const Duration(seconds: 1));
+    });
+
+    testWidgets('Up/Down leave a slider, Left/Right change it', (tester) async {
+      var value = 0.5;
+      final focus = remoteSliderFocusNode();
+      addTearDown(focus.dispose);
+      await tester.pumpWidget(
+        app(
+          StatefulBuilder(
+            builder: (context, setState) => Column(
+              children: [
+                TextButton(onPressed: () {}, child: const Text('above')),
+                Slider(
+                  focusNode: focus,
+                  autofocus: true,
+                  value: value,
+                  onChanged: (v) => setState(() => value = v),
+                ),
+              ],
             ),
           ),
         ),
-      ),
-    );
-    BorderSide side() =>
-        ((tester.widget<Card>(find.byType(Card)).shape
-                as RoundedRectangleBorder?)
-            ?.side) ??
-        BorderSide.none;
-    expect(side(), BorderSide.none);
-
-    // A key press switches to the keyboard / remote highlight.
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.pump();
-    expect(side().width, 3);
+      );
+      await tester.pump();
+      expect(focus.hasPrimaryFocus, isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pump();
+      expect(value, greaterThan(0.5));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump();
+      expect(focus.hasFocus, isFalse);
+      await tester.pump(const Duration(seconds: 1));
+    });
   });
 
   testWidgets('on a TV, the tabs are in a rail on the left', (tester) async {
@@ -110,10 +248,6 @@ void main() {
     expect(
       [for (final d in rail.destinations) (d.label as Text).data],
       ['Images', 'Scènes', 'Plus'],
-    );
-    expect(
-      MediaQuery.of(tester.element(find.byType(NavigationRail))).navigationMode,
-      NavigationMode.directional,
     );
 
     // Choosing a tab in the rail opens it.

@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.19.2
+- Android TV: videos and image clips play. Every stream failed with
+  "MediacodecVideoRenderer error": the TV's video decoders refuse to draw
+  into the app's texture, so on a TV videos are drawn in an Android
+  surface instead, as TV apps do. Phones are unchanged.
+- Android TV: the play button over a scene's picture can be reached and
+  pressed with the remote.
+- Android TV, image viewer: Up/Down reach the buttons of the top bar
+  (sound, download) and of the bottom bar (clip controls, rating); going
+  past a bar's edge comes back to the picture, where Left/Right change
+  images and OK shows or hides the bars.
+- Android TV, player: the remote works as soon as the video opens (OK
+  plays/pauses and goes to the buttons, Left/Right seek), instead of only
+  once the controls had hidden themselves.
+- A clip that cannot be played shows its thumbnail and the reason,
+  instead of a broken picture.
+- Android TV: a thick frame now shows what has the remote's focus, on
+  every page and every kind of item (buttons, tabs, lists, fields…), and
+  follows it while pages scroll.
+- Android TV: items that do nothing (information rows, disabled buttons)
+  no longer take the focus.
+- Android TV: Up/Down leave a text field (from its first or last line for
+  a multi-line one) and the player's and viewer's progress bars, instead
+  of only Back, which also closed the page.
+
 ## 1.19.1
 - One APK for every device: phones, tablets and Android TVs, 32- and
   64-bit (most TVs run a 32-bit system, which the 64-bit-only APK could

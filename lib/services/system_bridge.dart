@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:video_player/video_player.dart' show VideoViewType;
 
 import '../l10n/l10n.dart';
 
@@ -18,6 +19,14 @@ class SystemBridge {
   /// navigation, held OK button for long presses…). Read once at startup
   /// by [detectTv].
   bool isTv = false;
+
+  /// How videos are drawn. On a TV, in an Android surface: many TV video
+  /// decoders fail to start when they must draw into a Flutter texture
+  /// ("MediacodecVideoRenderer error" for every stream), as TV apps
+  /// normally use such a surface. Phones keep the texture, which fits in
+  /// pages more freely.
+  VideoViewType get videoViewType =>
+      isTv ? VideoViewType.platformView : VideoViewType.textureView;
 
   /// Asks Android whether this is a TV. False elsewhere and in tests.
   Future<void> detectTv() async {

@@ -52,11 +52,11 @@ class StashApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: messengerKey,
-      // Scan progress, the offline popup and the remote's long presses
-      // work above every page.
+      // Scan progress, the offline popup and the remote's focus frame and
+      // long presses work above every page.
       builder: (context, child) => _Relabel(
         language: language,
-        child: _TvNavigation(
+        child: _TvFocus(
           child: RemoteKeys(
             child: AppGate(
               navigatorKey: navigatorKey,
@@ -89,22 +89,14 @@ class StashApp extends StatelessWidget {
   }
 }
 
-/// On a TV, the arrows of the remote move the focus everywhere: sliders,
-/// for instance, then change with Left/Right only (not Up/Down, which
-/// would trap the focus on them).
-class _TvNavigation extends StatelessWidget {
-  const _TvNavigation({required this.child});
+/// On a TV, a clear frame around the remote's focus, over every page.
+class _TvFocus extends StatelessWidget {
+  const _TvFocus({required this.child});
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    if (!SystemBridge.instance.isTv) return child;
-    return MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(navigationMode: NavigationMode.directional),
-      child: child,
-    );
-  }
+  Widget build(BuildContext context) =>
+      SystemBridge.instance.isTv ? FocusRing(child: child) : child;
 }
 
 /// Redraws every page, open ones included, when the language changes:

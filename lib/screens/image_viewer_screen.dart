@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
 import '../services/downloads.dart';
+import '../services/system_bridge.dart';
 import '../utils/format.dart';
 import '../widgets/clip_poster.dart';
 import '../widgets/detail_widgets.dart';
@@ -59,15 +61,55 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _controller.dispose();
+    _pageFocus.dispose();
+    _topBar.dispose();
+    _bottomBar.dispose();
     super.dispose();
   }
+
+  /// The page's own focus (Left/Right change images) and the bars around
+  /// their buttons, which the remote enters with Up/Down.
+  final _pageFocus = FocusNode(debugLabel: 'viewer');
+  final _topBar = FocusNode(
+    debugLabel: 'top bar',
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
+  final _bottomBar = FocusNode(
+    debugLabel: 'bottom bar',
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
+
+  /// Shows the bars and puts the focus on the first button of [bar], if
+  /// it has any.
+  void _enterBar(FocusNode bar) {
+    setState(() => _chrome = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // The top-left one: the descendants are not in screen order.
+      final buttons = bar.traversalDescendants.toList()
+        ..sort((a, b) {
+          final dy = a.rect.top.compareTo(b.rect.top);
+          return dy != 0 ? dy : a.rect.left.compareTo(b.rect.left);
+        });
+      buttons.firstOrNull?.requestFocus();
+    });
+  }
+
+  /// [bar] whose buttons [node] gathers.
+  PreferredSizeWidget _focusGroup(FocusNode node, PreferredSizeWidget bar) =>
+      PreferredSize(
+        preferredSize: bar.preferredSize,
+        child: Focus(focusNode: node, child: bar),
+      );
 
   /// Players of the clips built so far, by image id.
   final _clips = <String, VideoPlayerController>{};
 
   /// Bottom bar: the clip's progress and the image's rating, as they
   /// apply.
-  Widget? _bottomBar(StashImage image) {
+  Widget? _bottomBarOf(StashImage image) {
     final clip = image.isClip ? _clips[image.id] : null;
     final rate = widget.downloadable;
     if (!_chrome || (clip == null && !rate)) return null;
@@ -110,12 +152,39 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
   }
 
   /// Remote control: Left/Right go to the previous/next image, OK shows
-  /// or hides the bars (while no button of theirs has the focus).
+  /// or hides the bars, Up/Down go to the buttons of the top/bottom bar.
+  /// From the buttons, going past a bar's edge comes back to the image.
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
-    if (!node.hasPrimaryFocus || event is KeyUpEvent) {
-      return KeyEventResult.ignored;
-    }
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
+    final up = key == LogicalKeyboardKey.arrowUp;
+    final down = key == LogicalKeyboardKey.arrowDown;
+    if (!node.hasPrimaryFocus) {
+      // A button of a bar has the focus.
+      if (!up && !down) return KeyEventResult.ignored;
+      final from = FocusManager.instance.primaryFocus!;
+      final before = from.rect;
+      final moved = from.focusInDirection(
+        up ? TraversalDirection.up : TraversalDirection.down,
+      );
+      // Past a bar's edge (Flutter may wrap around to the other bar, the
+      // move is applied once this key is handled): back to the image.
+      scheduleMicrotask(() {
+        final to = FocusManager.instance.primaryFocus;
+        final after = to?.rect;
+        final onward =
+            moved &&
+            to != from &&
+            after != null &&
+            (up ? after.top < before.top : after.top > before.top);
+        if (!onward && mounted) node.requestFocus();
+      });
+      return KeyEventResult.handled;
+    }
+    if (up || down) {
+      _enterBar(up ? _topBar : _bottomBar);
+      return KeyEventResult.handled;
+    }
     final step = key == LogicalKeyboardKey.arrowRight
         ? 1
         : key == LogicalKeyboardKey.arrowLeft
@@ -141,7 +210,12 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Focus(autofocus: true, onKeyEvent: _onKey, child: _page(context));
+    return Focus(
+      focusNode: _pageFocus,
+      autofocus: true,
+      onKeyEvent: _onKey,
+      child: _page(context),
+    );
   }
 
   Widget _page(BuildContext context) {
@@ -149,26 +223,32 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
       extendBody: true,
-      bottomNavigationBar: _bottomBar(widget.images[_index]),
+      bottomNavigationBar: switch (_bottomBarOf(widget.images[_index])) {
+        final bar? => Focus(focusNode: _bottomBar, child: bar),
+        null => null,
+      },
       appBar: _chrome
-          ? AppBar(
-              backgroundColor: Colors.black45,
-              foregroundColor: Colors.white,
-              title: Text('${_index + 1} / ${widget.images.length}'),
-              actions: [
-                if (widget.images[_index].isClip)
-                  IconButton(
-                    tooltip: _muted ? tr.soundOn : tr.soundOff,
-                    icon: Icon(_muted ? Icons.volume_off : Icons.volume_up),
-                    onPressed: () => setState(() => _muted = !_muted),
-                  ),
-                if (widget.downloadable)
-                  DownloadButton(
-                    key: ValueKey(widget.images[_index].id),
-                    kind: OfflineKind.image,
-                    id: widget.images[_index].id,
-                  ),
-              ],
+          ? _focusGroup(
+              _topBar,
+              AppBar(
+                backgroundColor: Colors.black45,
+                foregroundColor: Colors.white,
+                title: Text('${_index + 1} / ${widget.images.length}'),
+                actions: [
+                  if (widget.images[_index].isClip)
+                    IconButton(
+                      tooltip: _muted ? tr.soundOn : tr.soundOff,
+                      icon: Icon(_muted ? Icons.volume_off : Icons.volume_up),
+                      onPressed: () => setState(() => _muted = !_muted),
+                    ),
+                  if (widget.downloadable)
+                    DownloadButton(
+                      key: ValueKey(widget.images[_index].id),
+                      kind: OfflineKind.image,
+                      id: widget.images[_index].id,
+                    ),
+                ],
+              ),
             )
           : null,
       body: GestureDetector(
@@ -308,12 +388,16 @@ class _ClipViewState extends State<_ClipView> {
     final client = context.read<AppState>().client;
     final url = client?.mediaUrl(path);
     final c = path.startsWith('/')
-        ? VideoPlayerController.file(File(path))
+        ? VideoPlayerController.file(
+            File(path),
+            viewType: SystemBridge.instance.videoViewType,
+          )
         : url == null
         ? null
         : VideoPlayerController.networkUrl(
             Uri.parse(url),
             httpHeaders: client!.authHeaders,
+            viewType: SystemBridge.instance.videoViewType,
           );
     if (c == null) return;
     try {
@@ -361,9 +445,39 @@ class _ClipViewState extends State<_ClipView> {
   Widget build(BuildContext context) {
     final c = _controller;
     if (_error != null) {
-      // Not a video the player knows (an animated GIF downloaded as a
-      // clip before they were told apart): shown as a picture.
-      return NetImage(widget.image.image, fit: BoxFit.contain);
+      final path = widget.image.image;
+      if (path != null && path.startsWith('/')) {
+        // Not a video the player knows (an animated GIF downloaded as a
+        // clip before they were told apart): shown as a picture.
+        return NetImage(path, fit: BoxFit.contain);
+      }
+      // A clip this device cannot play: its thumbnail, and why.
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipPoster(
+            thumbnail: widget.image.thumbnail,
+            video: null,
+            fit: BoxFit.contain,
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                tr.playbackFailed('$_error'),
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      );
     }
     if (c == null) {
       // The clip's thumbnail while it loads.
@@ -403,6 +517,14 @@ class _ClipProgressState extends State<_ClipProgress> {
   /// Position under the finger while dragging, in ms.
   double? _dragging;
 
+  final _sliderFocus = remoteSliderFocusNode();
+
+  @override
+  void dispose() {
+    _sliderFocus.dispose();
+    super.dispose();
+  }
+
   void _skip(VideoPlayerValue v, int seconds) {
     final to = v.position + Duration(seconds: seconds);
     widget.controller.seekTo(
@@ -431,6 +553,7 @@ class _ClipProgressState extends State<_ClipProgress> {
                 Text(formatDuration(at / 1000), style: white),
                 Expanded(
                   child: Slider(
+                    focusNode: _sliderFocus,
                     value: at,
                     max: length > 0 ? length : 1,
                     onChanged: length > 0

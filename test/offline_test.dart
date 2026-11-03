@@ -15,8 +15,10 @@ import 'package:stash_android/main.dart';
 import 'package:stash_android/models/models.dart';
 import 'package:stash_android/screens/downloads_screen.dart';
 import 'package:stash_android/screens/image_viewer_screen.dart';
+import 'package:stash_android/screens/player_screen.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/services/downloads.dart';
+import 'package:stash_android/services/system_bridge.dart';
 import 'package:stash_android/widgets/clip_poster.dart';
 import 'package:stash_android/widgets/net_image.dart';
 import 'package:stash_android/widgets/view_list.dart';
@@ -29,13 +31,17 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 class _FakePlayer extends VideoPlayerPlatform {
   final playing = <int, bool>{};
   final seeks = <Duration>[];
+  final viewTypes = <VideoViewType>[];
   var _next = 0;
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<int?> createWithOptions(VideoCreationOptions options) async => _next++;
+  Future<int?> createWithOptions(VideoCreationOptions options) async {
+    viewTypes.add(options.viewType);
+    return _next++;
+  }
 
   @override
   Stream<VideoEvent> videoEventsFor(int playerId) => Stream.value(
@@ -521,6 +527,181 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(InteractiveViewer), findsOneWidget);
     expect(find.byTooltip('Couper le son'), findsNothing);
+  });
+
+  testWidgets('on a TV, clips are drawn in an Android surface', (tester) async {
+    // TV decoders often refuse to draw into a Flutter texture.
+    final player = _FakePlayer();
+    VideoPlayerPlatform.instance = player;
+    final (app, _, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    Future<void> open() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: app,
+          child: MaterialApp(
+            home: ImageViewerScreen(
+              images: [
+                StashImage(
+                  id: '5',
+                  image: 'http://stash.test/image/5/image',
+                  isClip: true,
+                ),
+              ],
+              initialIndex: 0,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    await open();
+    expect(player.viewTypes.last, VideoViewType.textureView);
+
+    SystemBridge.instance.isTv = true;
+    addTearDown(() => SystemBridge.instance.isTv = false);
+    await open();
+    expect(player.viewTypes.last, VideoViewType.platformView);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('remote in the viewer: Up/Down reach the bars and come back', (
+    tester,
+  ) async {
+    final player = _FakePlayer();
+    VideoPlayerPlatform.instance = player;
+    final (app, _, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: ImageViewerScreen(
+            images: [
+              StashImage(
+                id: '5',
+                image: 'http://stash.test/image/5/image',
+                isClip: true,
+              ),
+            ],
+            initialIndex: 0,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    final page = FocusManager.instance.primaryFocus!;
+
+    // Down: the clip's controls (its bar, then its buttons); OK there
+    // presses a button instead of hiding the bars.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus, isNot(page));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    final button = FocusManager.instance.primaryFocus!;
+    expect(button, isNot(page));
+    expect(
+      button.context!.findAncestorWidgetOfExactType<IconButton>(),
+      isNotNull,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    expect(find.byType(AppBar), findsOneWidget, reason: 'bars still shown');
+
+    // Down through the rating, then past the bottom edge: back on the
+    // picture.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(
+      FocusManager.instance.primaryFocus,
+      isNot(page),
+      reason: 'the rating stars',
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus, page);
+
+    // Up: the top bar's buttons (here, the sound).
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    await tester.pump();
+    final top = FocusManager.instance.primaryFocus!.context!;
+    expect(top.findAncestorWidgetOfExactType<AppBar>(), isNotNull);
+    expect(
+      top.findAncestorWidgetOfExactType<Tooltip>()?.message,
+      'Activer le son',
+    );
+    // Past its top edge: back on the picture.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(FocusManager.instance.primaryFocus, page);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('remote in the player: OK, arrows and the controls', (
+    tester,
+  ) async {
+    final player = _FakePlayer();
+    VideoPlayerPlatform.instance = player;
+    final (app, _, dir) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    final video = File('${dir.path}/v.mp4')..writeAsBytesSync([0]);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          home: PlayerScreen(
+            sceneId: '1',
+            offlinePath: video.path,
+            offlineData: const {'id': '1', 'title': 'Scène'},
+          ),
+        ),
+      ),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    expect(player.playing[0], isTrue);
+    bool playFocused() =>
+        FocusManager.instance.primaryFocus?.debugLabel == 'play';
+
+    // Just opened, controls shown: OK pauses and puts the focus on
+    // play/pause at once (no waiting for the controls to hide).
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    await tester.pump();
+    expect(player.playing[0], isFalse);
+    expect(playFocused(), isTrue);
+
+    // The arrows now move between the buttons, OK presses them.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(playFocused(), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await tester.pump();
+    // 3 s + 10 s, within the 12 s of the video.
+    expect(player.seeks.last, const Duration(seconds: 12), reason: '+10 s');
+
+    // Playing, the controls hide after 4 s; then Left seeks back 10 s
+    // and shows them, focused on play/pause.
+    await tester.sendKeyEvent(LogicalKeyboardKey.mediaPlayPause);
+    await tester.pump();
+    expect(player.playing[0], isTrue);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(playFocused(), isFalse, reason: 'hidden controls let go');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pump();
+    await tester.pump();
+    expect(player.seeks.last, Duration.zero, reason: '3 s - 10 s');
+    expect(playFocused(), isTrue);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
   });
 
   testWidgets('a clip has a bar to seek, ±10 s and play/pause', (tester) async {
