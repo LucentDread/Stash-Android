@@ -17,6 +17,7 @@ import 'package:stash_android/screens/downloads_screen.dart';
 import 'package:stash_android/screens/image_viewer_screen.dart';
 import 'package:stash_android/services/app_state.dart';
 import 'package:stash_android/services/downloads.dart';
+import 'package:stash_android/services/system_bridge.dart';
 import 'package:stash_android/widgets/clip_poster.dart';
 import 'package:stash_android/widgets/net_image.dart';
 import 'package:stash_android/widgets/view_list.dart';
@@ -29,13 +30,17 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 class _FakePlayer extends VideoPlayerPlatform {
   final playing = <int, bool>{};
   final seeks = <Duration>[];
+  final viewTypes = <VideoViewType>[];
   var _next = 0;
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<int?> createWithOptions(VideoCreationOptions options) async => _next++;
+  Future<int?> createWithOptions(VideoCreationOptions options) async {
+    viewTypes.add(options.viewType);
+    return _next++;
+  }
 
   @override
   Stream<VideoEvent> videoEventsFor(int playerId) => Stream.value(
@@ -521,6 +526,44 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(InteractiveViewer), findsOneWidget);
     expect(find.byTooltip('Couper le son'), findsNothing);
+  });
+
+  testWidgets('on a TV, clips are drawn in an Android surface', (tester) async {
+    // TV decoders often refuse to draw into a Flutter texture.
+    final player = _FakePlayer();
+    VideoPlayerPlatform.instance = player;
+    final (app, _, _) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    Future<void> open() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: app,
+          child: MaterialApp(
+            home: ImageViewerScreen(
+              images: [
+                StashImage(
+                  id: '5',
+                  image: 'http://stash.test/image/5/image',
+                  isClip: true,
+                ),
+              ],
+              initialIndex: 0,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    await open();
+    expect(player.viewTypes.last, VideoViewType.textureView);
+
+    SystemBridge.instance.isTv = true;
+    addTearDown(() => SystemBridge.instance.isTv = false);
+    await open();
+    expect(player.viewTypes.last, VideoViewType.platformView);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('a clip has a bar to seek, ±10 s and play/pause', (tester) async {

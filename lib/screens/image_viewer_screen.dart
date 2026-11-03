@@ -10,6 +10,7 @@ import '../l10n/l10n.dart';
 import '../models/models.dart';
 import '../services/app_state.dart';
 import '../services/downloads.dart';
+import '../services/system_bridge.dart';
 import '../utils/format.dart';
 import '../widgets/clip_poster.dart';
 import '../widgets/detail_widgets.dart';
@@ -308,12 +309,16 @@ class _ClipViewState extends State<_ClipView> {
     final client = context.read<AppState>().client;
     final url = client?.mediaUrl(path);
     final c = path.startsWith('/')
-        ? VideoPlayerController.file(File(path))
+        ? VideoPlayerController.file(
+            File(path),
+            viewType: SystemBridge.instance.videoViewType,
+          )
         : url == null
         ? null
         : VideoPlayerController.networkUrl(
             Uri.parse(url),
             httpHeaders: client!.authHeaders,
+            viewType: SystemBridge.instance.videoViewType,
           );
     if (c == null) return;
     try {

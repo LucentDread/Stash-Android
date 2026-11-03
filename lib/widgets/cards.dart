@@ -9,6 +9,7 @@ import '../models/models.dart';
 import '../navigation.dart';
 import '../screens/edit/editors.dart';
 import '../services/app_state.dart';
+import '../services/system_bridge.dart';
 import '../utils/format.dart';
 import 'net_image.dart';
 
@@ -117,6 +118,7 @@ class _SceneCardState extends State<SceneCard> {
     final c = VideoPlayerController.networkUrl(
       Uri.parse(url),
       httpHeaders: state.client!.authHeaders,
+      viewType: SystemBridge.instance.videoViewType,
     );
     setState(() => _preview = c);
     try {

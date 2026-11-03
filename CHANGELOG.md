@@ -1,6 +1,12 @@
 # Changelog
 
 ## 1.19.2
+- Android TV: videos and image clips play. Every stream failed with
+  "MediacodecVideoRenderer error": the TV's video decoders refuse to draw
+  into the app's texture, so on a TV videos are drawn in an Android
+  surface instead, as TV apps do. Phones are unchanged.
+- Android TV: the play button over a scene's picture can be reached and
+  pressed with the remote.
 - Android TV: a thick frame now shows what has the remote's focus, on
   every page and every kind of item (buttons, tabs, lists, fields…), and
   follows it while pages scroll.

@@ -234,11 +234,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     final source = _sources[index];
     final c = source.local
-        ? VideoPlayerController.file(File(source.url))
+        ? VideoPlayerController.file(
+            File(source.url),
+            viewType: _bridge.videoViewType,
+          )
         : VideoPlayerController.networkUrl(
             Uri.parse(source.url),
             formatHint: source.hint,
             httpHeaders: _app.client!.authHeaders,
+            viewType: _bridge.videoViewType,
           );
     try {
       await c.initialize();
