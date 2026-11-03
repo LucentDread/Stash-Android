@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.19.0
+- Server unreachable: instead of errors, the home page (and any page that
+  cannot load) says the server cannot be reached, with a button to the
+  downloads and one to try again. The page comes back by itself once the
+  server answers. The "Offline" popup now only shows when the connection
+  is lost during use, not at launch.
+- Android TV: the same APK installs on a TV and shows in its launcher
+  (with a banner). With the remote: tabs in a rail on the left, the
+  focused card framed, holding OK does a long press (scene preview,
+  actions, selection); in the player, OK plays/pauses, Left/Right seek
+  ±10 s, Up/Down show the controls, and the media keys work; in the image
+  viewer, Left/Right change images.
+
 ## 1.18.3
 - Animated GIFs open again in the image viewer (a red error icon showed
   since 1.16.2): Stash files them as videos, so the app took them for

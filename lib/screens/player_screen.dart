@@ -15,6 +15,7 @@ import '../services/app_state.dart';
 import '../services/system_bridge.dart';
 import '../utils/format.dart';
 import '../widgets/async_view.dart';
+import '../widgets/remote_keys.dart';
 import 'edit/editors.dart';
 
 /// A playable source: the direct file or one of Stash's transcodes.
@@ -77,6 +78,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   final _bridge = SystemBridge.instance;
 
+  /// Remote control and keyboard: keys reach [_keys] while the controls
+  /// are hidden; showing them puts the focus on play/pause.
+  final _keys = FocusNode(debugLabel: 'player');
+  final _playButton = FocusNode(debugLabel: 'play');
+
   /// Last state sent for the small window, to send only changes.
   String? _pipState;
 
@@ -125,6 +131,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _bridge.setPip(enabled: false);
     _hideTimer?.cancel();
     _activityTimer?.cancel();
+    _keys.dispose();
+    _playButton.dispose();
     _saveActivity(finalSave: true);
     _controller?.removeListener(_onTick);
     _controller?.dispose();
@@ -309,14 +317,83 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _hideTimer?.cancel();
     _hideTimer = Timer(const Duration(seconds: 4), () {
       if (mounted && (_controller?.value.isPlaying ?? false)) {
-        setState(() => _controlsVisible = false);
+        _hideControls();
       }
     });
   }
 
-  void _toggleControls() {
-    setState(() => _controlsVisible = !_controlsVisible);
-    if (_controlsVisible) _scheduleHide();
+  void _hideControls() {
+    setState(() => _controlsVisible = false);
+    // Hidden buttons give up the focus: the keys come back here.
+    _keys.requestFocus();
+  }
+
+  void _showControls({bool focusPlay = false}) {
+    setState(() => _controlsVisible = true);
+    if (focusPlay) {
+      // Once the buttons can take the focus again (next frame).
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controlsVisible) _playButton.requestFocus();
+      });
+    }
+    _scheduleHide();
+  }
+
+  void _toggleControls() =>
+      _controlsVisible ? _hideControls() : _showControls();
+
+  /// Remote control: OK plays or pauses, Left/Right seek ±10 s, Up/Down
+  /// show the controls; with the controls shown, the arrows move between
+  /// the buttons. Media keys work at any time.
+  KeyEventResult _onKey(FocusNode _, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    final c = _controller;
+    if (key == LogicalKeyboardKey.mediaPlayPause) {
+      _togglePlay();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPlay) {
+      c?.play();
+      _scheduleHide();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaPause ||
+        key == LogicalKeyboardKey.mediaStop) {
+      c?.pause();
+      _showControls();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.mediaFastForward ||
+        key == LogicalKeyboardKey.mediaRewind) {
+      _seekBy(
+        key == LogicalKeyboardKey.mediaFastForward ? _seekStep : -_seekStep,
+      );
+      _showControls();
+      return KeyEventResult.handled;
+    }
+    if (_controlsVisible) {
+      // Moving between the buttons: they stay up meanwhile.
+      _scheduleHide();
+      return KeyEventResult.ignored;
+    }
+    if (RemoteKeys.okKeys.contains(key)) {
+      if (event is KeyDownEvent) _togglePlay();
+      _showControls(focusPlay: true);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      _seekBy(key == LogicalKeyboardKey.arrowRight ? _seekStep : -_seekStep);
+      _showControls(focusPlay: true);
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown) {
+      _showControls(focusPlay: true);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   void _togglePlay() {
@@ -478,7 +555,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         ),
       );
     }
-    return Scaffold(
+    final page = Scaffold(
       backgroundColor: Colors.black,
       body: _error != null && c == null
           ? Theme(
@@ -509,11 +586,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   duration: const Duration(milliseconds: 200),
                   child: IgnorePointer(
                     ignoring: !_controlsVisible,
-                    child: _controls(c),
+                    child: ExcludeFocus(
+                      excluding: !_controlsVisible,
+                      child: _controls(c),
+                    ),
                   ),
                 ),
               ],
             ),
+    );
+    return Focus(
+      focusNode: _keys,
+      autofocus: true,
+      onKeyEvent: _onKey,
+      child: page,
     );
   }
 
@@ -630,6 +716,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ),
                     const SizedBox(width: 24),
                     IconButton(
+                      focusNode: _playButton,
                       iconSize: 64,
                       icon: Icon(
                         value?.isPlaying ?? false

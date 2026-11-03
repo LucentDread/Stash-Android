@@ -604,6 +604,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get connectionRestored => 'Conexión con el servidor restablecida';
 
   @override
+  String get serverUnreachableTitle => 'Servidor inaccesible';
+
+  @override
+  String get stillUnreachable => 'El servidor sigue sin responder.';
+
+  @override
   String get offlineTitle => 'Sin conexión';
 
   @override

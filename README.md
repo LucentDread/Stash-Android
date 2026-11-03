@@ -2,7 +2,8 @@
 
 Android client for [Stash](https://github.com/stashapp/stash), written in
 Flutter. Inspired by [StashAppAndroidTV](https://github.com/damontecres/StashAppAndroidTV),
-but designed for phones and tablets (touch screens).
+but designed for phones and tablets (touch screens). The same APK also
+runs on Android TV, driven with the remote (see **Android TV** below).
 
 The app talks directly to your Stash server's GraphQL API: no third-party
 service, no data sent anywhere else.
@@ -47,8 +48,9 @@ service, no data sent anywhere else.
 - **Offline**: download a scene, a group (all its scenes), a gallery
   (button on their page) or an image (button in the viewer), in the
   background with a notification. Copies are in **More > Downloads** and
-  play without the server. When the server cannot be reached, a window says
-  so and leads to the downloads.
+  play without the server. When the server cannot be reached, the pages
+  say so (instead of errors) and lead to the downloads; a window says so
+  when the connection is lost during use.
 - **Library scan** from **More > Server**, with Stash's default scan
   options. Progress (percentage, current file) shows at the bottom of every
   page; at the end, open pages reload without changing the navigation.
@@ -69,6 +71,12 @@ service, no data sent anywhere else.
   supported. Position and watch time are sent back to Stash. Leaving the
   app during playback keeps the video in a small window (popup player, can
   be turned off).
+- **Android TV**: one APK for phones, tablets and TVs; on a TV the app
+  shows in the launcher and is driven with the remote: tabs in a rail on
+  the left, the focused item framed, OK to open, OK held for a long press
+  (scene preview, actions, selection). Player: OK plays/pauses, Left/Right
+  seek ±10 s, Up/Down show the controls, media keys (play/pause, fast
+  forward, rewind) work. Image viewer: Left/Right change images.
 - **Languages**: English, French, German, Italian and Spanish (vocabulary
   of Stash's own translations). The app follows the phone's language
   (English by default) or the one chosen in the settings.

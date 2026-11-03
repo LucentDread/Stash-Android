@@ -12,6 +12,7 @@ import '../services/app_state.dart';
 import '../utils/format.dart';
 import '../widgets/brand_title.dart';
 import '../widgets/cards.dart';
+import '../widgets/offline_notice.dart';
 import '../widgets/paged_grid.dart';
 import '../widgets/view_list.dart';
 import 'browse_screens.dart';
@@ -59,7 +60,11 @@ class _HomeTabState extends State<HomeTab> {
           ),
         ],
       ),
-      body: single != null
+      // Rather than rows of errors: the app reloads once the server
+      // answers again.
+      body: app.offline
+          ? const OfflineNotice()
+          : single != null
           ? ViewBrowser(key: key, view: single)
           : _StackedHome(key: key, ids: layout),
     );
@@ -395,27 +400,29 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: widget.standalone ? Text(tr.defaultHome) : const BrandTitle(),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => setState(() => _refresh++),
-        // A column rather than a lazy list: rows scrolled away are kept,
-        // not rebuilt (and reloaded, changing height) when coming back up.
-        child: SingleChildScrollView(
-          // Rebuilt (and reloaded) on pull-to-refresh and after a scan.
-          key: ValueKey('$_refresh-${app.dataVersion}'),
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final id in app.dashboardLayout)
-                if (HomeSection.fromId(id) case final section?)
-                  HomeSectionRow(section, key: ValueKey(id))
-                else if (app.viewById(id) case final view?)
-                  _viewRow(context, repo, view, sceneWidth),
-            ],
-          ),
-        ),
-      ),
+      body: app.offline
+          ? const OfflineNotice()
+          : RefreshIndicator(
+              onRefresh: () async => setState(() => _refresh++),
+              // A column rather than a lazy list: rows scrolled away are kept,
+              // not rebuilt (and reloaded, changing height) when coming back up.
+              child: SingleChildScrollView(
+                // Rebuilt (and reloaded) on pull-to-refresh and after a scan.
+                key: ValueKey('$_refresh-${app.dataVersion}'),
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final id in app.dashboardLayout)
+                      if (HomeSection.fromId(id) case final section?)
+                        HomeSectionRow(section, key: ValueKey(id))
+                      else if (app.viewById(id) case final view?)
+                        _viewRow(context, repo, view, sceneWidth),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }

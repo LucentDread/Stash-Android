@@ -393,6 +393,8 @@
   "downloadStarted": "Download started (More > Downloads)",
   "downloadInProgress": "Downloading",
   "connectionRestored": "Connection to the server restored",
+  "serverUnreachableTitle": "Server unreachable",
+  "stillUnreachable": "The server still does not answer.",
   "offlineTitle": "Offline",
   "offlineMessage": "The Stash server ({url}) cannot be reached. Downloaded scenes, groups, galleries and images are still available.",
   "@offlineMessage": {

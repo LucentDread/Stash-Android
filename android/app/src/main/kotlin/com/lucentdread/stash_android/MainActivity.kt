@@ -3,10 +3,12 @@ package com.lucentdread.stash_android
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
+import android.app.UiModeManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.drawable.Icon
@@ -96,6 +98,7 @@ class MainActivity : FlutterActivity() {
                             runOnUiThread { result.success(ok) }
                         }
                     }
+                    "isTv" -> result.success(isTv())
                     "installApk" -> {
                         try {
                             installApk(call.arguments as String)
@@ -108,6 +111,14 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+    }
+
+    /// Android TV (or Google TV): the same APK then shows a remote-control
+    /// friendly interface.
+    private fun isTv(): Boolean {
+        val uiMode = getSystemService(UI_MODE_SERVICE) as? UiModeManager
+        return uiMode?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION ||
+            packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
     }
 
     /// Writes the first frame of a video (local file or URL) to [out] as a
