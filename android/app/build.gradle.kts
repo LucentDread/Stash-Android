@@ -28,11 +28,11 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
-        versionCode = flutter.versionCode
+        // The build number of pubspec.yaml plus 10000. Up to 1.18.x, APKs
+        // were built per ABI, and Flutter added 1000 * ABI to the code
+        // (arm64-v8a 1.18.3 is 2034); the universal APK must stay above
+        // them, or Android refuses it as a downgrade.
+        versionCode = flutter.versionCode + 10000
         versionName = flutter.versionName
     }
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -74,18 +75,16 @@ class Updater {
         for (final a in m['assets'] as List? ?? const [])
           (a as Map).cast<String, dynamic>(),
       ].where((a) => (a['name'] as String? ?? '').endsWith('.apk')).toList();
-      // Builds are 64-bit ARM; prefer that one if others are added.
-      final apk =
-          assets
-              .where((a) => (a['name'] as String).contains('arm64-v8a'))
-              .firstOrNull ??
-          assets.firstOrNull;
+      final apk = pickApk([for (final a in assets) a['name'] as String]);
+      final asset = apk == null
+          ? null
+          : assets.firstWhere((a) => a['name'] == apk);
       newer.add(
         Release(
           version: tag,
           notes: m['body'] as String? ?? '',
-          apkUrl: apk?['browser_download_url'] as String?,
-          apkSize: (apk?['size'] as num?)?.toInt() ?? 0,
+          apkUrl: asset?['browser_download_url'] as String?,
+          apkSize: (asset?['size'] as num?)?.toInt() ?? 0,
         ),
       );
     }
@@ -170,4 +169,19 @@ class Updater {
     }
     return items;
   }
+}
+
+/// ABI suffixes of the APKs built per architecture.
+const _abis = ['arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86'];
+
+/// The APK to install among a release's [names]: the universal one
+/// (Stash-X.Y.Z.apk, every architecture, 32 and 64 bits: phones, tablets
+/// and TVs alike) when there is one; otherwise, for releases made before
+/// it (1.18.x and earlier), the 64-bit ARM one.
+@visibleForTesting
+String? pickApk(List<String> names) {
+  final apks = names.where((n) => n.endsWith('.apk')).toList();
+  return apks.where((n) => !_abis.any(n.contains)).firstOrNull ??
+      apks.where((n) => n.contains('arm64-v8a')).firstOrNull ??
+      apks.firstOrNull;
 }
