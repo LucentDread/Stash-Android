@@ -104,7 +104,15 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
             : const Center(child: CircularProgressIndicator()),
       );
     }
-    return SystemBridge.instance.isTv ? _tvPage(s) : _phonePage(s);
+    return _wideLayout ? _widePage(s) : _phonePage(s);
+  }
+
+  /// TVs, and tablets in landscape: room for the picture beside the
+  /// title and buttons.
+  bool get _wideLayout {
+    if (SystemBridge.instance.isTv) return true;
+    final size = MediaQuery.sizeOf(context);
+    return size.width >= 840 && size.width > size.height;
   }
 
   /// Phone and tablet: the picture on top (tap to play) under a
@@ -200,18 +208,54 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
     );
   }
 
-  /// TV, like the TV apps of media servers: the picture in the background
-  /// of the top right, fading into the page; the title, details and
-  /// buttons over it on the left (Play has the focus); the rest below.
-  /// No app bar: the remote's Back leaves the page.
-  Widget _tvPage(Scene s) {
+  /// TV and landscape tablet, like the TV apps of media servers: the
+  /// picture in the background of the top right, fading into the page;
+  /// the title, details and buttons over it on the left; the rest below.
+  /// No app bar: on a TV the remote's Back leaves the page (and Play has
+  /// the focus); on a touch screen, a back button sits in the corner and
+  /// a tap on the picture plays.
+  Widget _widePage(Scene s) {
     final theme = Theme.of(context);
     final size = MediaQuery.sizeOf(context);
     final background = theme.colorScheme.surface;
+    final tv = SystemBridge.instance.isTv;
     const side = 48.0;
+    final picture = Stack(
+      fit: StackFit.expand,
+      children: [
+        NetImage(s.screenshot, placeholderIcon: Icons.movie),
+        if (s.studio?.hasImage ?? false) StudioWatermark(s.studio!.imagePath!),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [background, background.withValues(alpha: 0)],
+              stops: const [0, 0.5],
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [background, background.withValues(alpha: 0)],
+              stops: const [0, 0.4],
+            ),
+          ),
+        ),
+        if (!tv)
+          const Center(
+            child: Icon(
+              Icons.play_circle_fill,
+              size: 72,
+              color: Colors.white70,
+            ),
+          ),
+      ],
+    );
     return Scaffold(
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
+        padding: withNavBar(context, const EdgeInsets.only(bottom: 32)),
         children: [
           SizedBox(
             height: size.height * 0.62,
@@ -223,39 +267,16 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                   right: 0,
                   bottom: 0,
                   width: size.width * 0.62,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      NetImage(s.screenshot, placeholderIcon: Icons.movie),
-                      if (s.studio?.hasImage ?? false)
-                        StudioWatermark(s.studio!.imagePath!),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              background,
-                              background.withValues(alpha: 0),
-                            ],
-                            stops: const [0, 0.5],
-                          ),
-                        ),
-                      ),
-                      DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [
-                              background,
-                              background.withValues(alpha: 0),
-                            ],
-                            stops: const [0, 0.4],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: tv
+                      ? picture
+                      : GestureDetector(onTap: () => _play(), child: picture),
                 ),
+                if (!tv)
+                  Positioned(
+                    top: MediaQuery.paddingOf(context).top + 8,
+                    left: 8,
+                    child: const BackButton(),
+                  ),
                 Positioned(
                   left: side,
                   bottom: 16,
@@ -280,7 +301,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                         runSpacing: 8,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          ..._playButtons(s, autofocus: true),
+                          ..._playButtons(s, autofocus: tv),
                           ..._pageActions(s),
                         ],
                       ),
@@ -383,9 +404,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
 
   /// Rating stars and O counter.
   Widget _ratingRow(Scene s) => Row(
-    mainAxisSize: SystemBridge.instance.isTv
-        ? MainAxisSize.min
-        : MainAxisSize.max,
+    mainAxisSize: _wideLayout ? MainAxisSize.min : MainAxisSize.max,
     children: [
       StarRating(
         rating100: _rating,
@@ -400,10 +419,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
           }
         }),
       ),
-      if (SystemBridge.instance.isTv)
-        const SizedBox(width: 24)
-      else
-        const Spacer(),
+      if (_wideLayout) const SizedBox(width: 24) else const Spacer(),
       TextButton.icon(
         onPressed: () => _run(() async {
           final c = await _repo.addO(s.id);

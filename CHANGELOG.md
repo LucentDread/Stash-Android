@@ -8,9 +8,12 @@
   their own focused border.
 - Android TV: Left/Right leave a text field once the cursor is at its
   start/end (e.g. from a search field to the tabs' rail).
-- Android TV: a scene's page is laid out for the TV: its picture in the
-  background of the top right, the title, details and buttons (play,
-  download, edit) on the left, Play focused; the rest below.
+- Android TV and tablets in landscape: a scene's page has a wide layout:
+  its picture in the background of the top right, the title, details and
+  buttons (play, download, edit) on the left, the rest below. On a TV,
+  Play has the focus; on a tablet, a tap on the picture plays and a back
+  button sits in the corner. Phones and tablets in portrait keep the
+  current page.
 - Android TV, player: the remote goes through the controls row by row (top
   bar, buttons, progress bar) and stops at the edges, instead of
   sometimes landing on nothing visible (the video, the page).

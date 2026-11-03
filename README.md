@@ -62,7 +62,8 @@ service, no data sent anywhere else.
 - **Tabs** of your choice (**More > Display > Tabs**): up to 4 screens in
   the bottom bar, in the chosen order; the others are in **More**.
 - **Groups**: dedicated tab, page with covers and scenes in group order.
-- **Scene page**: performers, studio, tags, galleries, markers,
+- **Scene page** (wide layout on TVs and tablets in landscape: picture
+  in the top right, title and buttons on the left): performers, studio, tags, galleries, markers,
   description, file details, editable rating (stars) and O counter.
 - **Video player**: resumes where you stopped (position can be cleared from
   the scene page), double-tap ±10 s, jump to markers (ticks on the progress

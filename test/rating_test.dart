@@ -102,6 +102,41 @@ int _fullStars(WidgetTester tester) =>
     tester.widgetList(find.byIcon(Icons.star)).length;
 
 void main() {
+  testWidgets('a landscape tablet gets the wide scene page, touch-ready', (
+    tester,
+  ) async {
+    final (app, _) = await _app();
+    Future<void> show(Size size) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: app,
+          child: const MaterialApp(home: SceneScreen(sceneId: '1')),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    addTearDown(tester.view.reset);
+    await show(const Size(1280, 800));
+    expect(find.byType(SliverAppBar), findsNothing);
+    expect(find.byType(BackButton), findsOneWidget, reason: 'no remote');
+    expect(find.byIcon(Icons.play_circle_fill), findsOneWidget);
+    expect(find.byType(DownloadButton), findsOneWidget);
+    expect(
+      FocusManager.instance.primaryFocus?.context
+          ?.findAncestorWidgetOfExactType<FilledButton>(),
+      isNull,
+      reason: 'no focus to show on a touch screen',
+    );
+
+    // Portrait: the phone page.
+    await show(const Size(800, 1280));
+    expect(find.byType(SliverAppBar), findsOneWidget);
+  });
+
   testWidgets('on a TV, the scene page is laid out for the remote', (
     tester,
   ) async {
