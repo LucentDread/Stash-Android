@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.19.7
+- Android TV: pages scroll smoothly to the item getting the focus,
+  instead of jumping.
+- Android TV, scene page: Up/Down go to the next row and its item closest
+  horizontally (from the download button, Down could skip every row down
+  to the last tag).
+- Android TV: descriptions take the focus again (with a light background):
+  Up/Down scroll through a long one step by step, then move on, so it can
+  be read in full even with nothing focusable below it.
+
 ## 1.19.6
 - Scene page on TVs and tablets in landscape:
   - the title bar shows as soon as the title has scrolled off the top,

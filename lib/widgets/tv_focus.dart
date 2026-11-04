@@ -76,3 +76,85 @@ class _FocusFrameState extends State<FocusFrame> {
     );
   }
 }
+
+/// Moves the focus to [node] and scrolls it into view smoothly, instead
+/// of the jump Flutter makes by default.
+void smoothRequestFocus(
+  FocusNode node, {
+  ScrollPositionAlignmentPolicy? alignmentPolicy,
+  double? alignment,
+  Duration? duration,
+  Curve? curve,
+}) {
+  node.requestFocus();
+  final context = node.context;
+  if (context == null) return;
+  Scrollable.ensureVisible(
+    context,
+    alignment: alignment ?? 1,
+    alignmentPolicy: alignmentPolicy ?? ScrollPositionAlignmentPolicy.explicit,
+    duration: duration == null || duration == Duration.zero
+        ? const Duration(milliseconds: 220)
+        : duration,
+    curve: curve ?? Curves.easeOutCubic,
+  );
+}
+
+/// How the remote moves the focus on a TV: Flutter's directional moves,
+/// scrolling smoothly.
+///
+/// With [rowsFirst], Up/Down go to the nearest row above/below, then to
+/// its item closest horizontally. Flutter's own choice only looks at items
+/// overlapping the focused one horizontally: from a button on the right,
+/// Down skipped every row starting further left (e.g. to a scene's last
+/// tag).
+class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
+  TvTraversalPolicy({this.rowsFirst = false})
+    : super(requestFocusCallback: smoothRequestFocus);
+
+  final bool rowsFirst;
+
+  @override
+  bool inDirection(FocusNode currentNode, TraversalDirection direction) {
+    final down = direction == TraversalDirection.down;
+    if (!rowsFirst || !(down || direction == TraversalDirection.up)) {
+      return super.inDirection(currentNode, direction);
+    }
+    final scope = currentNode.nearestScope;
+    if (scope == null || currentNode.context == null) return false;
+    final from = currentNode.rect;
+    // Items of the next row may start a few pixels above the focused
+    // one's bottom (or below its top) when they are taller.
+    const slack = 4.0;
+    final candidates = [
+      for (final n in scope.traversalDescendants)
+        if (n != currentNode &&
+            n.context != null &&
+            !n.rect.isEmpty &&
+            (down
+                ? n.rect.top >= from.bottom - slack
+                : n.rect.bottom <= from.top + slack))
+          n,
+    ];
+    if (candidates.isEmpty) return false;
+    double gap(FocusNode n) =>
+        down ? n.rect.top - from.bottom : from.top - n.rect.bottom;
+    final nearest = candidates.map(gap).reduce((a, b) => a < b ? a : b);
+    // The row: items about as close as the nearest one.
+    final row = candidates.where((n) => gap(n) <= nearest + 12);
+    final target = row.reduce(
+      (a, b) =>
+          (a.rect.center.dx - from.center.dx).abs() <=
+              (b.rect.center.dx - from.center.dx).abs()
+          ? a
+          : b,
+    );
+    requestFocusCallback(
+      target,
+      alignmentPolicy: down
+          ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
+          : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+    );
+    return true;
+  }
+}
