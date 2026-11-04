@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.19.6
+- Scene page on TVs and tablets in landscape:
+  - the title bar shows as soon as the title has scrolled off the top,
+    instead of once the whole header had (the title was lost meanwhile);
+  - no more thin line of the picture at the edges of its fade (seen
+    while pulling the page past its top, and as a faint vertical line);
+    the blur no longer darkens the picture's edges.
+
 ## 1.19.5
 - Scene page on TVs and tablets in landscape:
   - when its buttons (play, download, edit…) get the focus again, the

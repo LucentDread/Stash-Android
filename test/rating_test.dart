@@ -211,6 +211,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ImageFiltered), findsOneWidget);
     expect(barOpacity(), 0, reason: 'the header title still shows');
+    // Just past the header's title, the rest of the header still shown:
+    // the bar already shows the title.
+    scroll.jumpTo(0);
+    await tester.pumpAndSettle();
+    final titleBottom = tester.getRect(find.text('X').first).bottom;
+    scroll.jumpTo(titleBottom - 40);
+    await tester.pumpAndSettle();
+    expect(scroll.pixels, lessThan(1080 * 0.62), reason: 'header in view');
+    expect(barOpacity(), 1);
     // Past the header: the title bar sticks to the top.
     scroll.jumpTo(scroll.maxScrollExtent.clamp(0, 900));
     await tester.pumpAndSettle();
