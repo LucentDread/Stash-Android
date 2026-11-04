@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.19.4
+- Android TV, player: the remote's Back first hides the controls (or
+  closes the ⋮ menu), then leaves the video. The back button on screen
+  still leaves at once.
+
 ## 1.19.3
 - Android TV: the focus shows in each item's own shape instead of a frame
   laid over the page: a white outline on buttons (round, pill-shaped…)

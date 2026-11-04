@@ -713,12 +713,32 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ],
             ),
     );
-    return Focus(
-      focusNode: _keys,
-      autofocus: true,
-      onKeyEvent: _onKey,
-      child: page,
+    return PopScope(
+      // On a TV, the remote's Back first closes the menu or hides the
+      // controls, then leaves.
+      canPop: !(_bridge.isTv && (_controlsVisible || _menu.isOpen)),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: Focus(
+        focusNode: _keys,
+        autofocus: true,
+        onKeyEvent: _onKey,
+        child: page,
+      ),
     );
+  }
+
+  /// Back on a TV with the controls shown.
+  void _back() {
+    if (_menu.isOpen) {
+      _menu.close();
+      setState(() {});
+      return;
+    }
+    _hideTimer?.cancel();
+    setState(() => _controlsVisible = false);
+    _keys.requestFocus();
   }
 
   /// Tap toggles controls; double tap on either side seeks ±10 s.
@@ -773,7 +793,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       tooltip: MaterialLocalizations.of(context)
                           .backButtonTooltip,
                       icon: const BackButtonIcon(),
-                      onPressed: () => Navigator.maybePop(context),
+                      // Leaves at once (the remote's Back first hides the
+                      // controls, see build).
+                      onPressed: () => Navigator.pop(context),
                     ),
                     Expanded(
                       child: Text(

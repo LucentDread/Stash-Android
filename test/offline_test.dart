@@ -730,6 +730,76 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   });
 
+  testWidgets('remote Back hides the player controls before leaving', (
+    tester,
+  ) async {
+    final player = _FakePlayer();
+    VideoPlayerPlatform.instance = player;
+    final (app, _, dir) =
+        await tester.runAsync(_setup) as (AppState, FakeFetcher, Directory);
+    final video = File('${dir.path}/v.mp4')..writeAsBytesSync([0]);
+    Future<void> open() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: app,
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => PlayerScreen(
+                      sceneId: '1',
+                      offlinePath: video.path,
+                      offlineData: const {'id': '1', 'title': 'Scène'},
+                    ),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.byType(PlayerScreen), findsOneWidget);
+    }
+
+    Future<void> back() async {
+      await tester.binding.handlePopRoute();
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    bool controlsShown() =>
+        tester
+            .widget<AnimatedOpacity>(find.byType(AnimatedOpacity).last)
+            .opacity ==
+        1;
+
+    SystemBridge.instance.isTv = true;
+    addTearDown(() => SystemBridge.instance.isTv = false);
+    await open();
+    expect(controlsShown(), isTrue);
+    await back();
+    expect(find.byType(PlayerScreen), findsOneWidget, reason: 'still there');
+    expect(controlsShown(), isFalse);
+    await back();
+    expect(find.byType(PlayerScreen), findsNothing);
+
+    // On a phone, Back leaves at once.
+    SystemBridge.instance.isTv = false;
+    await open();
+    await back();
+    expect(find.byType(PlayerScreen), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 5));
+  });
+
   testWidgets('a clip has a bar to seek, ±10 s and play/pause', (tester) async {
     final player = _FakePlayer();
     VideoPlayerPlatform.instance = player;
