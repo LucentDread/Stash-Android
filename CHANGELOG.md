@@ -13,6 +13,11 @@
 - Launch: a dark screen with the app's logo instead of a white one that
   flashed before the app showed (on devices not in dark mode, as TVs
   usually are not; on Android 12+, the system's launch screen too).
+- Launch animation: the logo in the middle slides to the left as it
+  grows, the name comes out from behind it, logo and name end up
+  centered together, then fade into the app (1.6 s, while the app
+  starts). It starts exactly where the launch screen leaves off; skipped
+  when the device asks for no animations.
 - Android TV: the remote kept working wrongly once the focused item had
   scrolled out of sight (its position was unknown); it now goes on from
   what shows on screen.

@@ -28,11 +28,16 @@ class SystemBridge {
   VideoViewType get videoViewType =>
       isTv ? VideoViewType.platformView : VideoViewType.textureView;
 
-  /// Asks Android whether this is a TV. False elsewhere and in tests.
+  /// Android's API level; 0 elsewhere and in tests. Read by [detectTv].
+  int sdkInt = 0;
+
+  /// Asks Android whether this is a TV, and its version. False and 0
+  /// elsewhere and in tests.
   Future<void> detectTv() async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     try {
       isTv = await _channel.invokeMethod<bool>('isTv') ?? false;
+      sdkInt = await _channel.invokeMethod<int>('sdkInt') ?? 0;
     } on MissingPluginException {
       // Tests.
     } on PlatformException {

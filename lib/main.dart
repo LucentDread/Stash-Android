@@ -8,6 +8,7 @@ import 'screens/setup_screen.dart';
 import 'services/app_state.dart';
 import 'services/system_bridge.dart';
 import 'widgets/app_gate.dart';
+import 'widgets/launch_intro.dart';
 import 'widgets/offline_watcher.dart';
 import 'widgets/remote_keys.dart';
 import 'widgets/scan_banner.dart';
@@ -23,7 +24,16 @@ Future<void> main() async {
   app.checkServer().ignore();
   // Also applied natively at startup; this follows later changes.
   SystemBridge.instance.setSecure(app.hideInRecents).ignore();
-  runApp(ChangeNotifierProvider.value(value: app, child: const StashApp()));
+  runApp(
+    ChangeNotifierProvider.value(
+      value: app,
+      // Before Android 12, its launch screen showed the logo already.
+      child: LaunchIntro(
+        logoShown: SystemBridge.instance.sdkInt < 31,
+        child: const StashApp(),
+      ),
+    ),
+  );
 }
 
 class StashApp extends StatelessWidget {
