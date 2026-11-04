@@ -83,7 +83,7 @@ class StudioScreen extends StatelessWidget {
                     if (s.details != null && s.details!.isNotEmpty)
                       Section(
                         title: tr.description,
-                        child: SelectableText(s.details!),
+                        child: DetailText(s.details!),
                       ),
                     if (s.urls.isNotEmpty)
                       Section(title: tr.links, child: UrlList(s.urls)),

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -38,6 +40,9 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
   /// copy fades in at the same pace.
   final _titleShift = ValueNotifier<double>(0);
 
+  /// Scroll of the wide page (parallax, back to the top).
+  final _wideScroll = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +52,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
   @override
   void dispose() {
     _titleShift.dispose();
+    _wideScroll.dispose();
     super.dispose();
   }
 
@@ -211,112 +217,176 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
   /// TV and landscape tablet, like the TV apps of media servers: the
   /// picture in the background of the top right, fading into the page;
   /// the title, details and buttons over it on the left; the rest below.
-  /// No app bar: on a TV the remote's Back leaves the page (and Play has
-  /// the focus); on a touch screen, a back button sits in the corner and
-  /// a tap on the picture plays.
+  /// Scrolling down, the picture slides slower than the page and blurs
+  /// (parallax), and a bar with the title stays at the top. No app bar:
+  /// on a TV the remote's Back leaves the page (and Play has the focus);
+  /// on a touch screen, a back button sits in the corner (and in the
+  /// title bar) and a tap on the picture plays.
   Widget _widePage(Scene s) {
     final theme = Theme.of(context);
     final size = MediaQuery.sizeOf(context);
+    final top = MediaQuery.paddingOf(context).top;
     final background = theme.colorScheme.surface;
     final tv = SystemBridge.instance.isTv;
     const side = 48.0;
-    final picture = Stack(
-      fit: StackFit.expand,
-      children: [
-        NetImage(s.screenshot, placeholderIcon: Icons.movie),
-        if (s.studio?.hasImage ?? false) StudioWatermark(s.studio!.imagePath!),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [background, background.withValues(alpha: 0)],
-              stops: const [0, 0.5],
-            ),
-          ),
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [background, background.withValues(alpha: 0)],
-              stops: const [0, 0.4],
-            ),
-          ),
-        ),
-        if (!tv)
-          const Center(
-            child: Icon(
-              Icons.play_circle_fill,
-              size: 72,
-              color: Colors.white70,
-            ),
-          ),
-      ],
-    );
-    return Scaffold(
-      body: ListView(
-        padding: withNavBar(context, const EdgeInsets.only(bottom: 32)),
-        children: [
-          SizedBox(
-            height: size.height * 0.62,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  bottom: 0,
-                  width: size.width * 0.62,
-                  child: tv
-                      ? picture
-                      : GestureDetector(onTap: () => _play(), child: picture),
+    final heroHeight = size.height * 0.62;
+
+    // Slides at half the scroll speed and blurs, up to a point.
+    final picture = AnimatedBuilder(
+      animation: _wideScroll,
+      builder: (context, child) {
+        final offset = _wideScroll.hasClients
+            ? _wideScroll.offset.clamp(0.0, heroHeight)
+            : 0.0;
+        final sigma = (offset / heroHeight * 16).clamp(0.0, 12.0);
+        return Transform.translate(
+          offset: Offset(0, offset * 0.5),
+          child: sigma < 0.5
+              ? child
+              : ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                  child: child,
                 ),
-                if (!tv)
-                  Positioned(
-                    top: MediaQuery.paddingOf(context).top + 8,
-                    left: 8,
-                    child: const BackButton(),
+        );
+      },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          NetImage(s.screenshot, placeholderIcon: Icons.movie),
+          if (s.studio?.hasImage ?? false)
+            StudioWatermark(s.studio!.imagePath!),
+        ],
+      ),
+    );
+    final fades = [
+      DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [background, background.withValues(alpha: 0)],
+            stops: const [0, 0.5],
+          ),
+        ),
+      ),
+      DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+            colors: [background, background.withValues(alpha: 0)],
+            stops: const [0, 0.4],
+          ),
+        ),
+      ),
+    ];
+    final pictureArea = ClipRect(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          picture,
+          ...fades,
+          if (!tv)
+            const Center(
+              child: Icon(
+                Icons.play_circle_fill,
+                size: 72,
+                color: Colors.white70,
+              ),
+            ),
+        ],
+      ),
+    );
+
+    final hero = SizedBox(
+      height: heroHeight,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned(
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: size.width * 0.62,
+            child: tv
+                ? pictureArea
+                : GestureDetector(onTap: () => _play(), child: pictureArea),
+          ),
+          if (!tv) Positioned(top: top + 8, left: 8, child: const BackButton()),
+          Positioned(
+            left: side,
+            bottom: 16,
+            width: size.width * 0.5,
+            // Back to the top of the page whenever these buttons get the
+            // focus again: they sit low in the header, so revealing just
+            // them would leave the picture cut.
+            child: Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onFocusChange: (focused) {
+                if (focused && _wideScroll.hasClients) {
+                  _wideScroll.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                  );
+                }
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    s.displayTitle,
+                    style: theme.textTheme.headlineMedium,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                Positioned(
-                  left: side,
-                  bottom: 16,
-                  width: size.width * 0.5,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 8),
+                  ..._summary(s),
+                  const SizedBox(height: 12),
+                  _ratingRow(s),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(
-                        s.displayTitle,
-                        style: theme.textTheme.headlineMedium,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 8),
-                      ..._summary(s),
-                      const SizedBox(height: 12),
-                      _ratingRow(s),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          ..._playButtons(s, autofocus: tv),
-                          ..._pageActions(s),
-                        ],
-                      ),
+                      ..._playButtons(s, autofocus: tv),
+                      ..._pageActions(s),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: side),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: _sections(s),
+        ],
+      ),
+    );
+
+    return Scaffold(
+      body: CustomScrollView(
+        controller: _wideScroll,
+        slivers: [
+          SliverToBoxAdapter(child: hero),
+          // Under the header, then stuck to the top with the title once
+          // the header has scrolled away. Pinned, so that the page keeps
+          // what gets the focus out from under it.
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _TitleBar(
+              title: s.displayTitle,
+              height: top + 56,
+              topPadding: top,
+              back: !tv,
+              color: background,
+              side: tv ? side : 8,
             ),
+          ),
+          SliverPadding(
+            padding: withNavBar(
+              context,
+              const EdgeInsets.fromLTRB(side, 0, side, 32),
+            ),
+            sliver: SliverList.list(children: _sections(s)),
           ),
         ],
       ),
@@ -503,7 +573,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
           ),
         ),
       if (s.details != null && s.details!.isNotEmpty)
-        Section(title: tr.description, child: SelectableText(s.details!)),
+        Section(title: tr.description, child: DetailText(s.details!)),
       if (s.tags.isNotEmpty)
         Section(
           title: tr.tags,
@@ -551,4 +621,88 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
       if (s.urls.isNotEmpty) Section(title: tr.links, child: UrlList(s.urls)),
     ];
   }
+}
+
+/// The wide scene page's title bar: transparent below the header, then
+/// stuck to the top, with the title (and a back button on touch screens)
+/// over the page's color.
+class _TitleBar extends SliverPersistentHeaderDelegate {
+  _TitleBar({
+    required this.title,
+    required this.height,
+    required this.topPadding,
+    required this.back,
+    required this.color,
+    required this.side,
+  });
+
+  final String title;
+  final double height;
+  final double topPadding;
+  final bool back;
+  final Color color;
+  final double side;
+
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    // Its natural place has scrolled above the top: it is stuck there.
+    final stuck = shrinkOffset > 0;
+    return SizedBox(
+      height: height,
+      child: AnimatedOpacity(
+        opacity: stuck ? 1 : 0,
+        duration: const Duration(milliseconds: 150),
+        // Not reachable while invisible.
+        child: ExcludeFocus(
+          excluding: !stuck,
+          child: IgnorePointer(
+            ignoring: !stuck,
+            child: Material(
+              color: color,
+              elevation: 2,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: topPadding,
+                  left: side,
+                  right: side,
+                ),
+                child: Row(
+                  children: [
+                    if (back) const BackButton(),
+                    if (back) const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_TitleBar old) =>
+      title != old.title ||
+      height != old.height ||
+      topPadding != old.topPadding ||
+      back != old.back ||
+      color != old.color ||
+      side != old.side;
 }

@@ -156,7 +156,7 @@ class _PerformerInfo extends StatelessWidget {
           ]),
         ),
         if (p.details != null && p.details!.isNotEmpty)
-          Section(title: tr.description, child: SelectableText(p.details!)),
+          Section(title: tr.description, child: DetailText(p.details!)),
         if (p.tags.isNotEmpty)
           Section(
             title: tr.tags,

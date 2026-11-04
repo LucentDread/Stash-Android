@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.19.5
+- Scene page on TVs and tablets in landscape:
+  - when its buttons (play, download, edit…) get the focus again, the
+    page goes back to the top, picture whole, instead of stopping with
+    the picture cut;
+  - once scrolled past the top, a bar with the title stays at the top
+    (with a back button on tablets), as on phones;
+  - the picture slides slower than the page (parallax) and blurs more
+    and more as the page goes down, up to a limit.
+- Android TV: descriptions and file details are plain text, so the remote
+  no longer stops in them line by line (they stay selectable on touch
+  screens).
+
 ## 1.19.4
 - Android TV, player: the remote's Back first hides the controls (or
   closes the ⋮ menu), then leaves the video. The back button on screen

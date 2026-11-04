@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../l10n/l10n.dart';
 import '../models/models.dart';
+import '../services/system_bridge.dart';
 
 /// Wrap of tappable chips for linked performers / tags / studios.
 class RefChips extends StatelessWidget {
@@ -88,10 +89,7 @@ class InfoTable extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: SelectableText(
-                    value!,
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                  child: DetailText(value!, style: theme.textTheme.bodyMedium),
                 ),
               ],
             ),
@@ -243,4 +241,18 @@ class _LiveRatingState extends State<LiveRating> {
   @override
   Widget build(BuildContext context) =>
       StarRating(rating100: _value, onChanged: _set);
+}
+
+/// A text the user may copy on a touch screen (selectable). On a TV it is
+/// plain text: selectable text takes the remote's focus, and the arrows
+/// would go through it line by line.
+class DetailText extends StatelessWidget {
+  const DetailText(this.text, {super.key, this.style});
+  final String text;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) => SystemBridge.instance.isTv
+      ? Text(text, style: style)
+      : SelectableText(text, style: style);
 }
