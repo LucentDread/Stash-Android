@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.19.8
+- Android TV, on every page: Up/Down go to the next row, however short or
+  narrow (from the right end of a home row, Down skipped a short row of
+  groups for the favorite performers below it), then to its item closest
+  horizontally. In the tabs' rail, Up/Down stay in the rail.
+- Android TV, on every page: what cannot take the focus can be read.
+  When nothing can take the focus further down (or up), or the next item
+  is more than half a screen away, Up/Down scroll the page a step: a
+  scene's information section, the home page's statistics (one more Up
+  from the first row)…
+- Launch: a dark screen with the app's logo instead of a white one that
+  flashed before the app showed (on devices not in dark mode, as TVs
+  usually are not; on Android 12+, the system's launch screen too).
+- Launch animation: the logo in the middle slides to the left as it
+  grows, the name comes out from behind it, logo and name end up
+  centered together, then fade into the app (1.6 s, while the app
+  starts). It starts exactly where the launch screen leaves off; skipped
+  when the device asks for no animations.
+- Android TV: the remote kept working wrongly once the focused item had
+  scrolled out of sight (its position was unknown); it now goes on from
+  what shows on screen.
+
 ## 1.19.7
 - Android TV: pages scroll smoothly to the item getting the focus,
   instead of jumping, keeping room above it for its row's title; the

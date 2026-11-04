@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
 import '../services/app_state.dart';
 import '../services/system_bridge.dart';
+import '../widgets/tv_focus.dart';
 import 'app_screens.dart';
 import 'more_screen.dart';
 
@@ -19,6 +20,16 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+
+  /// On a TV, the rail's part of the screen for the remote.
+  final _railRegion = TvRegionNode();
+
+  @override
+  void dispose() {
+    _railRegion.dispose();
+    super.dispose();
+  }
+
   final _visited = <int>{0};
 
   @override
@@ -92,18 +103,22 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
-            selectedIndex: _index,
-            onDestinationSelected: select,
-            labelType: NavigationRailLabelType.all,
-            destinations: [
-              for (final (_, d) in pages)
-                NavigationRailDestination(
-                  icon: d.icon,
-                  selectedIcon: d.selectedIcon,
-                  label: Text(d.label),
-                ),
-            ],
+          // Up/Down stay in the rail (see TvRegionNode).
+          Focus(
+            focusNode: _railRegion,
+            child: NavigationRail(
+              selectedIndex: _index,
+              onDestinationSelected: select,
+              labelType: NavigationRailLabelType.all,
+              destinations: [
+                for (final (_, d) in pages)
+                  NavigationRailDestination(
+                    icon: d.icon,
+                    selectedIcon: d.selectedIcon,
+                    label: Text(d.label),
+                  ),
+              ],
+            ),
           ),
           const VerticalDivider(width: 1),
           Expanded(child: body),

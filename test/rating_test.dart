@@ -228,6 +228,14 @@ void main() {
     expect(steps, greaterThan(1), reason: 'several steps of text');
     expect(chip(), startsWith('Tag'));
     expect(tester.getRect(text).bottom, lessThan(1080));
+
+    // Past the last tag, the information section (nothing to focus in
+    // it) still comes into view: Down scrolls on to the page's end.
+    for (var i = 0; i < 15; i++) {
+      await press(LogicalKeyboardKey.arrowDown);
+    }
+    expect(scroll.pixels, scroll.maxScrollExtent);
+    expect(tester.getRect(find.text('Informations')).bottom, lessThan(1080));
   });
 
   testWidgets('on a TV, the scene page is laid out for the remote', (

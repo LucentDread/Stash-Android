@@ -99,6 +99,7 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "isTv" -> result.success(isTv())
+                    "sdkInt" -> result.success(Build.VERSION.SDK_INT)
                     "installApk" -> {
                         try {
                             installApk(call.arguments as String)
