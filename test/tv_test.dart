@@ -299,6 +299,90 @@ void main() {
     });
   });
 
+  testWidgets('home rows: Right stops at the end, going up shows the top', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (_, child) =>
+            FocusTraversalGroup(policy: TvTraversalPolicy(), child: child!),
+        home: Scaffold(
+          body: ListView(
+            children: [
+              // Like the statistics: shown, but nothing to focus.
+              const SizedBox(height: 120, child: Text('stats')),
+              for (var r = 0; r < 6; r++) ...[
+                SizedBox(height: 40, child: Text('row $r')),
+                SizedBox(
+                  height: 160,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (var i = 0; i < 4; i++)
+                        SizedBox(
+                          width: 200,
+                          child: InkWell(
+                            key: ValueKey('$r-$i'),
+                            onTap: () {},
+                            child: Text('$r-$i'),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+    final page = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    String? focused() =>
+        (FocusManager.instance.primaryFocus?.context
+                        ?.findAncestorWidgetOfExactType<InkWell>()
+                        ?.key
+                    as ValueKey?)
+                ?.value
+            as String?;
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(focused(), '0-0');
+    // Along the row to its end; one more Right stays there (it used to
+    // land on the row below).
+    for (var i = 0; i < 3; i++) {
+      await press(LogicalKeyboardKey.arrowRight);
+    }
+    expect(focused(), '0-3');
+    await press(LogicalKeyboardKey.arrowRight);
+    expect(focused(), '0-3');
+
+    // Down the rows: the page scrolls, keeping each row's title in view.
+    for (var r = 1; r < 5; r++) {
+      await press(LogicalKeyboardKey.arrowDown);
+      expect(focused(), startsWith('$r-'));
+    }
+    expect(page.pixels, greaterThan(200));
+    await press(LogicalKeyboardKey.arrowUp);
+    expect(tester.getRect(find.text('row 3')).top, greaterThanOrEqualTo(0));
+
+    // Back to the first row: the page goes back to its top, statistics
+    // included.
+    for (var r = 3; r > 0; r--) {
+      await press(LogicalKeyboardKey.arrowUp);
+    }
+    expect(focused(), startsWith('0-'));
+    expect(page.pixels, 0);
+  });
+
   testWidgets('on a TV, the tabs are in a rail on the left', (tester) async {
     SystemBridge.instance.isTv = true;
     addTearDown(() => SystemBridge.instance.isTv = false);

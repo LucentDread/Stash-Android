@@ -2,7 +2,11 @@
 
 ## 1.19.7
 - Android TV: pages scroll smoothly to the item getting the focus,
-  instead of jumping.
+  instead of jumping, keeping room above it for its row's title; the
+  first item of a page brings it back to its very top (the home page's
+  statistics, which cannot take the focus, stayed hidden).
+- Android TV, home page rows: Right at the end of a row stays there,
+  instead of jumping to the row below.
 - Android TV, scene page: Up/Down go to the next row and its item closest
   horizontally (from the download button, Down could skip every row down
   to the last tag).
