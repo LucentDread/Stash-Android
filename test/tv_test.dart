@@ -374,13 +374,141 @@ void main() {
     await press(LogicalKeyboardKey.arrowUp);
     expect(tester.getRect(find.text('row 3')).top, greaterThanOrEqualTo(0));
 
-    // Back to the first row: the page goes back to its top, statistics
-    // included.
+    // Back to the first row; Up once more shows what is above it (the
+    // statistics, which cannot take the focus), up to the page's top.
     for (var r = 3; r > 0; r--) {
       await press(LogicalKeyboardKey.arrowUp);
     }
     expect(focused(), startsWith('0-'));
+    await press(LogicalKeyboardKey.arrowUp);
+    expect(focused(), startsWith('0-'));
     expect(page.pixels, 0);
+    expect(tester.getRect(find.text('stats')).top, 0);
+  });
+
+  testWidgets('Down goes to the next row, even a short one', (tester) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    // Like a home page: a wide row, a short one (two small group covers),
+    // then a row long enough to sit under the first one's right end.
+    Widget row(String name, int count, double width) => SizedBox(
+      height: 100,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (var i = 0; i < count; i++)
+            SizedBox(
+              width: width,
+              child: InkWell(
+                key: ValueKey('$name$i'),
+                onTap: () {},
+                child: Text('$name$i'),
+              ),
+            ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (_, child) =>
+            FocusTraversalGroup(policy: TvTraversalPolicy(), child: child!),
+        home: Scaffold(
+          body: ListView(
+            children: [
+              row('resume', 4, 300),
+              row('groups', 2, 120),
+              row('performers', 8, 150),
+            ],
+          ),
+        ),
+      ),
+    );
+    String? focused() =>
+        (FocusManager.instance.primaryFocus?.context
+                        ?.findAncestorWidgetOfExactType<InkWell>()
+                        ?.key
+                    as ValueKey?)
+                ?.value
+            as String?;
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    await press(LogicalKeyboardKey.arrowDown);
+    for (var i = 0; i < 3; i++) {
+      await press(LogicalKeyboardKey.arrowRight);
+    }
+    expect(focused(), 'resume3');
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(focused(), 'groups1', reason: 'the short row right below');
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(focused(), startsWith('performers'));
+    await press(LogicalKeyboardKey.arrowUp);
+    expect(focused(), startsWith('groups'));
+  });
+
+  testWidgets('what cannot take the focus can still be read', (tester) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (_, child) =>
+            FocusTraversalGroup(policy: TvTraversalPolicy(), child: child!),
+        home: Scaffold(
+          body: ListView(
+            children: [
+              TextButton(onPressed: () {}, child: const Text('first')),
+              // A long block without anything to focus (statistics,
+              // information…), between two buttons.
+              const SizedBox(height: 1500, child: Text('information')),
+              TextButton(onPressed: () {}, child: const Text('middle')),
+              // And at the end of the page.
+              const SizedBox(height: 1200, child: Text('the end')),
+            ],
+          ),
+        ),
+      ),
+    );
+    final page = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    String? focused() =>
+        (FocusManager.instance.primaryFocus?.context
+                    ?.findAncestorWidgetOfExactType<TextButton>()
+                    ?.child
+                as Text?)
+            ?.data;
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(focused(), 'first');
+    // Down scrolls through the block in steps before reaching "middle".
+    var steps = 0;
+    while (focused() == 'first' && steps < 20) {
+      final before = page.pixels;
+      await press(LogicalKeyboardKey.arrowDown);
+      steps++;
+      if (focused() == 'first') expect(page.pixels, greaterThan(before));
+    }
+    expect(focused(), 'middle');
+    expect(steps, greaterThan(1), reason: 'the block was scrolled through');
+    // Nothing below "middle": Down scrolls on to the very end.
+    for (var i = 0; i < 10; i++) {
+      await press(LogicalKeyboardKey.arrowDown);
+    }
+    expect(page.pixels, page.maxScrollExtent);
+    expect(focused(), 'middle');
+    // Up comes back.
+    for (var i = 0; i < 20 && focused() == 'middle'; i++) {
+      await press(LogicalKeyboardKey.arrowUp);
+    }
+    expect(focused(), 'first');
   });
 
   testWidgets('nothing that way: the focus stays (Left from the rail)', (

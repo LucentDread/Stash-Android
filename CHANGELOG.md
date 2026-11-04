@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.19.8
+- Android TV, on every page: Up/Down go to the next row, however short or
+  narrow (from the right end of a home row, Down skipped a short row of
+  groups for the favorite performers below it), then to its item closest
+  horizontally. In the tabs' rail, Up/Down stay in the rail.
+- Android TV, on every page: what cannot take the focus can be read.
+  When nothing can take the focus further down (or up), or the next item
+  is more than half a screen away, Up/Down scroll the page a step: a
+  scene's information section, the home page's statistics (one more Up
+  from the first row)…
+- Android TV: the remote kept working wrongly once the focused item had
+  scrolled out of sight (its position was unknown); it now goes on from
+  what shows on screen.
+
 ## 1.19.7
 - Android TV: pages scroll smoothly to the item getting the focus,
   instead of jumping, keeping room above it for its row's title; the

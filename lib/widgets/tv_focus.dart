@@ -92,9 +92,7 @@ const _roomBelow = 32.0;
 
 /// Moves the focus to [node] and scrolls it into view smoothly, instead
 /// of the jump Flutter makes by default. Vertically, it also keeps some
-/// room around it (a row's title above its items), and the first item
-/// that can take the focus brings the page back to its very top (what
-/// sits above it, e.g. statistics, cannot take the focus to show).
+/// room around it (a row's title above its items).
 void smoothRequestFocus(
   FocusNode node, {
   ScrollPositionAlignmentPolicy? alignmentPolicy,
@@ -133,78 +131,119 @@ void smoothRequestFocus(
   } else if (bottom + _roomBelow > height) {
     target += bottom + _roomBelow - height;
   }
-  final nodeRect = node.rect;
-  final firstInPage = !node.nearestScope!.traversalDescendants.any(
-    (n) =>
-        n != node &&
-        n.context != null &&
-        n.rect.bottom <= nodeRect.top + 1 &&
-        _scrollableOf(n.context!, Axis.vertical) == page,
-  );
-  if (firstInPage) target = position.minScrollExtent;
   target = target.clamp(position.minScrollExtent, position.maxScrollExtent);
   if ((target - position.pixels).abs() >= 1) {
     position.animateTo(target, duration: d, curve: c);
   }
 }
 
-/// How the remote moves the focus on a TV: Flutter's directional moves,
-/// scrolling smoothly.
-///
-/// With [rowsFirst], Up/Down go to the nearest row above/below, then to
-/// its item closest horizontally. Flutter's own choice only looks at items
-/// overlapping the focused one horizontally: from a button on the right,
-/// Down skipped every row starting further left (e.g. to a scene's last
-/// tag).
-class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
-  TvTraversalPolicy({this.rowsFirst = false})
-    : super(requestFocusCallback: smoothRequestFocus);
+/// Marks a part of the screen the remote's Up/Down stay within (e.g. the
+/// tabs' rail beside a page): put it on a [Focus] around that part.
+class TvRegionNode extends FocusNode {
+  TvRegionNode() : super(canRequestFocus: false, skipTraversal: true);
+}
 
-  final bool rowsFirst;
+/// Where [node] is on screen; null when it has no place there (e.g. the
+/// focused item, scrolled far out of a list, is kept but not laid out).
+Rect? _rectOf(FocusNode node) {
+  if (node.context == null) return null;
+  final r = node.rect;
+  return r.isFinite && !r.isEmpty ? r : null;
+}
+
+TvRegionNode? _regionOf(FocusNode node) {
+  for (final a in node.ancestors) {
+    if (a is TvRegionNode) return a;
+  }
+  return null;
+}
+
+/// How the remote moves the focus on a TV, the same way on every page:
+///
+/// - Up/Down go to the nearest row above/below (its items closest to the
+///   focused one vertically, whatever their width), then to its item
+///   closest horizontally. Flutter's own choice only looks at items lined
+///   up with the focused one, so it skipped a short row for one further
+///   away (e.g. from the right end of a home row, past a shorter row).
+///   They stay within the focused item's [TvRegionNode], if any (the
+///   rail).
+/// - When nothing can take the focus that way, or the next item is more
+///   than half a screen away, Up/Down scroll the page a step instead:
+///   whatever cannot take the focus (information, statistics) can still
+///   be read.
+/// - Left/Right move along a horizontal row and stop at its right end;
+///   elsewhere, Flutter's move, if anything lies that way at all.
+/// - Pages scroll smoothly to the focus ([smoothRequestFocus]).
+class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
+  TvTraversalPolicy() : super(requestFocusCallback: smoothRequestFocus);
+
+  static const _slack = 4.0;
 
   @override
   bool inDirection(FocusNode currentNode, TraversalDirection direction) {
     // No "back to where the focus came from" memory: mixed with the moves
-    // made here, it sent the focus to unexpected items (e.g. from the tabs'
-    // rail back to a row).
+    // made here, it sent the focus to unexpected items.
     final scope = currentNode.nearestScope;
     if (scope != null) invalidateScopeData(scope);
     // Nothing focused yet (a page just opened): Flutter's first item.
     if (scope == null ||
         currentNode is FocusScopeNode ||
-        scope.focusedChild == null) {
+        scope.focusedChild == null ||
+        currentNode.context == null) {
       return super.inDirection(currentNode, direction);
     }
-    final along =
-        direction == TraversalDirection.left ||
-        direction == TraversalDirection.right;
-    if (along && currentNode.context != null) {
-      final moved = _alongRow(currentNode, direction);
-      if (moved != null) return moved;
+    switch (direction) {
+      case TraversalDirection.up:
+      case TraversalDirection.down:
+        return _vertical(
+          currentNode,
+          scope,
+          down: direction == TraversalDirection.down,
+        );
+      case TraversalDirection.left:
+      case TraversalDirection.right:
+        final moved = _alongRow(currentNode, direction);
+        if (moved != null) return moved;
+        // Nothing that way (e.g. Left from the rail, at the screen's edge):
+        // stay, instead of Flutter's fallback to some other item.
+        if (!_anythingToward(currentNode, direction)) return true;
+        return super.inDirection(currentNode, direction);
     }
-    // Nothing that way (e.g. Left from the tabs' rail, at the screen's
-    // edge): stay, instead of Flutter's fallback to some other item.
-    if (!_anythingToward(currentNode, direction)) return true;
-    final down = direction == TraversalDirection.down;
-    if (!rowsFirst || !(down || direction == TraversalDirection.up)) {
-      return super.inDirection(currentNode, direction);
-    }
-    if (currentNode.context == null) return false;
-    final from = currentNode.rect;
-    // Items of the next row may start a few pixels above the focused
-    // one's bottom (or below its top) when they are taller.
-    const slack = 4.0;
+  }
+
+  bool _vertical(
+    FocusNode currentNode,
+    FocusScopeNode scope, {
+    required bool down,
+  }) {
+    final region = _regionOf(currentNode);
+    final page = region == null
+        ? _scrollableOf(currentNode.context!, Axis.vertical)
+        : null;
+    final view = _viewRect(page);
+    // The focused item scrolled out of sight (see [_rectOf]): from the
+    // edge of the page it left by, so the next move picks what shows.
+    final from =
+        _rectOf(currentNode) ??
+        (view == null
+            ? null
+            : down
+            ? Rect.fromLTWH(view.left, view.top - 1, view.width, 1)
+            : Rect.fromLTWH(view.left, view.bottom, view.width, 1));
+    if (from == null) return true;
     final candidates = [
       for (final n in scope.traversalDescendants)
-        if (n != currentNode &&
-            n.context != null &&
-            !n.rect.isEmpty &&
-            (down
-                ? n.rect.top >= from.bottom - slack
-                : n.rect.bottom <= from.top + slack))
-          n,
+        if (n != currentNode && _regionOf(n) == region)
+          if (_rectOf(n) case final r?)
+            if (down
+                ? r.top >= from.bottom - _slack
+                : r.bottom <= from.top + _slack)
+              n,
     ];
-    if (candidates.isEmpty) return false;
+    if (candidates.isEmpty) {
+      _scrollStep(page, down: down);
+      return true;
+    }
     double gap(FocusNode n) =>
         down ? n.rect.top - from.bottom : from.top - n.rect.bottom;
     final nearest = candidates.map(gap).reduce((a, b) => a < b ? a : b);
@@ -217,11 +256,44 @@ class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
           ? a
           : b,
     );
+    // Over half a screen of the page before it: show that first.
+    if (view != null) {
+      final hidden = down
+          ? target.rect.top - view.bottom
+          : view.top - target.rect.bottom;
+      if (hidden > view.height / 2 && _scrollStep(page, down: down)) {
+        return true;
+      }
+    }
     requestFocusCallback(
       target,
       alignmentPolicy: down
           ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
           : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+    );
+    return true;
+  }
+
+  /// The visible part of [page], on screen.
+  static Rect? _viewRect(ScrollableState? page) {
+    final box = page?.context.findRenderObject();
+    if (box is! RenderBox || !box.attached) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
+  /// Scrolls [page] by most of a screen; false when it cannot go further.
+  static bool _scrollStep(ScrollableState? page, {required bool down}) {
+    if (page == null) return false;
+    final p = page.position;
+    final to = (p.pixels + (down ? 0.6 : -0.6) * p.viewportDimension).clamp(
+      p.minScrollExtent,
+      p.maxScrollExtent,
+    );
+    if ((to - p.pixels).abs() < 1) return false;
+    p.animateTo(
+      to,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
     );
     return true;
   }
@@ -235,18 +307,17 @@ class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
     final scope = currentNode.nearestScope;
     if (row == null || scope == null) return null;
     final right = direction == TraversalDirection.right;
-    final from = currentNode.rect;
-    const slack = 4.0;
+    final from = _rectOf(currentNode);
+    if (from == null) return null;
     final next = [
       for (final n in scope.traversalDescendants)
-        if (n != currentNode &&
-            n.context != null &&
-            !n.rect.isEmpty &&
-            (right
-                ? n.rect.left >= from.right - slack
-                : n.rect.right <= from.left + slack) &&
-            _scrollableOf(n.context!, Axis.horizontal) == row)
-          n,
+        if (n != currentNode)
+          if (_rectOf(n) case final r?)
+            if ((right
+                    ? r.left >= from.right - _slack
+                    : r.right <= from.left + _slack) &&
+                _scrollableOf(n.context!, Axis.horizontal) == row)
+              n,
     ];
     if (next.isEmpty) return right ? true : null;
     double gap(FocusNode n) =>
@@ -268,19 +339,18 @@ class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
   ) {
     final scope = currentNode.nearestScope;
     if (scope == null || currentNode.context == null) return true;
-    final from = currentNode.rect;
-    const slack = 4.0;
-    return scope.traversalDescendants.any(
-      (n) =>
-          n != currentNode &&
-          n.context != null &&
-          !n.rect.isEmpty &&
-          switch (direction) {
-            TraversalDirection.left => n.rect.right <= from.left + slack,
-            TraversalDirection.right => n.rect.left >= from.right - slack,
-            TraversalDirection.up => n.rect.bottom <= from.top + slack,
-            TraversalDirection.down => n.rect.top >= from.bottom - slack,
-          },
-    );
+    final from = _rectOf(currentNode);
+    if (from == null) return true;
+    return scope.traversalDescendants.any((n) {
+      if (n == currentNode) return false;
+      final r = _rectOf(n);
+      if (r == null) return false;
+      return switch (direction) {
+        TraversalDirection.left => r.right <= from.left + _slack,
+        TraversalDirection.right => r.left >= from.right - _slack,
+        TraversalDirection.up => r.bottom <= from.top + _slack,
+        TraversalDirection.down => r.top >= from.bottom - _slack,
+      };
+    });
   }
 }
