@@ -61,7 +61,15 @@ Future<(AppState, List<Map<String, dynamic>>)> _app({
         final item = {'id': '1', 'name': 'X', 'title': 'X', 'rating100': 60};
         final Object data = switch (q) {
           _ when q.contains('findScene(') => {
-            'findScene': {...item, 'paths': <String, dynamic>{}},
+            'findScene': {
+              ...item,
+              'paths': <String, dynamic>{},
+              // Long enough for the page to scroll.
+              'details': List.filled(
+                80,
+                'Une ligne de description.',
+              ).join('\n'),
+            },
           },
           _ when q.contains('findPerformer(') => {'findPerformer': item},
           _ when q.contains('findStudio(') => {'findStudio': item},
@@ -122,7 +130,8 @@ void main() {
     addTearDown(tester.view.reset);
     await show(const Size(1280, 800));
     expect(find.byType(SliverAppBar), findsNothing);
-    expect(find.byType(BackButton), findsOneWidget, reason: 'no remote');
+    // In the corner (and in the title bar, shown once scrolled).
+    expect(find.byType(BackButton), findsWidgets, reason: 'no remote');
     expect(find.byIcon(Icons.play_circle_fill), findsOneWidget);
     expect(find.byType(DownloadButton), findsOneWidget);
     expect(
@@ -179,6 +188,41 @@ void main() {
       }
     }
     expect(reached, {DownloadButton, EditButton});
+
+    // Scrolled down: the title bar sticks to the top, the picture blurs.
+    final scroll = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    double barOpacity() => tester
+        .widget<AnimatedOpacity>(
+          find
+              .ancestor(
+                of: find.text('X').last,
+                matching: find.byType(AnimatedOpacity),
+              )
+              .first,
+        )
+        .opacity;
+    expect(barOpacity(), 0);
+    expect(find.byType(ImageFiltered), findsNothing);
+    FocusManager.instance.primaryFocus!.unfocus();
+    // Halfway down the header: the picture slides behind and blurs.
+    scroll.jumpTo(300);
+    await tester.pumpAndSettle();
+    expect(find.byType(ImageFiltered), findsOneWidget);
+    expect(barOpacity(), 0, reason: 'the header title still shows');
+    // Past the header: the title bar sticks to the top.
+    scroll.jumpTo(scroll.maxScrollExtent.clamp(0, 900));
+    await tester.pumpAndSettle();
+    expect(scroll.pixels, greaterThan(700));
+    expect(barOpacity(), 1);
+
+    // Play gets the focus again: back to the top, the picture whole.
+    Focus.of(tester.element(find.text('Lire', skipOffstage: false)))
+        .requestFocus();
+    await tester.pumpAndSettle();
+    expect(scroll.pixels, 0);
+    expect(find.byType(ImageFiltered), findsNothing);
   });
 
   testWidgets('the scene rating can be cleared with its button', (

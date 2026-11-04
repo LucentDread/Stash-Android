@@ -123,7 +123,7 @@ class _GroupInfo extends StatelessWidget {
             ),
           ),
         if (g.synopsis != null && g.synopsis!.isNotEmpty)
-          Section(title: tr.synopsis, child: SelectableText(g.synopsis!)),
+          Section(title: tr.synopsis, child: DetailText(g.synopsis!)),
         if (g.tags.isNotEmpty)
           Section(
             title: tr.tags,
