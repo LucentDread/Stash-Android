@@ -43,9 +43,31 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
   /// Scroll of the wide page (parallax, back to the top).
   final _wideScroll = ScrollController();
 
+  /// The wide page's title (in its header), and whether it has scrolled
+  /// under the top bar: the bar then shows it.
+  final _wideTitle = GlobalKey();
+  final _wideTitleGone = ValueNotifier<bool>(false);
+
+  void _checkWideTitle() {
+    final box = _wideTitle.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached || !mounted) return;
+    final bottom = box.localToGlobal(Offset(0, box.size.height)).dy;
+    _wideTitleGone.value =
+        bottom < MediaQuery.paddingOf(context).top + _barHeight;
+  }
+
+  /// Height of the wide page's title bar, under the status bar.
+  static const _barHeight = 56.0;
+
   @override
   void initState() {
     super.initState();
+    // After the frame's layout, where the title has moved.
+    _wideScroll.addListener(
+      () => WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _checkWideTitle(),
+      ),
+    );
     _load();
   }
 
@@ -53,6 +75,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
   void dispose() {
     _titleShift.dispose();
     _wideScroll.dispose();
+    _wideTitleGone.dispose();
     super.dispose();
   }
 
@@ -244,7 +267,12 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
           child: sigma < 0.5
               ? child
               : ImageFiltered(
-                  imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                  imageFilter: ImageFilter.blur(
+                    sigmaX: sigma,
+                    sigmaY: sigma,
+                    // Its edges keep their color instead of darkening.
+                    tileMode: TileMode.clamp,
+                  ),
                   child: child,
                 ),
         );
@@ -262,8 +290,11 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
       DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [background, background.withValues(alpha: 0)],
-            stops: const [0, 0.5],
+            // A solid band at the edge: under the stretch of an overscroll
+            // or a fractional position, the picture's last pixels would
+            // otherwise show as a line.
+            colors: [background, background, background.withValues(alpha: 0)],
+            stops: const [0, 0.03, 0.5],
           ),
         ),
       ),
@@ -272,8 +303,8 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
           gradient: LinearGradient(
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
-            colors: [background, background.withValues(alpha: 0)],
-            stops: const [0, 0.4],
+            colors: [background, background, background.withValues(alpha: 0)],
+            stops: const [0, 0.04, 0.4],
           ),
         ),
       ),
@@ -282,7 +313,17 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          picture,
+          // Stops short of the area's left and bottom edges, inside the
+          // fades' solid bands: on an edge that falls between two pixels
+          // (or stretched by an overscroll), the picture would show
+          // through as a thin line.
+          Positioned(
+            left: 8,
+            top: 0,
+            right: 0,
+            bottom: 8,
+            child: ClipRect(child: picture),
+          ),
           ...fades,
           if (!tv)
             const Center(
@@ -336,6 +377,7 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
                 children: [
                   Text(
                     s.displayTitle,
+                    key: _wideTitle,
                     style: theme.textTheme.headlineMedium,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -363,30 +405,45 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
     );
 
     return Scaffold(
-      body: CustomScrollView(
-        controller: _wideScroll,
-        slivers: [
-          SliverToBoxAdapter(child: hero),
-          // Under the header, then stuck to the top with the title once
-          // the header has scrolled away. Pinned, so that the page keeps
-          // what gets the focus out from under it.
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _TitleBar(
-              title: s.displayTitle,
-              height: top + 56,
-              topPadding: top,
-              back: !tv,
-              color: background,
-              side: tv ? side : 8,
-            ),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            controller: _wideScroll,
+            slivers: [
+              SliverToBoxAdapter(child: hero),
+              // The title bar's room once stuck to the top: pinned, so
+              // that the page keeps what gets the focus out from under
+              // the bar.
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _BarRoom(top + _barHeight),
+              ),
+              SliverPadding(
+                padding: withNavBar(
+                  context,
+                  const EdgeInsets.fromLTRB(side, 0, side, 32),
+                ),
+                sliver: SliverList.list(children: _sections(s)),
+              ),
+            ],
           ),
-          SliverPadding(
-            padding: withNavBar(
-              context,
-              const EdgeInsets.fromLTRB(side, 0, side, 32),
+          // Shows as soon as the header's title has scrolled under it.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ValueListenableBuilder(
+              valueListenable: _wideTitleGone,
+              builder: (_, gone, _) => _TitleBar(
+                visible: gone,
+                title: s.displayTitle,
+                height: top + _barHeight,
+                topPadding: top,
+                back: !tv,
+                color: background,
+                side: tv ? side : 8,
+              ),
             ),
-            sliver: SliverList.list(children: _sections(s)),
           ),
         ],
       ),
@@ -623,25 +680,11 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
   }
 }
 
-/// The wide scene page's title bar: transparent below the header, then
-/// stuck to the top, with the title (and a back button on touch screens)
-/// over the page's color.
-class _TitleBar extends SliverPersistentHeaderDelegate {
-  _TitleBar({
-    required this.title,
-    required this.height,
-    required this.topPadding,
-    required this.back,
-    required this.color,
-    required this.side,
-  });
-
-  final String title;
+/// Room for the wide scene page's title bar, pinned to the top once
+/// scrolled there; the bar itself lies over the page.
+class _BarRoom extends SliverPersistentHeaderDelegate {
+  _BarRoom(this.height);
   final double height;
-  final double topPadding;
-  final bool back;
-  final Color color;
-  final double side;
 
   @override
   double get minExtent => height;
@@ -653,56 +696,72 @@ class _TitleBar extends SliverPersistentHeaderDelegate {
     BuildContext context,
     double shrinkOffset,
     bool overlapsContent,
-  ) {
-    // Its natural place has scrolled above the top: it is stuck there.
-    final stuck = shrinkOffset > 0;
-    return SizedBox(
-      height: height,
-      child: AnimatedOpacity(
-        opacity: stuck ? 1 : 0,
-        duration: const Duration(milliseconds: 150),
-        // Not reachable while invisible.
-        child: ExcludeFocus(
-          excluding: !stuck,
-          child: IgnorePointer(
-            ignoring: !stuck,
-            child: Material(
-              color: color,
-              elevation: 2,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: topPadding,
-                  left: side,
-                  right: side,
-                ),
-                child: Row(
-                  children: [
-                    if (back) const BackButton(),
-                    if (back) const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
+  ) => SizedBox(height: height);
+
+  @override
+  bool shouldRebuild(_BarRoom old) => height != old.height;
+}
+
+/// The wide scene page's title bar, over the page's color, with a back
+/// button on touch screens: [visible] once the header's title has
+/// scrolled away.
+class _TitleBar extends StatelessWidget {
+  const _TitleBar({
+    required this.visible,
+    required this.title,
+    required this.height,
+    required this.topPadding,
+    required this.back,
+    required this.color,
+    required this.side,
+  });
+
+  final bool visible;
+  final String title;
+  final double height;
+  final double topPadding;
+  final bool back;
+  final Color color;
+  final double side;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: height,
+    child: AnimatedOpacity(
+      opacity: visible ? 1 : 0,
+      duration: const Duration(milliseconds: 150),
+      // Not reachable while invisible.
+      child: ExcludeFocus(
+        excluding: !visible,
+        child: IgnorePointer(
+          ignoring: !visible,
+          child: Material(
+            color: color,
+            elevation: 2,
+            child: Padding(
+              padding: EdgeInsets.only(
+                top: topPadding,
+                left: side,
+                right: side,
+              ),
+              child: Row(
+                children: [
+                  if (back) const BackButton(),
+                  if (back) const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_TitleBar old) =>
-      title != old.title ||
-      height != old.height ||
-      topPadding != old.topPadding ||
-      back != old.back ||
-      color != old.color ||
-      side != old.side;
+    ),
+  );
 }
