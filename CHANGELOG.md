@@ -7,6 +7,10 @@
   statistics, which cannot take the focus, stayed hidden).
 - Android TV, home page rows: Right at the end of a row stays there,
   instead of jumping to the row below.
+- Android TV: where nothing lies in the pressed direction (e.g. Left from
+  the tabs' rail), the focus stays, instead of landing on some other item
+  (the first item of a row); the focus no longer goes "back to where it
+  came from" by itself.
 - Android TV, scene page: Up/Down go to the next row and its item closest
   horizontally (from the download button, Down could skip every row down
   to the last tag).

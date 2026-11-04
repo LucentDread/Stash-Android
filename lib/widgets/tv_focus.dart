@@ -164,6 +164,17 @@ class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
 
   @override
   bool inDirection(FocusNode currentNode, TraversalDirection direction) {
+    // No "back to where the focus came from" memory: mixed with the moves
+    // made here, it sent the focus to unexpected items (e.g. from the tabs'
+    // rail back to a row).
+    final scope = currentNode.nearestScope;
+    if (scope != null) invalidateScopeData(scope);
+    // Nothing focused yet (a page just opened): Flutter's first item.
+    if (scope == null ||
+        currentNode is FocusScopeNode ||
+        scope.focusedChild == null) {
+      return super.inDirection(currentNode, direction);
+    }
     final along =
         direction == TraversalDirection.left ||
         direction == TraversalDirection.right;
@@ -171,12 +182,14 @@ class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
       final moved = _alongRow(currentNode, direction);
       if (moved != null) return moved;
     }
+    // Nothing that way (e.g. Left from the tabs' rail, at the screen's
+    // edge): stay, instead of Flutter's fallback to some other item.
+    if (!_anythingToward(currentNode, direction)) return true;
     final down = direction == TraversalDirection.down;
     if (!rowsFirst || !(down || direction == TraversalDirection.up)) {
       return super.inDirection(currentNode, direction);
     }
-    final scope = currentNode.nearestScope;
-    if (scope == null || currentNode.context == null) return false;
+    if (currentNode.context == null) return false;
     final from = currentNode.rect;
     // Items of the next row may start a few pixels above the focused
     // one's bottom (or below its top) when they are taller.
@@ -246,5 +259,28 @@ class TvTraversalPolicy extends ReadingOrderTraversalPolicy {
           : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
     );
     return true;
+  }
+
+  /// Whether an item lies entirely [direction] of [currentNode].
+  static bool _anythingToward(
+    FocusNode currentNode,
+    TraversalDirection direction,
+  ) {
+    final scope = currentNode.nearestScope;
+    if (scope == null || currentNode.context == null) return true;
+    final from = currentNode.rect;
+    const slack = 4.0;
+    return scope.traversalDescendants.any(
+      (n) =>
+          n != currentNode &&
+          n.context != null &&
+          !n.rect.isEmpty &&
+          switch (direction) {
+            TraversalDirection.left => n.rect.right <= from.left + slack,
+            TraversalDirection.right => n.rect.left >= from.right - slack,
+            TraversalDirection.up => n.rect.bottom <= from.top + slack,
+            TraversalDirection.down => n.rect.top >= from.bottom - slack,
+          },
+    );
   }
 }
