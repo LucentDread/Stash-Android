@@ -10,6 +10,9 @@
   is more than half a screen away, Up/Down scroll the page a step: a
   scene's information section, the home page's statistics (one more Up
   from the first row)…
+- Launch: a dark screen with the app's logo instead of a white one that
+  flashed before the app showed (on devices not in dark mode, as TVs
+  usually are not; on Android 12+, the system's launch screen too).
 - Android TV: the remote kept working wrongly once the focused item had
   scrolled out of sight (its position was unknown); it now goes on from
   what shows on screen.

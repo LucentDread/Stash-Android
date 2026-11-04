@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#242424</color>
+    <!-- The app's dark background (Flutter's dark theme surface), shown
+         from the launch on: no white flash, even when the device is not
+         in dark mode (a TV usually is not). -->
+    <color name="app_background">#101418</color>
 </resources>
