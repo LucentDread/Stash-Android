@@ -61,13 +61,15 @@ class StashApp extends StatelessWidget {
       // work above every page.
       builder: (context, child) => _Relabel(
         language: language,
-        child: RemoteKeys(
-          child: AppGate(
-            navigatorKey: navigatorKey,
-            child: OfflineWatcher(
+        child: _TvTraversal(
+          child: RemoteKeys(
+            child: AppGate(
               navigatorKey: navigatorKey,
-              messengerKey: messengerKey,
-              child: ScanBannerHost(child: child!),
+              child: OfflineWatcher(
+                navigatorKey: navigatorKey,
+                messengerKey: messengerKey,
+                child: ScanBannerHost(child: child!),
+              ),
             ),
           ),
         ),
@@ -94,6 +96,17 @@ class StashApp extends StatelessWidget {
           : const SetupScreen(),
     );
   }
+}
+
+/// On a TV, the remote's moves scroll the pages smoothly to the focus.
+class _TvTraversal extends StatelessWidget {
+  const _TvTraversal({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => SystemBridge.instance.isTv
+      ? FocusTraversalGroup(policy: TvTraversalPolicy(), child: child)
+      : child;
 }
 
 /// Redraws every page, open ones included, when the language changes:

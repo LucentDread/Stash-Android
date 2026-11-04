@@ -69,6 +69,12 @@ Future<(AppState, List<Map<String, dynamic>>)> _app({
                 80,
                 'Une ligne de description.',
               ).join('\n'),
+              'performers': [
+                for (final n in ['P1', 'P2']) {'id': n, 'name': n},
+              ],
+              'tags': [
+                for (var i = 1; i <= 12; i++) {'id': 't$i', 'name': 'Tag $i'},
+              ],
             },
           },
           _ when q.contains('findPerformer(') => {'findPerformer': item},
@@ -144,6 +150,84 @@ void main() {
     // Portrait: the phone page.
     await show(const Size(800, 1280));
     expect(find.byType(SliverAppBar), findsOneWidget);
+  });
+
+  testWidgets('on a TV, Down goes row by row, smoothly, through the text', (
+    tester,
+  ) async {
+    SystemBridge.instance.isTv = true;
+    addTearDown(() => SystemBridge.instance.isTv = false);
+    final (app, _) = await _app();
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: app,
+        child: MaterialApp(
+          theme: tvTheme(ThemeData.dark()),
+          builder: (_, child) =>
+              FocusTraversalGroup(policy: TvTraversalPolicy(), child: child!),
+          home: const SceneScreen(sceneId: '1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final scroll = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    Element focused() =>
+        FocusManager.instance.primaryFocus!.context! as Element;
+    String? chip() =>
+        (focused().findAncestorWidgetOfExactType<ActionChip>()?.label as Text?)
+            ?.data;
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    // From download (right of Play), Down reaches the first row below
+    // (the performers), not a row that happens to sit under it.
+    while (focused().findAncestorWidgetOfExactType<DownloadButton>() == null) {
+      await press(LogicalKeyboardKey.arrowRight);
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    // The performer closest horizontally.
+    expect(chip(), 'P2');
+    // Scrolling there is animated, not a jump.
+    final start = scroll.pixels;
+    await tester.pump(const Duration(milliseconds: 50));
+    final midway = scroll.pixels;
+    await tester.pumpAndSettle();
+    if (scroll.pixels != start) {
+      expect(midway, isNot(scroll.pixels), reason: 'smooth scroll');
+    }
+
+    // Down: the description, focused as a block, its start shown.
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(chip(), isNull);
+    final text = find.textContaining('Une ligne de description.');
+    expect(
+      focused().findAncestorWidgetOfExactType<Section>()?.title,
+      'Description',
+    );
+    expect(tester.getRect(text).top, greaterThan(0));
+
+    // Down scrolls through it while some is hidden, then moves on (to the
+    // tags, after the description).
+    var steps = 0;
+    while (chip() == null && steps < 20) {
+      final before = scroll.pixels;
+      await press(LogicalKeyboardKey.arrowDown);
+      steps++;
+      if (chip() == null) {
+        expect(scroll.pixels, greaterThan(before), reason: 'reading on');
+      }
+    }
+    expect(steps, greaterThan(1), reason: 'several steps of text');
+    expect(chip(), startsWith('Tag'));
+    expect(tester.getRect(text).bottom, lessThan(1080));
   });
 
   testWidgets('on a TV, the scene page is laid out for the remote', (

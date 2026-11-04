@@ -407,25 +407,29 @@ class _SceneScreenState extends State<SceneScreen> with DataRefresh {
     return Scaffold(
       body: Stack(
         children: [
-          CustomScrollView(
-            controller: _wideScroll,
-            slivers: [
-              SliverToBoxAdapter(child: hero),
-              // The title bar's room once stuck to the top: pinned, so
-              // that the page keeps what gets the focus out from under
-              // the bar.
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _BarRoom(top + _barHeight),
-              ),
-              SliverPadding(
-                padding: withNavBar(
-                  context,
-                  const EdgeInsets.fromLTRB(side, 0, side, 32),
+          // Up/Down go row by row (see TvTraversalPolicy).
+          FocusTraversalGroup(
+            policy: TvTraversalPolicy(rowsFirst: true),
+            child: CustomScrollView(
+              controller: _wideScroll,
+              slivers: [
+                SliverToBoxAdapter(child: hero),
+                // The title bar's room once stuck to the top: pinned, so
+                // that the page keeps what gets the focus out from under
+                // the bar.
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _BarRoom(top + _barHeight),
                 ),
-                sliver: SliverList.list(children: _sections(s)),
-              ),
-            ],
+                SliverPadding(
+                  padding: withNavBar(
+                    context,
+                    const EdgeInsets.fromLTRB(side, 0, side, 32),
+                  ),
+                  sliver: SliverList.list(children: _sections(s)),
+                ),
+              ],
+            ),
           ),
           // Shows as soon as the header's title has scrolled under it.
           Positioned(

@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.19.7
+- Android TV: pages scroll smoothly to the item getting the focus,
+  instead of jumping, keeping room above it for its row's title; the
+  first item of a page brings it back to its very top (the home page's
+  statistics, which cannot take the focus, stayed hidden).
+- Android TV, home page rows: Right at the end of a row stays there,
+  instead of jumping to the row below.
+- Android TV: where nothing lies in the pressed direction (e.g. Left from
+  the tabs' rail), the focus stays, instead of landing on some other item
+  (the first item of a row); the focus no longer goes "back to where it
+  came from" by itself.
+- Android TV, scene page: Up/Down go to the next row and its item closest
+  horizontally (from the download button, Down could skip every row down
+  to the last tag).
+- Android TV: descriptions take the focus again (with a light background):
+  Up/Down scroll through a long one step by step, then move on, so it can
+  be read in full even with nothing focusable below it.
+
 ## 1.19.6
 - Scene page on TVs and tablets in landscape:
   - the title bar shows as soon as the title has scrolled off the top,

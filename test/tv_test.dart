@@ -299,6 +299,165 @@ void main() {
     });
   });
 
+  testWidgets('home rows: Right stops at the end, going up shows the top', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (_, child) =>
+            FocusTraversalGroup(policy: TvTraversalPolicy(), child: child!),
+        home: Scaffold(
+          body: ListView(
+            children: [
+              // Like the statistics: shown, but nothing to focus.
+              const SizedBox(height: 120, child: Text('stats')),
+              for (var r = 0; r < 6; r++) ...[
+                SizedBox(height: 40, child: Text('row $r')),
+                SizedBox(
+                  height: 160,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (var i = 0; i < 4; i++)
+                        SizedBox(
+                          width: 200,
+                          child: InkWell(
+                            key: ValueKey('$r-$i'),
+                            onTap: () {},
+                            child: Text('$r-$i'),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+    final page = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
+    String? focused() =>
+        (FocusManager.instance.primaryFocus?.context
+                        ?.findAncestorWidgetOfExactType<InkWell>()
+                        ?.key
+                    as ValueKey?)
+                ?.value
+            as String?;
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(focused(), '0-0');
+    // Along the row to its end; one more Right stays there (it used to
+    // land on the row below).
+    for (var i = 0; i < 3; i++) {
+      await press(LogicalKeyboardKey.arrowRight);
+    }
+    expect(focused(), '0-3');
+    await press(LogicalKeyboardKey.arrowRight);
+    expect(focused(), '0-3');
+
+    // Down the rows: the page scrolls, keeping each row's title in view.
+    for (var r = 1; r < 5; r++) {
+      await press(LogicalKeyboardKey.arrowDown);
+      expect(focused(), startsWith('$r-'));
+    }
+    expect(page.pixels, greaterThan(200));
+    await press(LogicalKeyboardKey.arrowUp);
+    expect(tester.getRect(find.text('row 3')).top, greaterThanOrEqualTo(0));
+
+    // Back to the first row: the page goes back to its top, statistics
+    // included.
+    for (var r = 3; r > 0; r--) {
+      await press(LogicalKeyboardKey.arrowUp);
+    }
+    expect(focused(), startsWith('0-'));
+    expect(page.pixels, 0);
+  });
+
+  testWidgets('nothing that way: the focus stays (Left from the rail)', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (_, child) =>
+            FocusTraversalGroup(policy: TvTraversalPolicy(), child: child!),
+        home: Scaffold(
+          body: Row(
+            children: [
+              // The tabs' rail.
+              SizedBox(
+                width: 80,
+                child: Column(
+                  children: [
+                    for (final tab in ['home', 'scenes'])
+                      TextButton(
+                        autofocus: tab == 'scenes',
+                        onPressed: () {},
+                        child: Text(tab),
+                      ),
+                  ],
+                ),
+              ),
+              // The page's rows, one starting above the focused tab.
+              Expanded(
+                child: Column(
+                  children: [
+                    for (var r = 0; r < 2; r++)
+                      SizedBox(
+                        height: 100,
+                        child: Row(
+                          children: [
+                            for (var i = 0; i < 3; i++)
+                              TextButton(
+                                onPressed: () {},
+                                child: Text('$r-$i'),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    String? focused() =>
+        (FocusManager.instance.primaryFocus?.context
+                    ?.findAncestorWidgetOfExactType<TextButton>()
+                    ?.child
+                as Text?)
+            ?.data;
+    expect(focused(), 'scenes');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(focused(), 'scenes', reason: 'nothing left of the rail');
+    // Up and Down still move along the rail, Right into the page.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(focused(), 'home');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(focused(), 'home', reason: 'top of the screen');
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(focused(), startsWith('0-'));
+  });
+
   testWidgets('on a TV, the tabs are in a rail on the left', (tester) async {
     SystemBridge.instance.isTv = true;
     addTearDown(() => SystemBridge.instance.isTv = false);
@@ -322,6 +481,37 @@ void main() {
       [for (final d in rail.destinations) (d.label as Text).data],
       ['Images', 'Scènes', 'Plus'],
     );
+
+    // The remote on the rail: Left at the screen's edge stays there,
+    // whatever moves came before (Right into the page and back).
+    String? focusedTab() =>
+        FocusManager.instance.primaryFocus?.context
+                ?.findAncestorWidgetOfExactType<NavigationRail>() !=
+            null
+        ? 'rail'
+        : null;
+
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    await press(LogicalKeyboardKey.arrowDown); // focus enters the screen
+    for (var i = 0; i < 3; i++) {
+      await press(LogicalKeyboardKey.arrowLeft);
+    }
+    expect(focusedTab(), 'rail');
+    final onRail = FocusManager.instance.primaryFocus;
+    await press(LogicalKeyboardKey.arrowRight);
+    await press(LogicalKeyboardKey.arrowDown);
+    await press(LogicalKeyboardKey.arrowLeft);
+    await press(LogicalKeyboardKey.arrowLeft);
+    await press(LogicalKeyboardKey.arrowLeft);
+    expect(focusedTab(), 'rail', reason: 'Left never leaves the rail');
+    final edge = FocusManager.instance.primaryFocus;
+    await press(LogicalKeyboardKey.arrowLeft);
+    expect(FocusManager.instance.primaryFocus, edge);
+    expect(onRail, isNotNull);
 
     // Choosing a tab in the rail opens it.
     await tester.tap(find.text('Plus'));

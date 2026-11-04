@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -11,7 +12,10 @@ import 'package:stash_android/api/stash_repository.dart';
 import 'package:stash_android/models/scene_filter.dart';
 import 'package:stash_android/screens/home_layout_screen.dart';
 import 'package:stash_android/screens/home_screen.dart';
+import 'package:stash_android/main.dart';
 import 'package:stash_android/services/app_state.dart';
+import 'package:stash_android/services/system_bridge.dart';
+import 'package:stash_android/widgets/cards.dart';
 
 /// App state whose server answers every list, counting the requests by
 /// kind ("resume" for the scenes to resume).
@@ -88,6 +92,62 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('TV home: the remote on rows and the rail goes where expected', (
+    tester,
+  ) async {
+    SystemBridge.instance.isTv = true;
+    addTearDown(() => SystemBridge.instance.isTv = false);
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final (app, _) = await _app();
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(value: app, child: const StashApp()),
+    );
+    await _settle(tester);
+    expect(find.byType(NavigationRail), findsOneWidget);
+
+    Element? focused() =>
+        FocusManager.instance.primaryFocus?.context as Element?;
+    bool onRail() =>
+        focused()?.findAncestorWidgetOfExactType<NavigationRail>() != null;
+    String? card() =>
+        focused()?.findAncestorWidgetOfExactType<SceneCard>()?.scene.title;
+    Future<void> press(LogicalKeyboardKey key) async {
+      await tester.sendKeyEvent(key);
+      await _settle(tester);
+      await tester.pumpAndSettle();
+    }
+
+    // Into the page, onto the first row's cards.
+    for (var i = 0; i < 6 && card() == null; i++) {
+      await press(
+        onRail() ? LogicalKeyboardKey.arrowRight : LogicalKeyboardKey.arrowDown,
+      );
+    }
+    expect(card(), isNotNull);
+    final row = card();
+    // To the end of the row; Right there stays on its last card.
+    for (var i = 0; i < 8; i++) {
+      await press(LogicalKeyboardKey.arrowRight);
+    }
+    expect(card(), 'Plage 5');
+    expect(row, isNotNull);
+    // Down to the next row, then Left until the rail; Left again stays.
+    await press(LogicalKeyboardKey.arrowDown);
+    expect(card(), isNotNull);
+    for (var i = 0; i < 10 && !onRail(); i++) {
+      await press(LogicalKeyboardKey.arrowLeft);
+    }
+    expect(onRail(), isTrue);
+    final tab = FocusManager.instance.primaryFocus;
+    await press(LogicalKeyboardKey.arrowLeft);
+    expect(FocusManager.instance.primaryFocus, tab, reason: 'screen edge');
+    await press(LogicalKeyboardKey.arrowLeft);
+    expect(FocusManager.instance.primaryFocus, tab);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('default home: back to the top after scrolling to the bottom', (
     tester,
   ) async {
